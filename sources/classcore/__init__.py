@@ -25,6 +25,8 @@ from . import __
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---
 
+from .factories import *
+
 
 __version__ = '1.0a0'
 
