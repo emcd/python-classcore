@@ -29,28 +29,53 @@ from . import __
 _T = __.typx.TypeVar( '_T', bound = type )
 
 
-Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
-Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
-
-
-_decorators_name = '_class_decorators_'
-_initializer_name = '_class_initializer_'
-
-
-BaseConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
+ConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., type ],
     __.typx.Doc( ''' Constructor method from base metaclass. ''' ),
 ]
-BaseInitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
+InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., None ],
-    __.typx.Doc( ''' Initializer method from base metaclass. ''' ),
-]
+    __.typx.Doc(
+        ''' Bound initializer function.
 
+            Usually from ``super( ).__init__``, but may also be a partial
+            function.
+        ''' ),
+]
+AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str, __.typx.Any ], None ],
+    __.typx.Doc(
+        ''' Bound attribute assigner function.
+
+            Usually from ``super( ).__setattr__``, but may also be a partial
+            function.
+        ''' ),
+]
+DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str ], None ],
+    __.typx.Doc(
+        ''' Bound attribute deleter function.
+
+            Usually from ``super( ).__delattr__``, but may also be a partial
+            function.
+        ''' ),
+]
+SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
+    __.typx.Doc(
+        ''' Bound attribute surveyor function.
+
+            Usually from ``super( ).__dir__``, but may also be a partial
+            function.
+        ''' ),
+]
+Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
+Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
 Initializer: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
         [
             type,
-            BaseInitializerLigation,
+            InitializerLigation,
             __.PositionalArguments,
             __.NominativeArguments,
         ],
@@ -58,24 +83,40 @@ Initializer: __.typx.TypeAlias = __.typx.Annotated[
     ],
     __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
 ]
+Assigner: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, AssignerLigation, str, __.typx.Any ], None ],
+    __.typx.Doc( ''' Attribute assigner to use with metaclass. ''' ),
+]
+Deleter: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, DeleterLigation, str ], None ],
+    __.typx.Doc( ''' Attribute deleter to use with metaclass. ''' ),
+]
+Surveyor: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, SurveyorLigation ], __.cabc.Iterable[ str ] ],
+    __.typx.Doc( ''' Attribute surveyor to use with metaclass. ''' ),
+]
 
 
 Constructor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
         [
             type,
-            BaseConstructorLigation,
+            ConstructorLigation,
             str,
             tuple[ type, ... ],
             dict[ str, __.typx.Any ],
             __.NominativeArguments,
             Decorators,
             Initializer,
+            Assigner,
+            Deleter,
+            Surveyor,
         ],
         type
     ],
     __.typx.Doc( ''' Constructor to use with metaclass. ''' ),
 ]
+
 
 ProduceCfcConstructorArgument: __.typx.TypeAlias = __.typx.Annotated[
     Constructor,
@@ -85,6 +126,28 @@ ProduceCfcInitializerArgument: __.typx.TypeAlias = __.typx.Annotated[
     Initializer,
     __.typx.Doc( ''' Default initializer to use with metaclasses. ''' ),
 ]
+ProduceCfcAssignerArgument: __.typx.TypeAlias = __.typx.Annotated[
+    Assigner,
+    __.typx.Doc(
+        ''' Default attributes assigner to use with metaclasses. ''' ),
+]
+ProduceCfcDeleterArgument: __.typx.TypeAlias = __.typx.Annotated[
+    Deleter,
+    __.typx.Doc(
+        ''' Default attributes deleter to use with metaclasses. ''' ),
+]
+ProduceCfcSurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
+    Surveyor,
+    __.typx.Doc(
+        ''' Default attributes surveyor to use with metaclasses. ''' ),
+]
+
+
+decorators_name = '_class_decorators_'
+initializer_name = '_class_initializer_'
+assigner_name = '_class_attributes_assigner_'
+deleter_name = '_class_attributes_deleter_'
+surveyor_name = '_class_attributes_surveyor_'
 
 
 def produce_constructor( ) -> Constructor:
@@ -92,24 +155,29 @@ def produce_constructor( ) -> Constructor:
 
     def construct( # noqa: PLR0913
         clscls: type[ _T ],
-        superf: BaseConstructorLigation,
+        superf: ConstructorLigation,
         name: str,
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ],
         arguments: __.NominativeArguments,
         decorators: Decorators,
         initializer: Initializer,
+        assigner: Assigner,
+        deleter: Deleter,
+        surveyor: Surveyor,
     ) -> type:
         ''' Constructs class, applying decorators and hooks. '''
         cls = superf( clscls, name, bases, namespace, **arguments )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
-        decorators_complete = getattr0( cls, _decorators_name, [ ] )
+        decorators_complete = getattr0( cls, decorators_name, [ ] )
         if decorators_complete: return cls
-        setattr( cls, _initializer_name, initializer )
-        # TODO: Assign assigner, deleter, surveyor.
+        setattr( cls, initializer_name, initializer )
+        setattr( cls, assigner_name, assigner )
+        setattr( cls, deleter_name, deleter )
+        setattr( cls, surveyor_name, surveyor )
         # TODO: Run hooks for other class attributes.
-        setattr( cls, _decorators_name, decorators_complete )
+        setattr( cls, decorators_name, decorators_complete )
         for decorator in decorators:
             decorators_complete.append( decorator )
             cls_ = decorator( cls )
@@ -127,7 +195,7 @@ def produce_initializer( ) -> Initializer:
 
     def initialize(
         cls: type,
-        superf: BaseInitializerLigation,
+        superf: InitializerLigation,
         posargs: __.PositionalArguments,
         nomargs: __.NominativeArguments,
     ) -> None:
@@ -136,16 +204,52 @@ def produce_initializer( ) -> Initializer:
         superf( *posargs, **nomargs )
         # Some metaclasses add class attributes via '__init__' method.
         # So, we wait until last possible moment to complete initialization.
-        decorators_complete = getattr0( cls, _decorators_name, [ ] )
+        decorators_complete = getattr0( cls, decorators_name, [ ] )
         if decorators_complete: return
-        delattr( cls, _decorators_name )
+        delattr( cls, decorators_name )
         # TODO: Run hooks for other class attributes.
 
     return initialize
 
 
-construct_core = produce_constructor( )
-initialize_core = produce_initializer( )
+def produce_assigner( ) -> Assigner:
+
+    def assign(
+        cls: type, superf: AssignerLigation, name: str, value: __.typx.Any
+    ) -> None:
+        ''' Assigns attribute to class. '''
+        superf( name, value )
+
+    return assign
+
+
+def produce_deleter( ) -> Deleter:
+
+    def delete(
+        cls: type, superf: DeleterLigation, name: str
+    ) -> None:
+        ''' Deletes attribute from class. '''
+        superf( name )
+
+    return delete
+
+
+def produce_surveyor( ) -> Surveyor:
+
+    def survey(
+        cls: type, superf: SurveyorLigation
+    ) -> __.cabc.Iterable[ str ]:
+        ''' Surveys attributes of class. '''
+        return superf( )
+
+    return survey
+
+
+constructor_default_default = produce_constructor( )
+initializer_default_default = produce_initializer( )
+assigner_default_default = produce_assigner( )
+deleter_default_default = produce_deleter( )
+surveyor_default_default = produce_surveyor( )
 
 
 def getattr0(
@@ -156,16 +260,21 @@ def getattr0(
     return cls.__dict__.get( name, default )
 
 
-def produce_class_factory_class(
+def produce_class_factory_class( # noqa: PLR0913
     clscls_base: type[ _T ],
     # TODO: clscls_decorators (e.g., 'with_docstring')
-    constructor_default: ProduceCfcConstructorArgument = construct_core,
-    initializer_default: ProduceCfcInitializerArgument = initialize_core,
-    # TODO: assigner_default
-    # TODO: deleter_default
-    # TODO: surveyor_default
+    constructor_default: ProduceCfcConstructorArgument = (
+        constructor_default_default ),
+    initializer_default: ProduceCfcInitializerArgument = (
+        initializer_default_default ),
+    assigner_default: ProduceCfcAssignerArgument = (
+        assigner_default_default ),
+    deleter_default: ProduceCfcDeleterArgument = (
+        deleter_default_default ),
+    surveyor_default: ProduceCfcSurveyorArgument = (
+        surveyor_default_default ),
 ) -> type:
-    ''' Produces hooked metaclasses from arbitrary base metaclasses. '''
+    ''' Produces customized metaclasses from arbitrary base metaclasses. '''
 
     class Class( clscls_base ):
 
@@ -177,26 +286,46 @@ def produce_class_factory_class(
             decorators: Decorators = ( ),
             constructor: Constructor = constructor_default,
             initializer: Initializer = initializer_default,
-            # TODO: assigner
-            # TODO: deleter
-            # TODO: surveyor
+            assigner: Assigner = assigner_default,
+            deleter: Deleter = deleter_default,
+            surveyor: Surveyor = surveyor_default,
             **arguments: __.typx.Any,
         ) -> Class:
             return constructor(
                 clscls, super( ).__new__,
                 name, bases, namespace, arguments,
-                decorators, initializer )
+                decorators, initializer, assigner, deleter, surveyor )
 
         def __init__(
             cls: type,
             *posargs: __.typx.Any,
             **nomargs: __.typx.Any,
         ) -> None:
-            # TODO? Default to None and raise exception if default.
-            initializer = getattr0(
-                cls, _initializer_name, initializer_default )
-            initializer( cls, super( ).__init__, posargs, nomargs )
+            init_base = super( ).__init__
+            initializer = getattr0( cls, initializer_name, None )
+            if initializer is None: init_base( *posargs, **nomargs )
+            else: initializer( cls, init_base, posargs, nomargs )
 
+        def __setattr__( cls: type, name: str, value: __.typx.Any ) -> None:
+            setattr_base = super( ).__setattr__
+            assigner = getattr0( cls, assigner_name, None )
+            if assigner is None: setattr_base( name, value )
+            else: assigner( cls, setattr_base, name, value )
+
+        def __delattr__( cls: type, name: str ) -> None:
+            delattr_base = super( ).__delattr__
+            deleter = getattr0( cls, deleter_name, None )
+            if deleter is None: delattr_base( name )
+            else: deleter( cls, delattr_base, name )
+
+        def __dir__( cls: type ) -> __.cabc.Iterable[ str ]:
+            dir_base = super( ).__dir__
+            surveyor = getattr0( cls, surveyor_name, None )
+            if surveyor is None: return dir_base( )
+            return surveyor( cls, dir_base )
+
+
+    # TODO: Run decorators on metaclass.
     return Class
 
 
