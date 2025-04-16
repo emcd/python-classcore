@@ -175,12 +175,59 @@ ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
 ]
 
 
-
 decorators_name = '_class_decorators_'
 initializer_name = '_class_initializer_'
 assigner_name = '_class_attributes_assigner_'
 deleter_name = '_class_attributes_deleter_'
 surveyor_name = '_class_attributes_surveyor_'
+
+
+@__.typx.dataclass_transform( kw_only_default = True )
+class DataclassObjectMutableBase:
+    ''' Dataclass base.
+
+        Standard metaclasses will look for ``__dataclass_transform__`` field
+        to trigger application of appropriate dataclass decorator.
+
+        Needed to fool static typecheckers when actual dataclass decorators
+        transform classes outside of the standard decorator application syntax.
+    '''
+
+
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
+class DataclassObjectBase:
+    ''' Dataclass base with immutability.
+
+        Standard metaclasses will look for ``__dataclass_transform__`` field
+        to trigger application of appropriate dataclass decorator.
+
+        Needed to fool static typecheckers when actual dataclass decorators
+        transform classes outside of the standard decorator application syntax.
+    '''
+
+
+@__.typx.dataclass_transform( kw_only_default = True )
+class ProtocolDataclassObjectMutableBase( __.typx.Protocol ):
+    ''' Dataclass base.
+
+        Standard metaclasses will look for ``__dataclass_transform__`` field
+        to trigger application of appropriate dataclass decorator.
+
+        Needed to fool static typecheckers when actual dataclass decorators
+        transform classes outside of the standard decorator application syntax.
+    '''
+
+
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
+class ProtocolDataclassObjectBase( __.typx.Protocol ):
+    ''' Dataclass base with immutability.
+
+        Standard metaclasses will look for ``__dataclass_transform__`` field
+        to trigger application of appropriate dataclass decorator.
+
+        Needed to fool static typecheckers when actual dataclass decorators
+        transform classes outside of the standard decorator application syntax.
+    '''
 
 
 def produce_constructor(
