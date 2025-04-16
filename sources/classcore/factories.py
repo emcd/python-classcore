@@ -28,6 +28,10 @@ from . import __
 
 _T = __.typx.TypeVar( '_T', bound = type )
 
+Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
+Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
+DecoratorsMutable: __.typx.TypeAlias = __.cabc.MutableSequence[ Decorator ]
+
 
 ConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., type ],
@@ -69,8 +73,27 @@ SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
             function.
         ''' ),
 ]
-Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
-Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
+
+# TODO: ConstructionPreprocessor (arguments/bases/namespace mutation)
+ConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, DecoratorsMutable ], None ],
+    __.typx.Doc(
+        ''' Processes class before decoration.
+
+            For use cases, such as decorator list manipulation.
+        ''' ),
+]
+# TODO: InitializationPreparer (arguments mutation)
+InitializationCompleter: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type ], None ],
+    __.typx.Doc(
+        ''' Completes initialization of class.
+
+            For use cases, such as enabling immutability once all other
+            initialization has occurred.
+        ''' ),
+]
+
 Initializer: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
         [
@@ -141,6 +164,16 @@ ProduceCfcSurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.typx.Doc(
         ''' Default attributes surveyor to use with metaclasses. ''' ),
 ]
+ProduceConstructorPostprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Sequence[ ConstructionPostprocessor ],
+    __.typx.Doc( ''' Processors to apply before decoration of class. ''' ),
+]
+ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Sequence[ InitializationCompleter ],
+    __.typx.Doc(
+        ''' Processors to apply at final stage of class initialization. ''' ),
+]
+
 
 
 decorators_name = '_class_decorators_'
@@ -150,8 +183,11 @@ deleter_name = '_class_attributes_deleter_'
 surveyor_name = '_class_attributes_surveyor_'
 
 
-def produce_constructor( ) -> Constructor:
-    # TODO: Support hooks for additional class attributes.
+def produce_constructor(
+    postprocessors: ProduceConstructorPostprocsArgument = ( ),
+) -> Constructor:
+    ''' Produces constructors for classes. '''
+    # TODO? Support pre-construction hooks which can mutate various things.
 
     def construct( # noqa: PLR0913
         clscls: type[ _T ],
@@ -172,13 +208,15 @@ def produce_constructor( ) -> Constructor:
         # Short-circuit to prevent recursive decoration and other tangles.
         decorators_complete = getattr0( cls, decorators_name, [ ] )
         if decorators_complete: return cls
+        decorators_ = list( decorators )
+        for postprocessor in postprocessors:
+            postprocessor( cls, decorators_ )
         setattr( cls, initializer_name, initializer )
         setattr( cls, assigner_name, assigner )
         setattr( cls, deleter_name, deleter )
         setattr( cls, surveyor_name, surveyor )
-        # TODO: Run hooks for other class attributes.
         setattr( cls, decorators_name, decorators_complete )
-        for decorator in decorators:
+        for decorator in decorators_:
             decorators_complete.append( decorator )
             cls_ = decorator( cls )
             if cls is cls_: continue
@@ -190,8 +228,11 @@ def produce_constructor( ) -> Constructor:
     return construct
 
 
-def produce_initializer( ) -> Initializer:
-    # TODO: Support hooks for additional class attributes.
+def produce_initializer(
+    completers: ProduceInitializerCompletersArgument = ( ),
+) -> Initializer:
+    ''' Produces initializers for classes. '''
+    # TODO? Support pre-init hooks which can mutate arguments.
 
     def initialize(
         cls: type,
@@ -200,14 +241,11 @@ def produce_initializer( ) -> Initializer:
         nomargs: __.NominativeArguments,
     ) -> None:
         ''' Initializes class, applying hooks. '''
-        # TODO? Separate pre-init and post-init hooks.
         superf( *posargs, **nomargs )
-        # Some metaclasses add class attributes via '__init__' method.
-        # So, we wait until last possible moment to complete initialization.
         decorators_complete = getattr0( cls, decorators_name, [ ] )
-        if decorators_complete: return
+        if decorators_complete: return # If non-empty, then not top-level.
         delattr( cls, decorators_name )
-        # TODO: Run hooks for other class attributes.
+        for completer in completers: completer( cls )
 
     return initialize
 
