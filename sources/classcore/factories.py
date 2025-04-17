@@ -136,25 +136,25 @@ Constructor: __.typx.TypeAlias = __.typx.Annotated[
 ]
 
 
-ProduceCfcConstructorArgument: __.typx.TypeAlias = __.typx.Annotated[
+ProduceFactoryConstructorArgument: __.typx.TypeAlias = __.typx.Annotated[
     Constructor,
     __.typx.Doc( ''' Default constructor to use with metaclasses. ''' ),
 ]
-ProduceCfcInitializerArgument: __.typx.TypeAlias = __.typx.Annotated[
+ProduceFactoryInitializerArgument: __.typx.TypeAlias = __.typx.Annotated[
     Initializer,
     __.typx.Doc( ''' Default initializer to use with metaclasses. ''' ),
 ]
-ProduceCfcAssignerArgument: __.typx.TypeAlias = __.typx.Annotated[
+ProduceFactoryAssignerArgument: __.typx.TypeAlias = __.typx.Annotated[
     Assigner,
     __.typx.Doc(
         ''' Default attributes assigner to use with metaclasses. ''' ),
 ]
-ProduceCfcDeleterArgument: __.typx.TypeAlias = __.typx.Annotated[
+ProduceFactoryDeleterArgument: __.typx.TypeAlias = __.typx.Annotated[
     Deleter,
     __.typx.Doc(
         ''' Default attributes deleter to use with metaclasses. ''' ),
 ]
-ProduceCfcSurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
+ProduceFactorySurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
     Surveyor,
     __.typx.Doc(
         ''' Default attributes surveyor to use with metaclasses. ''' ),
@@ -196,7 +196,7 @@ def produce_constructor(
         cls = superf( clscls, name, bases, namespace, **arguments )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
-        decorators_complete = getattr0( cls, decorators_name, [ ] )
+        decorators_complete = _utilities.getattr0( cls, decorators_name, [ ] )
         if decorators_complete: return cls
         decorators_ = list( decorators )
         for postprocessor in postprocessors:
@@ -228,7 +228,7 @@ def produce_initializer(
     ) -> None:
         ''' Initializes class, applying hooks. '''
         superf( *posargs, **nomargs )
-        decorators_complete = getattr0( cls, decorators_name, [ ] )
+        decorators_complete = _utilities.getattr0( cls, decorators_name, [ ] )
         if decorators_complete: return # If non-empty, then not top-level.
         delattr( cls, decorators_name )
         for completer in completers: completer( cls )
@@ -276,29 +276,27 @@ deleter_default = produce_deleter( )
 surveyor_default = produce_surveyor( )
 
 
-def getattr0(
-    cls: type, name: str, default: __.typx.Any
-) -> __.typx.Any:
-    # TODO: Support slotted classes.
-    ''' Returns attribute from class without inheritance. '''
-    return cls.__dict__.get( name, default )
-
-
 def produce_decorator(
-    # TODO: preprocessors
-    # TODO: postprocessors
     decorators: _nomina.Decorators = ( ),
+    preprocessors: _nomina.DecorationPreprocessors = ( ),
+    postprocessors: _nomina.DecorationPostprocessors = ( ),
 ) -> _nomina.Decorator:
-    ''' Generic decorator factory for use inside specialized ones. '''
+    ''' Generic decorator factory.
+
+        Can wrap to adapt specialized arguments into preprocessors and
+        postprocessors.
+    '''
     def decorate( cls: type[ _T ] ) -> type[ _T ]:
         decorators_ = list( decorators )
-        # TODO: Invoke preprocessors.
+        for preprocessor in preprocessors:
+            preprocessor( cls, decorators_ )
         for decorator in decorators_:
             cls_ = decorator( cls )
             if cls is cls_: continue
             _utilities.repair_class_reproduction( cls, cls_ )
             cls = cls_
-        # TODO: Invoke postprocessors.
+        for postprocessor in postprocessors:
+            postprocessor( cls )
         return cls
 
     return decorate
@@ -307,12 +305,12 @@ def produce_decorator(
 def produce_factory_class( # noqa: PLR0913
     clscls_base: type[ _T ],
     # TODO: clscls_decorators (e.g., 'with_docstring')
-    constructor: ProduceCfcConstructorArgument = constructor_default,
-    initializer: ProduceCfcInitializerArgument = initializer_default,
+    constructor: ProduceFactoryConstructorArgument = constructor_default,
+    initializer: ProduceFactoryInitializerArgument = initializer_default,
     # TODO: Change default for below implementations to None.
-    assigner: ProduceCfcAssignerArgument = assigner_default,
-    deleter: ProduceCfcDeleterArgument = deleter_default,
-    surveyor: ProduceCfcSurveyorArgument = surveyor_default,
+    assigner: ProduceFactoryAssignerArgument = assigner_default,
+    deleter: ProduceFactoryDeleterArgument = deleter_default,
+    surveyor: ProduceFactorySurveyorArgument = surveyor_default,
 ) -> type:
     ''' Produces customized metaclasses from arbitrary base metaclasses. '''
 

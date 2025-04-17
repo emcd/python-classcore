@@ -23,3 +23,6 @@
 
 from .imports import *
 from .nomina import *
+
+dictproxy_empty: types.MappingProxyType[ typx.Any, typx.Any ] = (
+    types.MappingProxyType( { } ) )
