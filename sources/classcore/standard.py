@@ -24,51 +24,64 @@
 from __future__ import annotations
 
 from . import __
+from . import bases as _bases
 from . import factories as _factories
+from . import nomina as _nomina
 
 
 # TODO: Custom implementations.
 #       Concealment and immutability.
 #       Dataclass detection.
+#       Slots detection.
 
 
-Class = _factories.produce_class_factory_class( type )
+Class = _factories.produce_factory_class( type )
 ProtocolClass = (
-    _factories.produce_class_factory_class(
+    _factories.produce_factory_class(
         type( __.typx.Protocol ) ) ) # pyright: ignore[reportArgumentType]
 
 
-class ObjectMutable( metaclass = Class ): pass
+def immutable(
+    # TODO: mutables
+    # TODO? mutables_regexes
+    # TODO? mutables_predicates
+    # TODO: visibles
+    # TODO? visibles_regexes
+    # TODO? visibles_predicates (default: public members only)
+) -> _nomina.Decorator:
+    # TODO: Pass appropriate postprocessors to decorator factory.
+    return _factories.produce_decorator( )
 
 
 # TODO: Object (with 'immutable' decorator)
 
 
-class DataclassObjectMutable(
-    _factories.DataclassObjectMutableBase, metaclass = Class
-): pass
+class ObjectMutable( metaclass = Class ): pass
 
 
 class DataclassObject(
-    _factories.DataclassObjectBase, metaclass = Class
+    _bases.DataclassObjectBase, metaclass = Class
 ): pass
 
 
-class ProtocolMutable( __.typx.Protocol, metaclass = ProtocolClass ): pass
+class DataclassObjectMutable(
+    _bases.DataclassObjectMutableBase, metaclass = Class
+): pass
 
 
 # TODO: Protocol (with 'immutable' decorator)
 
 
-class ProtocolDataclassObjectMutable(
-    _factories.ProtocolDataclassObjectMutableBase,
-    __.typx.Protocol,
+class ProtocolMutable( __.typx.Protocol, metaclass = ProtocolClass ): pass
+
+
+class DataclassProtocol(
+    _bases.DataclassProtocolBase, __.typx.Protocol,
     metaclass = ProtocolClass,
 ): pass
 
 
-class ProtocolDataclassObject(
-    _factories.ProtocolDataclassObjectBase,
-    __.typx.Protocol,
+class DataclassProtocolMutable(
+    _bases.DataclassProtocolMutableBase, __.typx.Protocol,
     metaclass = ProtocolClass,
 ): pass

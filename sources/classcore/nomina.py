@@ -18,20 +18,13 @@
 #============================================================================#
 
 
-''' Foundational class factories and decorators. '''
+''' Catalog of common type aliases. '''
 
+
+from __future__ import annotations
 
 from . import __
-from . import nomina
-from . import standard
-# --- BEGIN: Injected by Copier ---
-# --- END: Injected by Copier ---
 
-from .bases import *
-from .factories import *
-
-
-__version__ = '1.0a0'
-
-
-# TODO: Reclassify package modules as immutable and concealed.
+Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
+Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
+DecoratorsMutable: __.typx.TypeAlias = __.cabc.MutableSequence[ Decorator ]

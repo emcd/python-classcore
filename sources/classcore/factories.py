@@ -24,13 +24,12 @@
 from __future__ import annotations
 
 from . import __
+from . import nomina as _nomina
+from . import utilities as _utilities
 
 
 _T = __.typx.TypeVar( '_T', bound = type )
-
-Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
-Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
-DecoratorsMutable: __.typx.TypeAlias = __.cabc.MutableSequence[ Decorator ]
+_U = __.typx.TypeVar( '_U' )
 
 
 ConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
@@ -49,7 +48,7 @@ InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
 AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ str, __.typx.Any ], None ],
     __.typx.Doc(
-        ''' Bound attribute assigner function.
+        ''' Bound attributes assigner function.
 
             Usually from ``super( ).__setattr__``, but may also be a partial
             function.
@@ -58,7 +57,7 @@ AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
 DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ str ], None ],
     __.typx.Doc(
-        ''' Bound attribute deleter function.
+        ''' Bound attributes deleter function.
 
             Usually from ``super( ).__delattr__``, but may also be a partial
             function.
@@ -67,7 +66,7 @@ DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
 SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
     __.typx.Doc(
-        ''' Bound attribute surveyor function.
+        ''' Bound attributes surveyor function.
 
             Usually from ``super( ).__dir__``, but may also be a partial
             function.
@@ -76,7 +75,7 @@ SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
 
 # TODO: ConstructionPreprocessor (arguments/bases/namespace mutation)
 ConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, DecoratorsMutable ], None ],
+    __.cabc.Callable[ [ type, _nomina.DecoratorsMutable ], None ],
     __.typx.Doc(
         ''' Processes class before decoration.
 
@@ -129,11 +128,7 @@ Constructor: __.typx.TypeAlias = __.typx.Annotated[
             tuple[ type, ... ],
             dict[ str, __.typx.Any ],
             __.NominativeArguments,
-            Decorators,
-            Initializer,
-            Assigner,
-            Deleter,
-            Surveyor,
+            _nomina.Decorators,
         ],
         type
     ],
@@ -182,54 +177,6 @@ deleter_name = '_class_attributes_deleter_'
 surveyor_name = '_class_attributes_surveyor_'
 
 
-@__.typx.dataclass_transform( kw_only_default = True )
-class DataclassObjectMutableBase:
-    ''' Dataclass base.
-
-        Standard metaclasses will look for ``__dataclass_transform__`` field
-        to trigger application of appropriate dataclass decorator.
-
-        Needed to fool static typecheckers when actual dataclass decorators
-        transform classes outside of the standard decorator application syntax.
-    '''
-
-
-@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-class DataclassObjectBase:
-    ''' Dataclass base with immutability.
-
-        Standard metaclasses will look for ``__dataclass_transform__`` field
-        to trigger application of appropriate dataclass decorator.
-
-        Needed to fool static typecheckers when actual dataclass decorators
-        transform classes outside of the standard decorator application syntax.
-    '''
-
-
-@__.typx.dataclass_transform( kw_only_default = True )
-class ProtocolDataclassObjectMutableBase( __.typx.Protocol ):
-    ''' Dataclass base.
-
-        Standard metaclasses will look for ``__dataclass_transform__`` field
-        to trigger application of appropriate dataclass decorator.
-
-        Needed to fool static typecheckers when actual dataclass decorators
-        transform classes outside of the standard decorator application syntax.
-    '''
-
-
-@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-class ProtocolDataclassObjectBase( __.typx.Protocol ):
-    ''' Dataclass base with immutability.
-
-        Standard metaclasses will look for ``__dataclass_transform__`` field
-        to trigger application of appropriate dataclass decorator.
-
-        Needed to fool static typecheckers when actual dataclass decorators
-        transform classes outside of the standard decorator application syntax.
-    '''
-
-
 def produce_constructor(
     postprocessors: ProduceConstructorPostprocsArgument = ( ),
 ) -> Constructor:
@@ -243,11 +190,7 @@ def produce_constructor(
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ],
         arguments: __.NominativeArguments,
-        decorators: Decorators,
-        initializer: Initializer,
-        assigner: Assigner,
-        deleter: Deleter,
-        surveyor: Surveyor,
+        decorators: _nomina.Decorators,
     ) -> type:
         ''' Constructs class, applying decorators and hooks. '''
         cls = superf( clscls, name, bases, namespace, **arguments )
@@ -258,16 +201,12 @@ def produce_constructor(
         decorators_ = list( decorators )
         for postprocessor in postprocessors:
             postprocessor( cls, decorators_ )
-        setattr( cls, initializer_name, initializer )
-        setattr( cls, assigner_name, assigner )
-        setattr( cls, deleter_name, deleter )
-        setattr( cls, surveyor_name, surveyor )
         setattr( cls, decorators_name, decorators_complete )
         for decorator in decorators_:
             decorators_complete.append( decorator )
             cls_ = decorator( cls )
             if cls is cls_: continue
-            repair_class_reproduction( cls, cls_ )
+            _utilities.repair_class_reproduction( cls, cls_ )
             cls = cls_
         decorators_complete.clear( ) # Unblock top-level '__init__'.
         return cls
@@ -330,11 +269,11 @@ def produce_surveyor( ) -> Surveyor:
     return survey
 
 
-constructor_default_default = produce_constructor( )
-initializer_default_default = produce_initializer( )
-assigner_default_default = produce_assigner( )
-deleter_default_default = produce_deleter( )
-surveyor_default_default = produce_surveyor( )
+constructor_default = produce_constructor( )
+initializer_default = produce_initializer( )
+assigner_default = produce_assigner( )
+deleter_default = produce_deleter( )
+surveyor_default = produce_surveyor( )
 
 
 def getattr0(
@@ -345,41 +284,51 @@ def getattr0(
     return cls.__dict__.get( name, default )
 
 
-def produce_class_factory_class( # noqa: PLR0913
+def produce_decorator(
+    # TODO: preprocessors
+    # TODO: postprocessors
+    decorators: _nomina.Decorators = ( ),
+) -> _nomina.Decorator:
+    ''' Generic decorator factory for use inside specialized ones. '''
+    def decorate( cls: type[ _T ] ) -> type[ _T ]:
+        decorators_ = list( decorators )
+        # TODO: Invoke preprocessors.
+        for decorator in decorators_:
+            cls_ = decorator( cls )
+            if cls is cls_: continue
+            _utilities.repair_class_reproduction( cls, cls_ )
+            cls = cls_
+        # TODO: Invoke postprocessors.
+        return cls
+
+    return decorate
+
+
+def produce_factory_class( # noqa: PLR0913
     clscls_base: type[ _T ],
     # TODO: clscls_decorators (e.g., 'with_docstring')
-    constructor_default: ProduceCfcConstructorArgument = (
-        constructor_default_default ),
-    initializer_default: ProduceCfcInitializerArgument = (
-        initializer_default_default ),
-    assigner_default: ProduceCfcAssignerArgument = (
-        assigner_default_default ),
-    deleter_default: ProduceCfcDeleterArgument = (
-        deleter_default_default ),
-    surveyor_default: ProduceCfcSurveyorArgument = (
-        surveyor_default_default ),
+    constructor: ProduceCfcConstructorArgument = constructor_default,
+    initializer: ProduceCfcInitializerArgument = initializer_default,
+    # TODO: Change default for below implementations to None.
+    assigner: ProduceCfcAssignerArgument = assigner_default,
+    deleter: ProduceCfcDeleterArgument = deleter_default,
+    surveyor: ProduceCfcSurveyorArgument = surveyor_default,
 ) -> type:
     ''' Produces customized metaclasses from arbitrary base metaclasses. '''
 
     class Class( clscls_base ):
 
-        def __new__( # noqa: PLR0913
+        def __new__(
             clscls: type[ Class ],
             name: str,
             bases: tuple[ type, ... ],
             namespace: dict[ str, __.typx.Any ], *,
-            decorators: Decorators = ( ),
-            constructor: Constructor = constructor_default,
-            initializer: Initializer = initializer_default,
-            assigner: Assigner = assigner_default,
-            deleter: Deleter = deleter_default,
-            surveyor: Surveyor = surveyor_default,
+            decorators: _nomina.Decorators = ( ),
             **arguments: __.typx.Any,
         ) -> Class:
             return constructor(
                 clscls, super( ).__new__,
-                name, bases, namespace, arguments,
-                decorators, initializer, assigner, deleter, surveyor )
+                name, bases, namespace, arguments, decorators )
 
         def __init__(
             cls: type,
@@ -387,64 +336,24 @@ def produce_class_factory_class( # noqa: PLR0913
             **nomargs: __.typx.Any,
         ) -> None:
             init_base = super( ).__init__
-            initializer = getattr0( cls, initializer_name, None )
             if initializer is None: init_base( *posargs, **nomargs )
             else: initializer( cls, init_base, posargs, nomargs )
 
         def __setattr__( cls: type, name: str, value: __.typx.Any ) -> None:
             setattr_base = super( ).__setattr__
-            assigner = getattr0( cls, assigner_name, None )
             if assigner is None: setattr_base( name, value )
             else: assigner( cls, setattr_base, name, value )
 
         def __delattr__( cls: type, name: str ) -> None:
             delattr_base = super( ).__delattr__
-            deleter = getattr0( cls, deleter_name, None )
             if deleter is None: delattr_base( name )
             else: deleter( cls, delattr_base, name )
 
         def __dir__( cls: type ) -> __.cabc.Iterable[ str ]:
             dir_base = super( ).__dir__
-            surveyor = getattr0( cls, surveyor_name, None )
             if surveyor is None: return dir_base( )
             return surveyor( cls, dir_base )
 
 
     # TODO: Run decorators on metaclass.
     return Class
-
-
-def repair_class_reproduction( original: type, reproduction: type ) -> None:
-    ''' Repairs a class reproduction, if necessary. '''
-    match __.platform.python_implementation( ):
-        case 'CPython':  # pragma: no branch
-            _repair_cpython_class_closures( original, reproduction )
-        case _: pass  # pragma: no cover
-
-
-def _repair_cpython_class_closures(
-    original: type, reproduction: type
-) -> None:
-    # Adapted from https://github.com/python/cpython/pull/124455/files
-    def try_repair_closure(
-        function: __.cabc.Callable[ ..., __.typx.Any ]
-    ) -> bool:
-        try: index = function.__code__.co_freevars.index( '__class__' )
-        except ValueError: return False
-        if not function.__closure__: return False # pragma: no branch
-        closure = function.__closure__[ index ]
-        if original is closure.cell_contents: # pragma: no branch
-            closure.cell_contents = reproduction
-            return True
-        return False # pragma: no cover
-
-    for attribute in reproduction.__dict__.values( ):
-        attribute_ = __.inspect.unwrap( attribute )
-        if (    __.inspect.isfunction( attribute_ )
-            and try_repair_closure( attribute_ )
-        ): return
-        if isinstance( attribute_, property ):
-            for aname in ( 'fget', 'fset', 'fdel' ):
-                accessor = getattr( attribute_, aname )
-                if None is accessor: continue
-                if try_repair_closure( accessor ): return # pragma: no branch
