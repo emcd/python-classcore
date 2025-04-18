@@ -26,12 +26,13 @@ from __future__ import annotations
 from . import __
 
 
-def getattr0(
-    obj: object, name: str, default: __.typx.Any
-) -> __.typx.Any:
-    # TODO: Support slotted classes.
+def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
     ''' Returns attribute from object without inheritance. '''
-    return obj.__dict__.get( name, default )
+    attrsdict = getattr( obj, '__dict__', { } )
+    if name in attrsdict: return attrsdict[ name ]
+    slots = getattr( obj, '__slots__', ( ) )
+    if name in slots: return getattr( obj, name )
+    return default
 
 
 def repair_class_reproduction( original: type, reproduction: type ) -> None:

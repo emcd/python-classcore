@@ -36,8 +36,15 @@ from . import utilities as _utilities
 #       Slots detection.
 
 
+_U = __.typx.TypeVar( '_U' )
+
+
 AttributeMutabilityPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str, __.typx.Any ], bool ] )
+AttributeMutabilityPredicates: __.typx.TypeAlias = (
+    __.cabc.Sequence[ AttributeMutabilityPredicate ] )
+AttributeMutabilityRegexes: __.typx.TypeAlias = (
+    __.cabc.Sequence[ __.re.Pattern[ str ] ] )
 AttributeMutabilityVerifier: __.typx.TypeAlias = (
     str | __.re.Pattern[ str ] | AttributeMutabilityPredicate )
 AttributeMutabilityVerifiers: __.typx.TypeAlias = (
@@ -50,6 +57,7 @@ AttributeVisibilityVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ AttributeVisibilityVerifier ] )
 ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
+MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 
 
 Class = _factories.produce_factory_class( type )
@@ -80,43 +88,83 @@ def is_public_identifier( name: str ) -> bool:
     return not name.startswith( '_' )
 
 
+def associate_delattr(
+    cls: type[ _U ],
+    error_provider: ErrorClassProvider,
+    mutables_names: MutablesNames,
+    mutables_regexes: AttributeMutabilityRegexes,
+    mutables_predicates: AttributeMutabilityPredicates,
+) -> None:
+    original_delattr = getattr( cls, '__delattr__' )
+
+    def deleter( self: object, name: str ) -> None:
+        if name in mutables_names:
+            original_delattr( self, name )
+            return
+        # TODO: Sweep regexes.
+        # TODO: Sweep predicates.
+        if _probe_behavior( self, _class_behaviors_name, _immutability_label ):
+            raise error_provider( 'AttributeImmutability' )( name )
+        original_delattr( self, name )
+
+    cls.__delattr__ = deleter
+
+
+def associate_setattr(
+    cls: type[ _U ],
+    error_provider: ErrorClassProvider,
+    mutables_names: MutablesNames,
+    mutables_regexes: AttributeMutabilityRegexes,
+    mutables_predicates: AttributeMutabilityPredicates,
+) -> None:
+    original_setattr = getattr( cls, '__setattr__' )
+
+    def assigner( self: object, name: str, value: __.typx.Any ) -> None:
+        if name in mutables_names:
+            original_setattr( self, name )
+            return
+        # TODO: Sweep regexes.
+        # TODO: Sweep predicates.
+        if _probe_behavior( self, _class_behaviors_name, _immutability_label ):
+            raise error_provider( 'AttributeImmutability' )( name )
+        original_setattr( self, name )
+
+    cls.__setattr__ = assigner
+
+
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 def dataclass_immutable(
     mutables: AttributeMutabilityVerifiers = ( ),
     visibles: AttributeVisibilityVerifiers = ( is_public_identifier, ),
-    error_factory: ErrorClassProvider = _provide_error_class,
+    error_provider: ErrorClassProvider = _provide_error_class,
     # TODO? attribute value transformer
 ) -> _nomina.Decorator:
+    # https://github.com/microsoft/pyright/discussions/10344
     ''' Decorator factory. Ensures instances have immutable attributes. '''
-    # TODO: postprocessor for init completion
-    postproc_m = produce_mutables_postprocessor( error_factory, mutables )
+    postproc_i = produce_initialization_postprocessor(
+        # TODO: Inject nomargs for hidden fields.
+        )
+    postproc_m = produce_mutables_postprocessor( error_provider, mutables )
     postproc_v = produce_visibles_postprocessor( visibles )
-    decorator = _factories.produce_decorator(
+    return _factories.produce_decorator(
         decorators = ( _dataclass_core, ),
         preprocessors = ( _annotate_class, ),
-        postprocessors = ( postproc_m, postproc_v ) )
-
-    @__.typx.dataclass_transform(
-        frozen_default = True, kw_only_default = True )
-    def decorate_as_dataclass( cls: type ) -> type:
-        # TODO: Pyright bug report on dataclass_transform not applying.
-        return decorator( cls )
-
-    return decorate_as_dataclass
+        postprocessors = ( postproc_i, postproc_m, postproc_v ) )
 
 
 def immutable(
     mutables: AttributeMutabilityVerifiers = ( ),
     visibles: AttributeVisibilityVerifiers = ( is_public_identifier, ),
-    error_factory: ErrorClassProvider = _provide_error_class,
+    error_provider: ErrorClassProvider = _provide_error_class,
     # TODO? attribute value transformer
 ) -> _nomina.Decorator:
     ''' Decorator factory. Ensures instances have immutable attributes. '''
-    # TODO: postprocessor for init completion
-    postproc_m = produce_mutables_postprocessor( error_factory, mutables )
+    postproc_i = produce_initialization_postprocessor( )
+    postproc_m = produce_mutables_postprocessor( error_provider, mutables )
     postproc_v = produce_visibles_postprocessor( visibles )
     return _factories.produce_decorator(
         preprocessors = ( _annotate_class, ),
-        postprocessors = ( postproc_m, postproc_v ) )
+        postprocessors = ( postproc_i, postproc_m, postproc_v ) )
 
 
 def produce_initialization_postprocessor(
@@ -150,12 +198,18 @@ def produce_mutables_postprocessor(
     mutables: AttributeMutabilityVerifiers = ( )
 ) -> _nomina.DecorationPostprocessor:
 
-    # TODO: Bin mutables into set, regexes list, and predicates list.
+    mutables_names, mutables_regexes, mutables_predicates = (
+        _classify_mutability_verifiers( mutables ) )
+    # TODO? Add regexes match cache.
+    # TODO? Add predicates match cache.
 
     def postprocess( cls: type ) -> None:
-        # TODO: Associate __delattr__.
-        # TODO: Associate __setattr__.
-        pass
+        associate_delattr(
+            cls, error_provider,
+            mutables_names, mutables_regexes, mutables_predicates )
+        associate_setattr(
+            cls, error_provider,
+            mutables_names, mutables_regexes, mutables_predicates )
 
     return postprocess
 
@@ -223,3 +277,24 @@ def _annotate_cfc(
     annotations = getattr( cls, '__annotations__' )
     # TODO: accretive set instead of set
     annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
+
+
+def _classify_mutability_verifiers(
+    mutables: AttributeMutabilityVerifiers
+) -> tuple[
+    MutablesNames,
+    AttributeMutabilityRegexes,
+    AttributeMutabilityPredicates,
+]:
+    names: set[ str ] = set( )
+    regexes: list[ __.re.Pattern[ str ] ] = [ ]
+    predicates: list[ AttributeMutabilityPredicate ] = [ ]
+    for mutable in mutables:
+        if isinstance( mutable, str ):
+            names.add( mutable )
+    return frozenset( names ), tuple( regexes ), tuple( predicates )
+
+
+def _probe_behavior( obj: object, collection_name: str, label: str ) -> bool:
+    behaviors = _utilities.getattr0( obj, collection_name, frozenset( ) )
+    return label in behaviors
