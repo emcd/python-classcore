@@ -28,11 +28,20 @@ from . import __
 
 def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
     ''' Returns attribute from object without inheritance. '''
+    # Inspect object dictionary directly to suppress getattr inheritance.
     attrsdict = getattr( obj, '__dict__', { } )
     if name in attrsdict: return attrsdict[ name ]
     slots = getattr( obj, '__slots__', ( ) )
-    if name in slots: return getattr( obj, name )
+    # Name may be in slots but not yet assigned.
+    if name in slots: return getattr( obj, name, default )
     return default
+
+
+def qualify_object_name( obj: object ) -> str:
+    if __.inspect.isclass( obj ):
+        return f"class '{obj.__module__}.{obj.__qualname__}'"
+    # TODO? functions, methods, etc...
+    return "instance of {}".format( qualify_object_name( type( obj ) ) )
 
 
 def repair_class_reproduction( original: type, reproduction: type ) -> None:

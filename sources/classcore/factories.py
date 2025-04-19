@@ -145,17 +145,17 @@ ProduceFactoryInitializerArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.typx.Doc( ''' Default initializer to use with metaclasses. ''' ),
 ]
 ProduceFactoryAssignerArgument: __.typx.TypeAlias = __.typx.Annotated[
-    Assigner,
+    __.typx.Optional[ Assigner ],
     __.typx.Doc(
         ''' Default attributes assigner to use with metaclasses. ''' ),
 ]
 ProduceFactoryDeleterArgument: __.typx.TypeAlias = __.typx.Annotated[
-    Deleter,
+    __.typx.Optional[ Deleter ],
     __.typx.Doc(
         ''' Default attributes deleter to use with metaclasses. ''' ),
 ]
 ProduceFactorySurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
-    Surveyor,
+    __.typx.Optional[ Surveyor ],
     __.typx.Doc(
         ''' Default attributes surveyor to use with metaclasses. ''' ),
 ]
@@ -236,81 +236,18 @@ def produce_initializer(
     return initialize
 
 
-def produce_assigner( ) -> Assigner:
-
-    def assign(
-        cls: type, superf: AssignerLigation, name: str, value: __.typx.Any
-    ) -> None:
-        ''' Assigns attribute to class. '''
-        superf( name, value )
-
-    return assign
-
-
-def produce_deleter( ) -> Deleter:
-
-    def delete(
-        cls: type, superf: DeleterLigation, name: str
-    ) -> None:
-        ''' Deletes attribute from class. '''
-        superf( name )
-
-    return delete
-
-
-def produce_surveyor( ) -> Surveyor:
-
-    def survey(
-        cls: type, superf: SurveyorLigation
-    ) -> __.cabc.Iterable[ str ]:
-        ''' Surveys attributes of class. '''
-        return superf( )
-
-    return survey
-
-
 constructor_default = produce_constructor( )
 initializer_default = produce_initializer( )
-assigner_default = produce_assigner( )
-deleter_default = produce_deleter( )
-surveyor_default = produce_surveyor( )
 
 
-def produce_decorator(
-    decorators: _nomina.Decorators = ( ),
-    preprocessors: _nomina.DecorationPreprocessors = ( ),
-    postprocessors: _nomina.DecorationPostprocessors = ( ),
-) -> _nomina.Decorator:
-    ''' Generic decorator factory.
-
-        Can wrap to adapt specialized arguments into preprocessors and
-        postprocessors.
-    '''
-    def decorate( cls: type[ _T ] ) -> type[ _T ]:
-        decorators_ = list( decorators )
-        for preprocessor in preprocessors:
-            preprocessor( cls, decorators_ )
-        for decorator in decorators_:
-            cls_ = decorator( cls )
-            if cls is cls_: continue
-            _utilities.repair_class_reproduction( cls, cls_ )
-            cls = cls_
-        for postprocessor in postprocessors:
-            postprocessor( cls )
-        return cls
-
-    return decorate
-
-
-def produce_factory_class( # noqa: PLR0913
+def produce_class_factory( # noqa: PLR0913
     clscls_base: type[ _T ],
     # TODO: clscls_decorators (e.g., 'with_docstring')
     constructor: ProduceFactoryConstructorArgument = constructor_default,
     initializer: ProduceFactoryInitializerArgument = initializer_default,
-    # TODO: Change default for below implementations to None.
-    assigner: ProduceFactoryAssignerArgument = assigner_default,
-    deleter: ProduceFactoryDeleterArgument = deleter_default,
-    surveyor: ProduceFactorySurveyorArgument = surveyor_default,
+    assigner: ProduceFactoryAssignerArgument = None,
+    deleter: ProduceFactoryDeleterArgument = None,
+    surveyor: ProduceFactorySurveyorArgument = None,
 ) -> type:
     ''' Produces customized metaclasses from arbitrary base metaclasses. '''
 
@@ -355,3 +292,29 @@ def produce_factory_class( # noqa: PLR0913
 
     # TODO: Run decorators on metaclass.
     return Class
+
+
+def produce_decorator(
+    decorators: _nomina.Decorators = ( ),
+    preprocessors: _nomina.DecorationPreprocessors = ( ),
+    postprocessors: _nomina.DecorationPostprocessors = ( ),
+) -> _nomina.Decorator:
+    ''' Generic decorator factory.
+
+        Can wrap to adapt specialized arguments into preprocessors and
+        postprocessors.
+    '''
+    def decorate( cls: type[ _T ] ) -> type[ _T ]:
+        decorators_ = list( decorators )
+        for preprocessor in preprocessors:
+            preprocessor( cls, decorators_ )
+        for decorator in decorators_:
+            cls_ = decorator( cls )
+            if cls is cls_: continue
+            _utilities.repair_class_reproduction( cls, cls_ )
+            cls = cls_
+        for postprocessor in postprocessors:
+            postprocessor( cls )
+        return cls
+
+    return decorate

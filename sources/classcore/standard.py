@@ -30,12 +30,6 @@ from . import nomina as _nomina
 from . import utilities as _utilities
 
 
-# TODO: Custom implementations.
-#       Concealment and immutability.
-#       Dataclass detection.
-#       Slots detection.
-
-
 _U = __.typx.TypeVar( '_U' )
 
 
@@ -63,12 +57,6 @@ ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
 MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
-
-
-Class = _factories.produce_factory_class( type )
-ProtocolClass = (
-    _factories.produce_factory_class(
-        type( __.typx.Protocol ) ) ) # pyright: ignore[reportArgumentType]
 
 
 _cfc_behaviors_name = '_class_behaviors_'
@@ -109,7 +97,8 @@ def associate_delattr(
         # TODO: Sweep regexes.
         # TODO: Sweep predicates.
         if _probe_behavior( self, _class_behaviors_name, _immutability_label ):
-            raise error_provider( 'AttributeImmutability' )( name )
+            target = _utilities.qualify_object_name( self )
+            raise error_provider( 'AttributeImmutability' )( name, target )
         original_delattr( self, name )
 
     cls.__delattr__ = deleter
@@ -131,8 +120,8 @@ def associate_setattr(
         # TODO: Sweep regexes.
         # TODO: Sweep predicates.
         if _probe_behavior( self, _class_behaviors_name, _immutability_label ):
-            raise error_provider( 'AttributeImmutability' )(
-                name, f"on instance of class {self.__class__.__qualname__}" )
+            target = _utilities.qualify_object_name( self )
+            raise error_provider( 'AttributeImmutability' )( name, target )
         original_setattr( self, name, value )
 
     cls.__setattr__ = assigner
@@ -171,10 +160,12 @@ def dataclass_immutable(
     # TODO? attribute value transformer
 ) -> _nomina.Decorator:
     # https://github.com/microsoft/pyright/discussions/10344
-    ''' Decorator factory. Ensures instances have immutable attributes. '''
+    ''' Dataclass decorator factory.
+
+        Ensures instances have immutable attributes.
+    '''
     postproc_i = produce_initialization_postprocessor(
-        # TODO: Inject nomargs for hidden fields.
-        )
+        nomargs_injection = { _class_behaviors_name: set( ) } )
     postproc_m = produce_mutables_postprocessor( error_provider, mutables )
     postproc_v = produce_visibles_postprocessor( visibles )
     return _factories.produce_decorator(
@@ -189,13 +180,51 @@ def immutable(
     error_provider: ErrorClassProvider = _provide_error_class,
     # TODO? attribute value transformer
 ) -> _nomina.Decorator:
-    ''' Decorator factory. Ensures instances have immutable attributes. '''
+    ''' Class decorator factory.
+
+        Ensures instances have immutable attributes.
+    '''
     postproc_i = produce_initialization_postprocessor( )
     postproc_m = produce_mutables_postprocessor( error_provider, mutables )
     postproc_v = produce_visibles_postprocessor( visibles )
     return _factories.produce_decorator(
         preprocessors = ( _annotate_class, ),
         postprocessors = ( postproc_i, postproc_m, postproc_v ) )
+
+
+construct_class_factory = (
+    # TODO: Supply appropriate preprocessors and postprocessors.
+    #       Inject dataclass decorator, if dataclass base detected.
+    #       List record-keeping attributes in slots, if slots detected.
+    _factories.produce_constructor( ) )
+initialize_class_factory = (
+    # TODO: Supply appropriate completers.
+    #       Enable immutability as final completion.
+    _factories.produce_initializer( ) )
+
+
+def assign_class_factory_attribute(
+    cls: type,
+    superf: _factories.AssignerLigation,
+    name: str,
+    value: __.typx.Any
+) -> None:
+    # TODO: Implement.
+    pass
+
+
+def delete_class_factory_attribute(
+    cls: type, superf: _factories.DeleterLigation, name: str
+) -> None:
+    # TODO: Implement.
+    pass
+
+
+def survey_class_factory_attributes(
+    cls: type, superf: _factories.SurveyorLigation
+) -> __.cabc.Iterable[ str ]:
+    # TODO: Implement.
+    return superf( )
 
 
 def produce_initialization_postprocessor(
@@ -261,7 +290,23 @@ def produce_visibles_postprocessor(
     return postprocess
 
 
-# TODO: Object (with 'immutable' decorator)
+Class = _factories.produce_class_factory(
+    type,
+    constructor = construct_class_factory,
+    initializer = initialize_class_factory,
+    assigner = assign_class_factory_attribute,
+    deleter = delete_class_factory_attribute,
+    surveyor = survey_class_factory_attributes )
+ProtocolClass = _factories.produce_class_factory(
+    type( __.typx.Protocol ), # pyright: ignore[reportArgumentType]
+    constructor = construct_class_factory,
+    initializer = initialize_class_factory,
+    assigner = assign_class_factory_attribute,
+    deleter = delete_class_factory_attribute,
+    surveyor = survey_class_factory_attributes )
+
+
+# class Object( metaclass = Class, decorators = ( immutable, ) ): pass
 
 
 class ObjectMutable( metaclass = Class ): pass
