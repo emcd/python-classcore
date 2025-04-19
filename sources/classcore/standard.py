@@ -51,6 +51,10 @@ AttributeMutabilityVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ AttributeMutabilityVerifier ] )
 AttributeVisibilityPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], bool ] )
+AttributeVisibilityPredicates: __.typx.TypeAlias = (
+    __.cabc.Sequence[ AttributeVisibilityPredicate ] )
+AttributeVisibilityRegexes: __.typx.TypeAlias = (
+    __.cabc.Sequence[ __.re.Pattern[ str ] ] )
 AttributeVisibilityVerifier: __.typx.TypeAlias = (
     str | __.re.Pattern[ str ] | AttributeVisibilityPredicate )
 AttributeVisibilityVerifiers: __.typx.TypeAlias = (
@@ -58,6 +62,7 @@ AttributeVisibilityVerifiers: __.typx.TypeAlias = (
 ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
 MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
+VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 
 
 Class = _factories.produce_factory_class( type )
@@ -68,7 +73,7 @@ ProtocolClass = (
 
 _cfc_behaviors_name = '_class_behaviors_'
 _class_behaviors_name = '_behaviors_'
-_dataclass_core = __.dcls.dataclass( frozen = True, kw_only = True )
+_dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
 _immutability_label = 'immutability'
 
 
@@ -126,10 +131,36 @@ def associate_setattr(
         # TODO: Sweep regexes.
         # TODO: Sweep predicates.
         if _probe_behavior( self, _class_behaviors_name, _immutability_label ):
-            raise error_provider( 'AttributeImmutability' )( name )
-        original_setattr( self, name )
+            raise error_provider( 'AttributeImmutability' )(
+                name, f"on instance of class {self.__class__.__qualname__}" )
+        original_setattr( self, name, value )
 
     cls.__setattr__ = assigner
+
+
+def associate_dir(
+    cls: type[ _U ],
+    visibles_names: VisiblesNames,
+    visibles_regexes: AttributeVisibilityRegexes,
+    visibles_predicates: AttributeVisibilityPredicates,
+) -> None:
+    original_dir = getattr( cls, '__dir__' )
+
+    def surveyor( self: object ) -> __.cabc.Iterable[ str ]:
+        names = original_dir( self )
+        names_: list[ str ] = [ ]
+        for name in names:
+            if visibles_names and name in visibles_names:
+                names_.append( name )
+                continue
+            # TODO: Sweep regexes.
+            for predicate in visibles_predicates:
+                if predicate( name ):
+                    names_.append( name )
+                    continue
+        return tuple( names_ )
+
+    cls.__dir__ = surveyor
 
 
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
@@ -218,11 +249,14 @@ def produce_visibles_postprocessor(
     visibles: AttributeVisibilityVerifiers = ( )
 ) -> _nomina.DecorationPostprocessor:
 
-    # TODO: Bin visibles into set, regexes list, and predicates list.
+    visibles_names, visibles_regexes, visibles_predicates = (
+        _classify_visibility_verifiers( visibles ) )
+    # TODO? Add regexes match cache.
+    # TODO? Add predicates match cache.
 
     def postprocess( cls: type ) -> None:
-        # TODO: Associate __dir__.
-        pass
+        associate_dir(
+            cls, visibles_names, visibles_regexes, visibles_predicates )
 
     return postprocess
 
@@ -292,6 +326,22 @@ def _classify_mutability_verifiers(
     for mutable in mutables:
         if isinstance( mutable, str ):
             names.add( mutable )
+    return frozenset( names ), tuple( regexes ), tuple( predicates )
+
+
+def _classify_visibility_verifiers(
+    visibles: AttributeVisibilityVerifiers
+) -> tuple[
+    VisiblesNames,
+    AttributeVisibilityRegexes,
+    AttributeVisibilityPredicates,
+]:
+    names: set[ str ] = set( )
+    regexes: list[ __.re.Pattern[ str ] ] = [ ]
+    predicates: list[ AttributeVisibilityPredicate ] = [ ]
+    for visible in visibles:
+        if isinstance( visible, str ):
+            names.add( visible )
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
