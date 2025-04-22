@@ -69,6 +69,12 @@ _class_behaviors_name = '_behaviors_'
 _class_assigner_name = '_attributes_assigner_'
 _class_deleter_name = '_attributes_deleter_'
 _class_surveyor_name = '_attributes_surveyor_'
+_cfc_mutables_names_name = '_class_mutable_attributes_names_'
+_cfc_mutables_regexes_name = '_class_mutable_attributes_regexes_'
+_cfc_mutables_predicates_name = '_class_mutable_attributes_predicates_'
+_cfc_visibles_names_name = '_class_visible_attributes_names_'
+_cfc_visibles_regexes_name = '_class_visible_attributes_regexes_'
+_cfc_visibles_predicates_name = '_class_visible_attributes_predicates_'
 _class_mutables_names_name = '_mutable_attributes_names_'
 _class_mutables_regexes_name = '_mutable_attributes_regexes_'
 _class_mutables_predicates_name = '_mutable_attributes_predicates_'
@@ -116,15 +122,15 @@ def associate_delattr(
             return
         mutables_names: MutablesNames = (
             getattr( self, _class_mutables_names_name, frozenset( ) ) )
-        # mutables_regexes: AttributeMutabilityRegexes = (
-        #     getattr( self, _class_mutables_regexes_name, ( ) ) )
         # mutables_predicates: AttributeMutabilityPredicates = (
         #     getattr( self, _class_mutables_predicates_name, ( ) ) )
+        # mutables_regexes: AttributeMutabilityRegexes = (
+        #     getattr( self, _class_mutables_regexes_name, ( ) ) )
         if name in mutables_names:
             original( self, name )
             return
-        # TODO: Sweep regexes.
         # TODO: Sweep predicates.
+        # TODO: Sweep regexes.
         target = _utilities.qualify_object_name( self )
         raise error_provider( 'AttributeImmutability' )( name, target )
 
@@ -148,15 +154,15 @@ def associate_setattr(
             return
         mutables_names: MutablesNames = (
             getattr( self, _class_mutables_names_name, frozenset( ) ) )
-        # mutables_regexes: AttributeMutabilityRegexes = (
-        #     getattr( self, _class_mutables_regexes_name, ( ) ) )
         # mutables_predicates: AttributeMutabilityPredicates = (
         #     getattr( self, _class_mutables_predicates_name, ( ) ) )
+        # mutables_regexes: AttributeMutabilityRegexes = (
+        #     getattr( self, _class_mutables_regexes_name, ( ) ) )
         if name in mutables_names:
             original( self, name, value )
             return
-        # TODO: Sweep regexes.
         # TODO: Sweep predicates.
+        # TODO: Sweep regexes.
         target = _utilities.qualify_object_name( self )
         raise error_provider( 'AttributeImmutability' )( name, target )
 
@@ -177,20 +183,20 @@ def associate_dir( cls: type[ _U ] ) -> None:
         if _concealment_label not in behaviors: return names
         visibles_names: VisiblesNames = (
             getattr( self, _class_visibles_names_name, frozenset( ) ) )
-        # visibles_regexes: AttributeVisibilityRegexes = (
-        #     getattr( self, _class_visibles_regexes_name, ( ) ) )
         visibles_predicates: AttributeVisibilityPredicates = (
             getattr( self, _class_visibles_predicates_name, ( ) ) )
+        # visibles_regexes: AttributeVisibilityRegexes = (
+        #     getattr( self, _class_visibles_regexes_name, ( ) ) )
         names_: list[ str ] = [ ]
         for name in names:
             if visibles_names and name in visibles_names:
                 names_.append( name )
                 continue
-            # TODO: Sweep regexes.
             for predicate in visibles_predicates:
                 if predicate( name ):
                     names_.append( name )
                     continue
+            # TODO: Sweep regexes.
         return names_
 
     setattr( cls, _class_surveyor_name, surveyor )
@@ -258,6 +264,8 @@ def class_construction_preprocessor( # noqa: PLR0913
     else: dcls_spec = None
     mutables = arguments.pop( 'instance_mutables', ( ) )
     visibles = arguments.pop( 'instance_visibles', ( is_public_identifier, ) )
+    # TODO: Pop 'class_mutables' and 'class_visibles'.
+    #       Process and store as class attributes in namespace.
     if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
         decorator_factory = dataclass_standard
         if not dcls_spec.get( 'frozen_default', True ):
@@ -266,45 +274,119 @@ def class_construction_preprocessor( # noqa: PLR0913
     decorator = decorator_factory( mutables = mutables, visibles = visibles )
     decorators.append( decorator )
     annotations = namespace.get( '__annotations__', { } )
-    annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
+    # annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
     namespace[ '__annotations__' ] = annotations
     if '__slots__' in namespace:
         slots = list( namespace[ '__slots__' ] )
-        slots.append( _cfc_behaviors_name )
+        # slots.append( _cfc_behaviors_name )
         namespace[ '__slots__' ] = slots
 
 
-construct_class_factory = (
+def produce_class_attributes_assigner(
+    error_provider: ErrorClassProvider
+) -> _factories.Assigner:
+
+    def assign(
+        cls: type,
+        superf: _factories.AssignerLigation,
+        name: str,
+        value: __.typx.Any,
+    ) -> None:
+        behaviors = (
+            _utilities.getattr0( cls, _cfc_behaviors_name, frozenset( ) ) )
+        if _immutability_label not in behaviors:
+            superf( name, value )
+            return
+        mutables_names: MutablesNames = (
+            getattr( cls, _cfc_mutables_names_name, frozenset( ) ) )
+        # mutables_predicates: AttributeMutabilityPredicates = (
+        #     getattr( cls, _cfc_mutables_predicates_name, ( ) ) )
+        # mutables_regexes: AttributeMutabilityRegexes = (
+        #     getattr( cls, _cfc_mutables_regexes_name, ( ) ) )
+        if name in mutables_names:
+            superf( name, value )
+            return
+        # TODO: Sweep predicates.
+        # TODO: Sweep regexes.
+        target = _utilities.qualify_object_name( cls )
+        raise error_provider( 'AttributeImmutability' )( name, target )
+
+    return assign
+
+
+def produce_class_attributes_deleter(
+    error_provider: ErrorClassProvider
+) -> _factories.Deleter:
+
+    def delete(
+        cls: type, superf: _factories.DeleterLigation, name: str
+    ) -> None:
+        behaviors = (
+            _utilities.getattr0( cls, _cfc_behaviors_name, frozenset( ) ) )
+        if _immutability_label not in behaviors:
+            superf( name )
+            return
+        mutables_names: MutablesNames = (
+            getattr( cls, _cfc_mutables_names_name, frozenset( ) ) )
+        # mutables_predicates: AttributeMutabilityPredicates = (
+        #     getattr( cls, _cfc_mutables_predicates_name, ( ) ) )
+        # mutables_regexes: AttributeMutabilityRegexes = (
+        #     getattr( cls, _cfc_mutables_regexes_name, ( ) ) )
+        if name in mutables_names:
+            superf( name )
+            return
+        # TODO: Sweep predicates.
+        # TODO: Sweep regexes.
+        target = _utilities.qualify_object_name( cls )
+        raise error_provider( 'AttributeImmutability' )( name, target )
+
+    return delete
+
+
+def produce_class_attributes_surveyor( ) -> _factories.Surveyor:
+
+    def survey(
+        cls: type, superf: _factories.SurveyorLigation
+    ) -> __.cabc.Iterable[ str ]:
+        names = superf( )
+        behaviors = (
+            _utilities.getattr0( cls, _cfc_behaviors_name, frozenset( ) ) )
+        if _concealment_label not in behaviors: return names
+        visibles_names: VisiblesNames = (
+            getattr( cls, _cfc_visibles_names_name, frozenset( ) ) )
+        visibles_predicates: AttributeVisibilityPredicates = (
+            getattr( cls, _cfc_visibles_predicates_name, ( ) ) )
+        # visibles_regexes: AttributeVisibilityRegexes = (
+        #     getattr( cls, _cfc_visibles_regexes_name, ( ) ) )
+        names_: list[ str ] = [ ]
+        for name in names:
+            if visibles_names and name in visibles_names:
+                names_.append( name )
+                continue
+            for predicate in visibles_predicates:
+                if predicate( name ):
+                    names_.append( name )
+                    continue
+            # TODO: Sweep regexes.
+        return names_
+
+    return survey
+
+
+construct_class = (
     _factories.produce_constructor(
         preprocessors = ( class_construction_preprocessor, ) ) )
-initialize_class_factory = (
+initialize_class = (
     # TODO: Supply appropriate completers.
     #       Enable immutability as final completion.
     _factories.produce_initializer( ) )
-
-
-def assign_class_factory_attribute(
-    cls: type,
-    superf: _factories.AssignerLigation,
-    name: str,
-    value: __.typx.Any,
-) -> None:
-    # TODO: Implement.
-    superf( name, value )
-
-
-def delete_class_factory_attribute(
-    cls: type, superf: _factories.DeleterLigation, name: str
-) -> None:
-    # TODO: Implement.
-    superf( name )
-
-
-def survey_class_factory_attributes(
-    cls: type, superf: _factories.SurveyorLigation
-) -> __.cabc.Iterable[ str ]:
-    # TODO: Implement.
-    return superf( )
+assign_class_attributes = (
+    produce_class_attributes_assigner(
+        error_provider = _provide_error_class ) )
+delete_class_attributes = (
+    produce_class_attributes_deleter(
+        error_provider = _provide_error_class ) )
+survey_class_attributes = produce_class_attributes_surveyor( )
 
 
 def produce_initialization_postprocessor(
@@ -398,18 +480,18 @@ def produce_visibles_postprocessor(
 
 Class = _factories.produce_class_factory(
     type,
-    constructor = construct_class_factory,
-    initializer = initialize_class_factory,
-    assigner = assign_class_factory_attribute,
-    deleter = delete_class_factory_attribute,
-    surveyor = survey_class_factory_attributes )
+    constructor = construct_class,
+    initializer = initialize_class,
+    assigner = assign_class_attributes,
+    deleter = delete_class_attributes,
+    surveyor = survey_class_attributes )
 ProtocolClass = _factories.produce_class_factory(
     type( __.typx.Protocol ), # pyright: ignore[reportArgumentType]
-    constructor = construct_class_factory,
-    initializer = initialize_class_factory,
-    assigner = assign_class_factory_attribute,
-    deleter = delete_class_factory_attribute,
-    surveyor = survey_class_factory_attributes )
+    constructor = construct_class,
+    initializer = initialize_class,
+    assigner = assign_class_attributes,
+    deleter = delete_class_attributes,
+    surveyor = survey_class_attributes )
 
 
 def _annotate_class(
