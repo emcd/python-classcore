@@ -170,6 +170,7 @@ ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
 ]
 
 
+progress_name = '_class_IN_PROGRESS_'
 decorators_name = '_class_decorators_'
 initializer_name = '_class_initializer_'
 assigner_name = '_class_attributes_assigner_'
@@ -196,19 +197,19 @@ def produce_constructor(
         cls = superf( clscls, name, bases, namespace, **arguments )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
-        decorators_complete = _utilities.getattr0( cls, decorators_name, [ ] )
-        if decorators_complete: return cls
+        in_progress = _utilities.getattr0( cls, progress_name, False )
+        if in_progress: return cls
+        setattr( cls, progress_name, True )
+        setattr( cls, decorators_name, decorators )
         decorators_ = list( decorators )
         for postprocessor in postprocessors:
             postprocessor( cls, decorators_ )
-        setattr( cls, decorators_name, decorators_complete )
         for decorator in decorators_:
-            decorators_complete.append( decorator )
             cls_ = decorator( cls )
             if cls is cls_: continue
             _utilities.repair_class_reproduction( cls, cls_ )
             cls = cls_
-        decorators_complete.clear( ) # Unblock top-level '__init__'.
+        setattr( cls, progress_name, False )
         return cls
 
     return construct
@@ -218,7 +219,6 @@ def produce_initializer(
     completers: ProduceInitializerCompletersArgument = ( ),
 ) -> Initializer:
     ''' Produces initializers for classes. '''
-    # TODO? Support pre-init hooks which can mutate arguments.
 
     def initialize(
         cls: type,
@@ -228,9 +228,9 @@ def produce_initializer(
     ) -> None:
         ''' Initializes class, applying hooks. '''
         superf( *posargs, **nomargs )
-        decorators_complete = _utilities.getattr0( cls, decorators_name, [ ] )
-        if decorators_complete: return # If non-empty, then not top-level.
-        delattr( cls, decorators_name )
+        in_progress = _utilities.getattr0( cls, progress_name, False )
+        if in_progress: return # If non-empty, then not top-level.
+        delattr( cls, progress_name )
         for completer in completers: completer( cls )
 
     return initialize
@@ -241,7 +241,7 @@ initializer_default = produce_initializer( )
 
 
 def produce_class_factory( # noqa: PLR0913
-    clscls_base: type[ _T ],
+    clscls_base: type[ _T ], *,
     # TODO: clscls_decorators (e.g., 'with_docstring')
     constructor: ProduceFactoryConstructorArgument = constructor_default,
     initializer: ProduceFactoryInitializerArgument = initializer_default,

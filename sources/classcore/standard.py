@@ -42,7 +42,7 @@ AttributeMutabilityRegexes: __.typx.TypeAlias = (
 AttributeMutabilityVerifier: __.typx.TypeAlias = (
     str | __.re.Pattern[ str ] | AttributeMutabilityPredicate )
 AttributeMutabilityVerifiers: __.typx.TypeAlias = (
-    __.cabc.Sequence[ AttributeMutabilityVerifier ] )
+    __.cabc.Sequence[ AttributeMutabilityVerifier ] | __.typx.Literal[ '*' ] )
 AttributeVisibilityPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], bool ] )
 AttributeVisibilityPredicates: __.typx.TypeAlias = (
@@ -52,7 +52,7 @@ AttributeVisibilityRegexes: __.typx.TypeAlias = (
 AttributeVisibilityVerifier: __.typx.TypeAlias = (
     str | __.re.Pattern[ str ] | AttributeVisibilityPredicate )
 AttributeVisibilityVerifiers: __.typx.TypeAlias = (
-    __.cabc.Sequence[ AttributeVisibilityVerifier ] )
+    __.cabc.Sequence[ AttributeVisibilityVerifier ] | __.typx.Literal[ '*' ] )
 ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
 MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
@@ -63,6 +63,10 @@ _cfc_behaviors_name = '_class_behaviors_'
 _class_behaviors_name = '_behaviors_'
 _dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
 _immutability_label = 'immutability'
+_instance_omnimutability_nomargs = (
+    __.types.MappingProxyType( dict( instance_mutables = '*' ) ) )
+_instance_omnivisibility_nomargs = (
+    __.types.MappingProxyType( dict( instance_visibles = '*' ) ) )
 
 
 def _provide_error_class( name: str ) -> type[ Exception ]:
@@ -90,6 +94,7 @@ def associate_delattr(
 ) -> None:
     original_delattr = getattr( cls, '__delattr__' )
 
+    @__.funct.wraps( original_delattr )
     def deleter( self: object, name: str ) -> None:
         if name in mutables_names:
             original_delattr( self, name )
@@ -113,6 +118,7 @@ def associate_setattr(
 ) -> None:
     original_setattr = getattr( cls, '__setattr__' )
 
+    @__.funct.wraps( original_setattr )
     def assigner( self: object, name: str, value: __.typx.Any ) -> None:
         if name in mutables_names:
             original_setattr( self, name )
@@ -135,6 +141,7 @@ def associate_dir(
 ) -> None:
     original_dir = getattr( cls, '__dir__' )
 
+    @__.funct.wraps( original_dir )
     def surveyor( self: object ) -> __.cabc.Iterable[ str ]:
         names = original_dir( self )
         names_: list[ str ] = [ ]
@@ -192,11 +199,28 @@ def immutable(
         postprocessors = ( postproc_i, postproc_m, postproc_v ) )
 
 
+def class_construction_postprocessor(
+    cls: type,
+    decorators: _nomina.DecoratorsMutable,
+) -> None:
+    # TODO: Change to preprocessor to consume metaclass arguments.
+    #       Consume metaclass arguments as decorator arguments:
+    #           instance_mutables -> mutables
+    #           instance_visibles -> visibles
+    dcls_spec = getattr( cls, '__dataclass_transform__', None )
+    if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
+        if dcls_spec.get( 'frozen_default', False ):
+            decorators.append( dataclass_immutable( ) )
+        else:
+            # TODO: dataclass_immutable( mutables = '*' )
+            decorators.append( _dataclass_core )
+    else: decorators.append( immutable( ) )
+    # TODO: List record-keeping attributes in slots, if slots detected.
+
+
 construct_class_factory = (
-    # TODO: Supply appropriate preprocessors and postprocessors.
-    #       Inject dataclass decorator, if dataclass base detected.
-    #       List record-keeping attributes in slots, if slots detected.
-    _factories.produce_constructor( ) )
+    _factories.produce_constructor(
+        postprocessors = ( class_construction_postprocessor, ) ) )
 initialize_class_factory = (
     # TODO: Supply appropriate completers.
     #       Enable immutability as final completion.
@@ -210,14 +234,14 @@ def assign_class_factory_attribute(
     value: __.typx.Any
 ) -> None:
     # TODO: Implement.
-    pass
+    superf( name, value )
 
 
 def delete_class_factory_attribute(
     cls: type, superf: _factories.DeleterLigation, name: str
 ) -> None:
     # TODO: Implement.
-    pass
+    superf( name )
 
 
 def survey_class_factory_attributes(
@@ -244,8 +268,8 @@ def produce_initialization_postprocessor(
                 **{ **nomargs_injection, **nomargs } )
             behaviors = _utilities.getattr0(
                 self, _class_behaviors_name, set( ) )
-            if not behaviors: setattr(
-                self, _class_behaviors_name, behaviors )
+            if not behaviors:
+                setattr( self, _class_behaviors_name, behaviors )
             behaviors.add( _immutability_label )
 
         cls.__init__ = initialize
@@ -257,7 +281,9 @@ def produce_mutables_postprocessor(
     error_provider: ErrorClassProvider,
     mutables: AttributeMutabilityVerifiers = ( )
 ) -> _nomina.DecorationPostprocessor:
-
+    if mutables == '*':
+        def postprocess_null( cls: type ) -> None: pass
+        return postprocess_null
     mutables_names, mutables_regexes, mutables_predicates = (
         _classify_mutability_verifiers( mutables ) )
     # TODO? Add regexes match cache.
@@ -277,7 +303,9 @@ def produce_mutables_postprocessor(
 def produce_visibles_postprocessor(
     visibles: AttributeVisibilityVerifiers = ( )
 ) -> _nomina.DecorationPostprocessor:
-
+    if visibles == '*':
+        def postprocess_null( cls: type ) -> None: pass
+        return postprocess_null
     visibles_names, visibles_regexes, visibles_predicates = (
         _classify_visibility_verifiers( visibles ) )
     # TODO? Add regexes match cache.
@@ -304,40 +332,6 @@ ProtocolClass = _factories.produce_class_factory(
     assigner = assign_class_factory_attribute,
     deleter = delete_class_factory_attribute,
     surveyor = survey_class_factory_attributes )
-
-
-# class Object( metaclass = Class, decorators = ( immutable, ) ): pass
-
-
-class ObjectMutable( metaclass = Class ): pass
-
-
-class DataclassObject(
-    _bases.DataclassObjectBase, metaclass = Class
-): pass
-
-
-class DataclassObjectMutable(
-    _bases.DataclassObjectMutableBase, metaclass = Class
-): pass
-
-
-# TODO: Protocol (with 'immutable' decorator)
-
-
-class ProtocolMutable( __.typx.Protocol, metaclass = ProtocolClass ): pass
-
-
-class DataclassProtocol(
-    _bases.DataclassProtocolBase, __.typx.Protocol,
-    metaclass = ProtocolClass,
-): pass
-
-
-class DataclassProtocolMutable(
-    _bases.DataclassProtocolMutableBase, __.typx.Protocol,
-    metaclass = ProtocolClass,
-): pass
 
 
 def _annotate_class(
@@ -371,6 +365,10 @@ def _classify_mutability_verifiers(
     for mutable in mutables:
         if isinstance( mutable, str ):
             names.add( mutable )
+        elif isinstance( mutable, __.re.Pattern ):
+            regexes.append( mutable )
+        elif callable( mutable ):
+            predicates.append( mutable )
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
@@ -387,9 +385,41 @@ def _classify_visibility_verifiers(
     for visible in visibles:
         if isinstance( visible, str ):
             names.add( visible )
+        elif isinstance( visible, __.re.Pattern ):
+            regexes.append( visible )
+        elif callable( visible ):
+            predicates.append( visible )
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
 def _probe_behavior( obj: object, collection_name: str, label: str ) -> bool:
     behaviors = _utilities.getattr0( obj, collection_name, frozenset( ) )
     return label in behaviors
+
+
+class Object( metaclass = Class ): pass
+
+
+class DataclassObject(
+    _bases.DataclassObjectBase, metaclass = Class
+): pass
+
+
+class DataclassObjectMutable(
+    _bases.DataclassObjectMutableBase, metaclass = Class
+): pass
+
+
+class Protocol( __.typx.Protocol, metaclass = ProtocolClass ): pass
+
+
+class DataclassProtocol(
+    _bases.DataclassProtocolBase, __.typx.Protocol,
+    metaclass = ProtocolClass,
+): pass
+
+
+class DataclassProtocolMutable(
+    _bases.DataclassProtocolMutableBase, __.typx.Protocol,
+    metaclass = ProtocolClass,
+): pass
