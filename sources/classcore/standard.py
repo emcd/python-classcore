@@ -61,6 +61,8 @@ MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 
 
+_class_construction_arguments_name = '_class_construction_arguments_'
+
 _cfc_behaviors_name = '_class_behaviors_'
 _cfc_assigner_name = '_class_attributes_assigner_'
 _cfc_deleter_name = '_class_attributes_deleter_'
@@ -104,6 +106,10 @@ def _provide_error_class( name: str ) -> type[ Exception ]:
 def is_public_identifier( name: str ) -> bool:
     ''' Is Python identifier public? '''
     return not name.startswith( '_' )
+
+
+_mutables_default = ( )
+_visibles_default = ( is_public_identifier, )
 
 
 def associate_delattr(
@@ -258,21 +264,7 @@ def class_construction_preprocessor( # noqa: PLR0913
     arguments: dict[ str, __.typx.Any ],
     decorators: _nomina.DecoratorsMutable,
 ) -> None:
-    for base in bases:
-        dcls_spec = getattr( base, '__dataclass_transform__', None )
-        if dcls_spec: break
-    else: dcls_spec = None
-    mutables = arguments.pop( 'instance_mutables', ( ) )
-    visibles = arguments.pop( 'instance_visibles', ( is_public_identifier, ) )
-    # TODO: Pop 'class_mutables' and 'class_visibles'.
-    #       Process and store as class attributes in namespace.
-    if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
-        decorator_factory = dataclass_standard
-        if not dcls_spec.get( 'frozen_default', True ):
-            mutables = mutables or '*'
-    else: decorator_factory = standard
-    decorator = decorator_factory( mutables = mutables, visibles = visibles )
-    decorators.append( decorator )
+    _store_class_construction_arguments( namespace, arguments )
     annotations = namespace.get( '__annotations__', { } )
     # annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
     namespace[ '__annotations__' ] = annotations
@@ -280,6 +272,37 @@ def class_construction_preprocessor( # noqa: PLR0913
         slots = list( namespace[ '__slots__' ] )
         # slots.append( _cfc_behaviors_name )
         namespace[ '__slots__' ] = slots
+
+
+def class_construction_postprocessor(
+    cls: type, decorators: _nomina.DecoratorsMutable
+) -> None:
+    arguments = getattr( cls, _class_construction_arguments_name, { } )
+    dcls_spec = getattr( cls, '__dataclass_transform__', None )
+    instance_mutables = arguments.get( 'instance_mutables', _mutables_default )
+    instance_visibles = arguments.get( 'instance_visibles', _visibles_default )
+    if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
+        decorator_factory = dataclass_standard
+        if not dcls_spec.get( 'frozen_default', True ):
+            instance_mutables = instance_mutables or '*'
+    else: decorator_factory = standard
+    decorator = decorator_factory(
+        mutables = instance_mutables, visibles = instance_visibles )
+    decorators.append( decorator )
+
+
+def class_initialization_completer( cls: type ) -> None:
+    arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
+        getattr( cls, _class_construction_arguments_name, None ) )
+    if arguments is None: return
+    arguments = arguments or { }
+    class_mutables = arguments.get( 'class_mutables', _mutables_default )
+    class_visibles = arguments.get( 'class_visibles', _visibles_default )
+    behaviors: set[ str ] = set( )
+    if class_mutables != '*': behaviors.add( _immutability_label )
+    if class_visibles != '*': behaviors.add( _concealment_label )
+    delattr( cls, _class_construction_arguments_name )
+    setattr( cls, _cfc_behaviors_name, behaviors )
 
 
 def produce_class_attributes_assigner(
@@ -375,11 +398,11 @@ def produce_class_attributes_surveyor( ) -> _factories.Surveyor:
 
 construct_class = (
     _factories.produce_constructor(
-        preprocessors = ( class_construction_preprocessor, ) ) )
+        preprocessors = ( class_construction_preprocessor, ),
+        postprocessors = ( class_construction_postprocessor, ) ) )
 initialize_class = (
-    # TODO: Supply appropriate completers.
-    #       Enable immutability as final completion.
-    _factories.produce_initializer( ) )
+    _factories.produce_initializer(
+        completers = ( class_initialization_completer, ) ) )
 assign_class_attributes = (
     produce_class_attributes_assigner(
         error_provider = _provide_error_class ) )
@@ -555,6 +578,20 @@ def _classify_visibility_verifiers(
 def _probe_behavior( obj: object, collection_name: str, label: str ) -> bool:
     behaviors = _utilities.getattr0( obj, collection_name, frozenset( ) )
     return label in behaviors
+
+
+def _store_class_construction_arguments(
+    namespace: dict[ str, __.typx.Any ],
+    arguments: dict[ str, __.typx.Any ],
+) -> None:
+    arguments_ = { }
+    for name in (
+        'class_mutables', 'class_visibles',
+        'instance_mutables', 'instance_visibles',
+    ):
+        if name in arguments:
+            arguments_[ name ] = arguments.pop( name )
+    namespace[ _class_construction_arguments_name ] = arguments_
 
 
 class Object( metaclass = Class ): pass
