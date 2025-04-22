@@ -92,6 +92,10 @@ _instance_omnivisibility_nomargs = (
     __.types.MappingProxyType( dict( instance_visibles = '*' ) ) )
 
 
+def _calculate_attribute_name( level: str, core: str ) -> str:
+    return f"_{__.package_name}_{level}_{core}_"
+
+
 def _provide_error_class( name: str ) -> type[ Exception ]:
     ''' Produces error class for this package. '''
     match name:
@@ -264,7 +268,7 @@ def class_construction_preprocessor( # noqa: PLR0913
     arguments: dict[ str, __.typx.Any ],
     decorators: _nomina.DecoratorsMutable,
 ) -> None:
-    _store_class_construction_arguments( namespace, arguments )
+    _record_class_construction_arguments( namespace, arguments )
     annotations = namespace.get( '__annotations__', { } )
     # annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
     namespace[ '__annotations__' ] = annotations
@@ -294,14 +298,19 @@ def class_construction_postprocessor(
 def class_initialization_completer( cls: type ) -> None:
     arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
         getattr( cls, _class_construction_arguments_name, None ) )
-    if arguments is None: return
+    if arguments is not None:
+        delattr( cls, _class_construction_arguments_name )
     arguments = arguments or { }
     class_mutables = arguments.get( 'class_mutables', _mutables_default )
     class_visibles = arguments.get( 'class_visibles', _visibles_default )
     behaviors: set[ str ] = set( )
-    if class_mutables != '*': behaviors.add( _immutability_label )
-    if class_visibles != '*': behaviors.add( _concealment_label )
-    delattr( cls, _class_construction_arguments_name )
+    if class_mutables != '*':
+        _record_class_mutables( cls, class_mutables )
+        behaviors.add( _immutability_label )
+    if class_visibles != '*':
+        _record_class_visibles( cls, class_visibles )
+        behaviors.add( _concealment_label )
+    # Set behaviors attribute last since it enables enforcement.
     setattr( cls, _cfc_behaviors_name, behaviors )
 
 
@@ -580,7 +589,25 @@ def _probe_behavior( obj: object, collection_name: str, label: str ) -> bool:
     return label in behaviors
 
 
-def _store_class_construction_arguments(
+def _record_class_mutables(
+    cls: type, mutables: AttributeMutabilityVerifiers
+) -> None:
+    names, regexes, predicates = _classify_mutability_verifiers( mutables )
+    setattr( cls, _cfc_mutables_names_name, names )
+    setattr( cls, _cfc_mutables_regexes_name, regexes )
+    setattr( cls, _cfc_mutables_predicates_name, predicates )
+
+
+def _record_class_visibles(
+    cls: type, mutables: AttributeVisibilityVerifiers
+) -> None:
+    names, regexes, predicates = _classify_visibility_verifiers( mutables )
+    setattr( cls, _cfc_visibles_names_name, names )
+    setattr( cls, _cfc_visibles_regexes_name, regexes )
+    setattr( cls, _cfc_visibles_predicates_name, predicates )
+
+
+def _record_class_construction_arguments(
     namespace: dict[ str, __.typx.Any ],
     arguments: dict[ str, __.typx.Any ],
 ) -> None:
@@ -589,8 +616,8 @@ def _store_class_construction_arguments(
         'class_mutables', 'class_visibles',
         'instance_mutables', 'instance_visibles',
     ):
-        if name in arguments:
-            arguments_[ name ] = arguments.pop( name )
+        if name not in arguments: continue
+        arguments_[ name ] = arguments.pop( name )
     namespace[ _class_construction_arguments_name ] = arguments_
 
 

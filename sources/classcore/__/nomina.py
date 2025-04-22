@@ -28,3 +28,5 @@ from . import imports as __
 
 NominativeArguments: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
 PositionalArguments: __.typx.TypeAlias = __.cabc.Sequence[ __.typx.Any ]
+
+package_name = __name__.split( '.', maxsplit = 1 )[ 0 ]
