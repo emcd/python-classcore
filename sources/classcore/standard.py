@@ -61,38 +61,12 @@ MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 
 
-_class_construction_arguments_name = '_class_construction_arguments_'
-
-_cfc_behaviors_name = '_class_behaviors_'
-_cfc_assigner_name = '_class_attributes_assigner_'
-_cfc_deleter_name = '_class_attributes_deleter_'
-_cfc_surveyor_name = '_class_attributes_surveyor_'
-_class_behaviors_name = '_behaviors_'
-_class_assigner_name = '_attributes_assigner_'
-_class_deleter_name = '_attributes_deleter_'
-_class_surveyor_name = '_attributes_surveyor_'
-_cfc_mutables_names_name = '_class_mutable_attributes_names_'
-_cfc_mutables_regexes_name = '_class_mutable_attributes_regexes_'
-_cfc_mutables_predicates_name = '_class_mutable_attributes_predicates_'
-_cfc_visibles_names_name = '_class_visible_attributes_names_'
-_cfc_visibles_regexes_name = '_class_visible_attributes_regexes_'
-_cfc_visibles_predicates_name = '_class_visible_attributes_predicates_'
-_class_mutables_names_name = '_mutable_attributes_names_'
-_class_mutables_regexes_name = '_mutable_attributes_regexes_'
-_class_mutables_predicates_name = '_mutable_attributes_predicates_'
-_class_visibles_names_name = '_visible_attributes_names_'
-_class_visibles_regexes_name = '_visible_attributes_regexes_'
-_class_visibles_predicates_name = '_visible_attributes_predicates_'
 _dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
 _concealment_label = 'concealment'
 _immutability_label = 'immutability'
-_instance_omnimutability_nomargs = (
-    __.types.MappingProxyType( dict( instance_mutables = '*' ) ) )
-_instance_omnivisibility_nomargs = (
-    __.types.MappingProxyType( dict( instance_visibles = '*' ) ) )
 
 
-def _calculate_attribute_name( level: str, core: str ) -> str:
+def _calculate_attrname( level: str, core: str ) -> str:
     return f"_{__.package_name}_{level}_{core}_"
 
 
@@ -119,24 +93,29 @@ _visibles_default = ( is_public_identifier, )
 def associate_delattr(
     cls: type[ _U ], error_provider: ErrorClassProvider
 ) -> None:
-    extant = getattr( cls, _class_deleter_name, None )
+    deleter_name = _calculate_attrname( 'instances', 'deleter' )
+    extant = getattr( cls, deleter_name, None )
     original = getattr( cls, '__delattr__' )
     if extant is original: return
+    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
+    names_name = _calculate_attrname( 'instances', 'mutables_names' )
+    # regexes_name = (
+    #     _calculate_attrname( 'instances', 'mutables_regexes' ) )
+    # predicates_name = (
+    #     _calculate_attrname( 'instances', 'mutables_predicates' ) )
 
     @__.funct.wraps( original )
     def deleter( self: object, name: str ) -> None:
-        behaviors = (
-            _utilities.getattr0( self, _class_behaviors_name, frozenset( ) ) )
+        behaviors = _utilities.getattr0( self, behaviors_name, frozenset( ) )
         if _immutability_label not in behaviors:
             original( self, name )
             return
-        mutables_names: MutablesNames = (
-            getattr( self, _class_mutables_names_name, frozenset( ) ) )
-        # mutables_predicates: AttributeMutabilityPredicates = (
-        #     getattr( self, _class_mutables_predicates_name, ( ) ) )
-        # mutables_regexes: AttributeMutabilityRegexes = (
-        #     getattr( self, _class_mutables_regexes_name, ( ) ) )
-        if name in mutables_names:
+        names: MutablesNames = getattr( self, names_name, frozenset( ) )
+        # predicates: AttributeMutabilityPredicates = (
+        #     getattr( self, predicates_name, ( ) ) )
+        # regexes: AttributeMutabilityRegexes = (
+        #     getattr( self, regexes_name, ( ) ) )
+        if name in names:
             original( self, name )
             return
         # TODO: Sweep predicates.
@@ -144,31 +123,36 @@ def associate_delattr(
         target = _utilities.qualify_object_name( self )
         raise error_provider( 'AttributeImmutability' )( name, target )
 
-    setattr( cls, _class_deleter_name, deleter )
+    setattr( cls, deleter_name, deleter )
     cls.__delattr__ = deleter
 
 
 def associate_setattr(
     cls: type[ _U ], error_provider: ErrorClassProvider
 ) -> None:
-    extant = getattr( cls, _class_assigner_name, None )
+    assigner_name = _calculate_attrname( 'instances', 'assigner' )
+    extant = getattr( cls, assigner_name, None )
     original = getattr( cls, '__setattr__' )
     if extant is original: return
+    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
+    names_name = _calculate_attrname( 'instances', 'mutables_names' )
+    # regexes_name = (
+    #     _calculate_attrname( 'instances', 'mutables_regexes' ) )
+    # predicates_name = (
+    #     _calculate_attrname( 'instances', 'mutables_predicates' ) )
 
     @__.funct.wraps( original )
     def assigner( self: object, name: str, value: __.typx.Any ) -> None:
-        behaviors = (
-            _utilities.getattr0( self, _class_behaviors_name, frozenset( ) ) )
+        behaviors = _utilities.getattr0( self, behaviors_name, frozenset( ) )
         if _immutability_label not in behaviors:
             original( self, name, value )
             return
-        mutables_names: MutablesNames = (
-            getattr( self, _class_mutables_names_name, frozenset( ) ) )
-        # mutables_predicates: AttributeMutabilityPredicates = (
-        #     getattr( self, _class_mutables_predicates_name, ( ) ) )
-        # mutables_regexes: AttributeMutabilityRegexes = (
-        #     getattr( self, _class_mutables_regexes_name, ( ) ) )
-        if name in mutables_names:
+        names: MutablesNames = getattr( self, names_name, frozenset( ) )
+        # predicates: AttributeMutabilityPredicates = (
+        #     getattr( self, predicates_name, ( ) ) )
+        # regexes: AttributeMutabilityRegexes = (
+        #     getattr( self, regexes_name, ( ) ) )
+        if name in names:
             original( self, name, value )
             return
         # TODO: Sweep predicates.
@@ -176,40 +160,43 @@ def associate_setattr(
         target = _utilities.qualify_object_name( self )
         raise error_provider( 'AttributeImmutability' )( name, target )
 
-    setattr( cls, _class_assigner_name, assigner )
+    setattr( cls, assigner_name, assigner )
     cls.__setattr__ = assigner
 
 
 def associate_dir( cls: type[ _U ] ) -> None:
-    extant = getattr( cls, _class_surveyor_name, None )
+    surveyor_name = _calculate_attrname( 'instances', 'surveyor' )
+    extant = getattr( cls, surveyor_name, None )
     original = getattr( cls, '__dir__' )
     if extant is original: return
+    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
+    names_name = _calculate_attrname( 'instances', 'visibles_names' )
+    # regexes_name = _calculate_attrname( 'instances', 'visibles_predicates' )
+    predicates_name = _calculate_attrname( 'instances', 'visibles_predicates' )
 
     @__.funct.wraps( original )
     def surveyor( self: object ) -> __.cabc.Iterable[ str ]:
-        names = original( self )
-        behaviors = (
-            _utilities.getattr0( self, _class_behaviors_name, frozenset( ) ) )
-        if _concealment_label not in behaviors: return names
-        visibles_names: VisiblesNames = (
-            getattr( self, _class_visibles_names_name, frozenset( ) ) )
-        visibles_predicates: AttributeVisibilityPredicates = (
-            getattr( self, _class_visibles_predicates_name, ( ) ) )
-        # visibles_regexes: AttributeVisibilityRegexes = (
-        #     getattr( self, _class_visibles_regexes_name, ( ) ) )
+        names_base = original( self )
+        behaviors = _utilities.getattr0( self, behaviors_name, frozenset( ) )
+        if _concealment_label not in behaviors: return names_base
+        names: VisiblesNames = getattr( self, names_name, frozenset( ) )
+        predicates: AttributeVisibilityPredicates = (
+            getattr( self, predicates_name, ( ) ) )
+        # regexes: AttributeVisibilityRegexes = (
+        #     getattr( self, regexes_name, ( ) ) )
         names_: list[ str ] = [ ]
-        for name in names:
-            if visibles_names and name in visibles_names:
+        for name in names_base:
+            if name in names:
                 names_.append( name )
                 continue
-            for predicate in visibles_predicates:
+            for predicate in predicates:
                 if predicate( name ):
                     names_.append( name )
                     continue
             # TODO: Sweep regexes.
         return names_
 
-    setattr( cls, _class_surveyor_name, surveyor )
+    setattr( cls, surveyor_name, surveyor )
     cls.__dir__ = surveyor
 
 
@@ -225,12 +212,13 @@ def dataclass_standard(
 
         Ensures instances have immutable attributes.
     '''
+    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
     behaviors: set[ str ] = set( )
     if mutables != '*': behaviors.add( _immutability_label )
     if visibles != '*': behaviors.add( _concealment_label )
     postproc_i = produce_initialization_postprocessor(
         behaviors = behaviors,
-        nomargs_injection = { _class_behaviors_name: set( ) } )
+        nomargs_injection = { behaviors_name: set( ) } )
     postproc_m = produce_mutables_postprocessor( error_provider, mutables )
     postproc_v = produce_visibles_postprocessor( visibles )
     return _factories.produce_decorator(
@@ -281,7 +269,8 @@ def class_construction_preprocessor( # noqa: PLR0913
 def class_construction_postprocessor(
     cls: type, decorators: _nomina.DecoratorsMutable
 ) -> None:
-    arguments = getattr( cls, _class_construction_arguments_name, { } )
+    arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
+    arguments = getattr( cls, arguments_name, { } )
     dcls_spec = getattr( cls, '__dataclass_transform__', None )
     instance_mutables = arguments.get( 'instance_mutables', _mutables_default )
     instance_visibles = arguments.get( 'instance_visibles', _visibles_default )
@@ -296,10 +285,10 @@ def class_construction_postprocessor(
 
 
 def class_initialization_completer( cls: type ) -> None:
+    arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
     arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
-        getattr( cls, _class_construction_arguments_name, None ) )
-    if arguments is not None:
-        delattr( cls, _class_construction_arguments_name )
+        getattr( cls, arguments_name, None ) )
+    if arguments is not None: delattr( cls, arguments_name )
     arguments = arguments or { }
     class_mutables = arguments.get( 'class_mutables', _mutables_default )
     class_visibles = arguments.get( 'class_visibles', _visibles_default )
@@ -311,12 +300,16 @@ def class_initialization_completer( cls: type ) -> None:
         _record_class_visibles( cls, class_visibles )
         behaviors.add( _concealment_label )
     # Set behaviors attribute last since it enables enforcement.
-    setattr( cls, _cfc_behaviors_name, behaviors )
+    setattr( cls, _calculate_attrname( 'class', 'behaviors' ), behaviors )
 
 
 def produce_class_attributes_assigner(
     error_provider: ErrorClassProvider
 ) -> _factories.Assigner:
+    behaviors_name = _calculate_attrname( 'class', 'behaviors' )
+    names_name = _calculate_attrname( 'class', 'mutables_names' )
+    # regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
+    # predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
 
     def assign(
         cls: type,
@@ -324,18 +317,16 @@ def produce_class_attributes_assigner(
         name: str,
         value: __.typx.Any,
     ) -> None:
-        behaviors = (
-            _utilities.getattr0( cls, _cfc_behaviors_name, frozenset( ) ) )
+        behaviors = _utilities.getattr0( cls, behaviors_name, frozenset( ) )
         if _immutability_label not in behaviors:
             superf( name, value )
             return
-        mutables_names: MutablesNames = (
-            getattr( cls, _cfc_mutables_names_name, frozenset( ) ) )
-        # mutables_predicates: AttributeMutabilityPredicates = (
-        #     getattr( cls, _cfc_mutables_predicates_name, ( ) ) )
-        # mutables_regexes: AttributeMutabilityRegexes = (
-        #     getattr( cls, _cfc_mutables_regexes_name, ( ) ) )
-        if name in mutables_names:
+        names: MutablesNames = getattr( cls, names_name, frozenset( ) )
+        # predicates: AttributeMutabilityPredicates = (
+        #     getattr( cls, predicates_name, ( ) ) )
+        # regexes: AttributeMutabilityRegexes = (
+        #     getattr( cls, regexes_name, ( ) ) )
+        if name in names:
             superf( name, value )
             return
         # TODO: Sweep predicates.
@@ -349,22 +340,24 @@ def produce_class_attributes_assigner(
 def produce_class_attributes_deleter(
     error_provider: ErrorClassProvider
 ) -> _factories.Deleter:
+    behaviors_name = _calculate_attrname( 'class', 'behaviors' )
+    names_name = _calculate_attrname( 'class', 'mutables_names' )
+    # regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
+    # predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
 
     def delete(
         cls: type, superf: _factories.DeleterLigation, name: str
     ) -> None:
-        behaviors = (
-            _utilities.getattr0( cls, _cfc_behaviors_name, frozenset( ) ) )
+        behaviors = _utilities.getattr0( cls, behaviors_name, frozenset( ) )
         if _immutability_label not in behaviors:
             superf( name )
             return
-        mutables_names: MutablesNames = (
-            getattr( cls, _cfc_mutables_names_name, frozenset( ) ) )
+        names: MutablesNames = getattr( cls, names_name, frozenset( ) )
         # mutables_predicates: AttributeMutabilityPredicates = (
-        #     getattr( cls, _cfc_mutables_predicates_name, ( ) ) )
+        #     getattr( cls, predicates_name, ( ) ) )
         # mutables_regexes: AttributeMutabilityRegexes = (
-        #     getattr( cls, _cfc_mutables_regexes_name, ( ) ) )
-        if name in mutables_names:
+        #     getattr( cls, regexes_name, ( ) ) )
+        if name in names:
             superf( name )
             return
         # TODO: Sweep predicates.
@@ -376,26 +369,28 @@ def produce_class_attributes_deleter(
 
 
 def produce_class_attributes_surveyor( ) -> _factories.Surveyor:
+    behaviors_name = _calculate_attrname( 'class', 'behaviors' )
+    names_name = _calculate_attrname( 'class', 'visibles_names' )
+    # regexes_name = _calculate_attrname( 'class', 'visibles_regexes' )
+    predicates_name = _calculate_attrname( 'class', 'visibles_predicates' )
 
     def survey(
         cls: type, superf: _factories.SurveyorLigation
     ) -> __.cabc.Iterable[ str ]:
-        names = superf( )
-        behaviors = (
-            _utilities.getattr0( cls, _cfc_behaviors_name, frozenset( ) ) )
-        if _concealment_label not in behaviors: return names
-        visibles_names: VisiblesNames = (
-            getattr( cls, _cfc_visibles_names_name, frozenset( ) ) )
-        visibles_predicates: AttributeVisibilityPredicates = (
-            getattr( cls, _cfc_visibles_predicates_name, ( ) ) )
-        # visibles_regexes: AttributeVisibilityRegexes = (
-        #     getattr( cls, _cfc_visibles_regexes_name, ( ) ) )
+        names_base = superf( )
+        behaviors = _utilities.getattr0( cls, behaviors_name, frozenset( ) )
+        if _concealment_label not in behaviors: return names_base
+        names: VisiblesNames = getattr( cls, names_name, frozenset( ) )
+        predicates: AttributeVisibilityPredicates = (
+            getattr( cls, predicates_name, ( ) ) )
+        # regexes: AttributeVisibilityRegexes = (
+        #     getattr( cls, regexes_name, ( ) ) )
         names_: list[ str ] = [ ]
-        for name in names:
-            if visibles_names and name in visibles_names:
+        for name in names_base:
+            if names and name in names:
                 names_.append( name )
                 continue
-            for predicate in visibles_predicates:
+            for predicate in predicates:
                 if predicate( name ):
                     names_.append( name )
                     continue
@@ -426,6 +421,7 @@ def produce_initialization_postprocessor(
     posargs_injection: __.PositionalArguments = ( ),
     nomargs_injection: __.NominativeArguments = __.dictproxy_empty,
 ) -> _nomina.DecorationPostprocessor:
+    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
     def postprocess( cls: type ) -> None:
         original_init = getattr( cls, '__init__' )
 
@@ -437,10 +433,9 @@ def produce_initialization_postprocessor(
                 self,
                 *( *posargs_injection, *posargs ),
                 **{ **nomargs_injection, **nomargs } )
-            behaviors_ = _utilities.getattr0(
-                self, _class_behaviors_name, set( ) )
+            behaviors_ = _utilities.getattr0( self, behaviors_name, set( ) )
             if not behaviors_:
-                setattr( self, _class_behaviors_name, behaviors_ )
+                setattr( self, behaviors_name, behaviors_ )
             behaviors_.update( behaviors )
 
         cls.__init__ = initialize
@@ -459,21 +454,21 @@ def produce_mutables_postprocessor(
         _classify_mutability_verifiers( mutables ) )
     # TODO? Add regexes match cache.
     # TODO? Add predicates match cache.
+    names_name = _calculate_attrname( 'instances', 'mutables_names' )
+    regexes_name = _calculate_attrname( 'instances', 'mutables_regexes' )
+    predicates_name = _calculate_attrname( 'instances', 'mutables_predicates' )
 
     def postprocess( cls: type ) -> None:
         mutables_names_: MutablesNames = frozenset( {
-            *mutables_names,
-            *getattr( cls, _class_mutables_names_name, frozenset( ) ) } )
-        setattr( cls, _class_mutables_names_name, mutables_names_ )
+            *mutables_names, *getattr( cls, names_name, frozenset( ) ) } )
+        setattr( cls, names_name, mutables_names_ )
         # TODO: Deduplicating, ordered merge for regexes and predicates.
         mutables_regexes_: AttributeMutabilityRegexes = (
-            *mutables_regexes,
-            *getattr( cls, _class_mutables_regexes_name, ( ) ) )
-        setattr( cls, _class_mutables_regexes_name, mutables_regexes_ )
+            *mutables_regexes, *getattr( cls, regexes_name, ( ) ) )
+        setattr( cls, regexes_name, mutables_regexes_ )
         mutables_predicates_: AttributeMutabilityPredicates = (
-            *mutables_predicates,
-            *getattr( cls, _class_mutables_predicates_name, ( ) ) )
-        setattr( cls, _class_mutables_predicates_name, mutables_predicates_ )
+            *mutables_predicates, *getattr( cls, predicates_name, ( ) ) )
+        setattr( cls, predicates_name, mutables_predicates_ )
         associate_delattr( cls, error_provider )
         associate_setattr( cls, error_provider )
 
@@ -490,21 +485,21 @@ def produce_visibles_postprocessor(
         _classify_visibility_verifiers( visibles ) )
     # TODO? Add regexes match cache.
     # TODO? Add predicates match cache.
+    names_name = _calculate_attrname( 'instances', 'visibles_names' )
+    regexes_name = _calculate_attrname( 'instances', 'visibles_regexes' )
+    predicates_name = _calculate_attrname( 'instances', 'visibles_predicates' )
 
     def postprocess( cls: type ) -> None:
         visibles_names_: VisiblesNames = frozenset( {
-            *visibles_names,
-            *getattr( cls, _class_visibles_names_name, frozenset( ) ) } )
-        setattr( cls, _class_visibles_names_name, visibles_names_ )
+            *visibles_names, *getattr( cls, names_name, frozenset( ) ) } )
+        setattr( cls, names_name, visibles_names_ )
         # TODO: Deduplicating, ordered merge for regexes and predicates.
         visibles_regexes_: AttributeVisibilityRegexes = (
-            *visibles_regexes,
-            *getattr( cls, _class_visibles_regexes_name, ( ) ) )
-        setattr( cls, _class_visibles_regexes_name, visibles_regexes_ )
+            *visibles_regexes, *getattr( cls, regexes_name, ( ) ) )
+        setattr( cls, regexes_name, visibles_regexes_ )
         visibles_predicates_: AttributeVisibilityPredicates = (
-            *visibles_predicates,
-            *getattr( cls, _class_visibles_predicates_name, ( ) ) )
-        setattr( cls, _class_visibles_predicates_name, visibles_predicates_ )
+            *visibles_predicates, *getattr( cls, predicates_name, ( ) ) )
+        setattr( cls, predicates_name, visibles_predicates_ )
         associate_dir( cls )
 
     return postprocess
@@ -530,18 +525,10 @@ def _annotate_class(
     cls: type, decorators: _nomina.DecoratorsMutable
 ) -> None:
     ''' Annotates class in support of machinery. '''
+    # TODO: Use inspect to get annotations.
     annotations = getattr( cls, '__annotations__' )
     # TODO: accretive set instead of set
-    annotations[ _class_behaviors_name ] = set[ str ]
-
-
-def _annotate_cfc(
-    cls: type, decorators: _nomina.DecoratorsMutable
-) -> None:
-    ''' Annotates metaclass in support of machinery. '''
-    annotations = getattr( cls, '__annotations__' )
-    # TODO: accretive set instead of set
-    annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
+    annotations[ _calculate_attrname( 'instance', 'behaviors' ) ] = set[ str ]
 
 
 def _classify_mutability_verifiers(
@@ -593,18 +580,24 @@ def _record_class_mutables(
     cls: type, mutables: AttributeMutabilityVerifiers
 ) -> None:
     names, regexes, predicates = _classify_mutability_verifiers( mutables )
-    setattr( cls, _cfc_mutables_names_name, names )
-    setattr( cls, _cfc_mutables_regexes_name, regexes )
-    setattr( cls, _cfc_mutables_predicates_name, predicates )
+    names_name = _calculate_attrname( 'class', 'mutables_names' )
+    regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
+    predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
+    setattr( cls, names_name, names )
+    setattr( cls, regexes_name, regexes )
+    setattr( cls, predicates_name, predicates )
 
 
 def _record_class_visibles(
     cls: type, mutables: AttributeVisibilityVerifiers
 ) -> None:
     names, regexes, predicates = _classify_visibility_verifiers( mutables )
-    setattr( cls, _cfc_visibles_names_name, names )
-    setattr( cls, _cfc_visibles_regexes_name, regexes )
-    setattr( cls, _cfc_visibles_predicates_name, predicates )
+    names_name = _calculate_attrname( 'class', 'visibles_names' )
+    regexes_name = _calculate_attrname( 'class', 'visibles_regexes' )
+    predicates_name = _calculate_attrname( 'class', 'visibles_predicates' )
+    setattr( cls, names_name, names )
+    setattr( cls, regexes_name, regexes )
+    setattr( cls, predicates_name, predicates )
 
 
 def _record_class_construction_arguments(
@@ -618,7 +611,8 @@ def _record_class_construction_arguments(
     ):
         if name not in arguments: continue
         arguments_[ name ] = arguments.pop( name )
-    namespace[ _class_construction_arguments_name ] = arguments_
+    arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
+    namespace[ arguments_name ] = arguments_
 
 
 class Object( metaclass = Class ): pass
