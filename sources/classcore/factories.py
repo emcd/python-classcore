@@ -73,7 +73,24 @@ SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 
-# TODO: ConstructionPreprocessor (arguments/bases/namespace mutation)
+ConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[
+        [
+            type[ type ],               # metaclass
+            str,                        # class name
+            list[ type ],               # bases (mutable)
+            dict[ str, __.typx.Any ],   # namespace (mutable)
+            dict[ str, __.typx.Any ],   # arguments (mutable)
+            _nomina.DecoratorsMutable,  # decorators (mutable)
+        ],
+        None
+    ],
+    __.typx.Doc(
+        ''' Processes class data before construction.
+
+            For use cases, such as argument conversion.
+        ''' ),
+]
 ConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ type, _nomina.DecoratorsMutable ], None ],
     __.typx.Doc(
@@ -159,6 +176,10 @@ ProduceFactorySurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.typx.Doc(
         ''' Default attributes surveyor to use with metaclasses. ''' ),
 ]
+ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Sequence[ ConstructionPreprocessor ],
+    __.typx.Doc( ''' Processors to apply before construction of class. ''' ),
+]
 ProduceConstructorPostprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Sequence[ ConstructionPostprocessor ],
     __.typx.Doc( ''' Processors to apply before decoration of class. ''' ),
@@ -171,18 +192,34 @@ ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
 
 
 progress_name = '_class_IN_PROGRESS_'
-decorators_name = '_class_decorators_'
 initializer_name = '_class_initializer_'
 assigner_name = '_class_attributes_assigner_'
 deleter_name = '_class_attributes_deleter_'
 surveyor_name = '_class_attributes_surveyor_'
 
 
+def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
+    ''' Applies sequence of decorators to class.
+
+        If decorators replace classes (e.g., ``dataclass( slots = True )``),
+        then any necessary repairs are performed on the replacement class with
+        respect to the original. E.g., on CPython, the class closure cell is
+        repaired so that ``super`` operates correctly in methods of the
+        replacement class.
+    '''
+    for decorator in decorators:
+        cls_ = decorator( cls )
+        if cls is cls_: continue # Simple mutation. No replacement.
+        _utilities.repair_class_reproduction( cls, cls_ )
+        cls = cls_ # Use the replacement class.
+    return cls
+
+
 def produce_constructor(
+    preprocessors: ProduceConstructorPreprocsArgument = ( ),
     postprocessors: ProduceConstructorPostprocsArgument = ( ),
 ) -> Constructor:
     ''' Produces constructors for classes. '''
-    # TODO? Support pre-construction hooks which can mutate various things.
 
     def construct( # noqa: PLR0913
         clscls: type[ _T ],
@@ -194,21 +231,19 @@ def produce_constructor(
         decorators: _nomina.Decorators,
     ) -> type:
         ''' Constructs class, applying decorators and hooks. '''
-        cls = superf( clscls, name, bases, namespace, **arguments )
+        bases_ = list( bases )
+        arguments_ = dict( arguments )
+        decorators_ = list( decorators )
+        for prep in preprocessors:
+            prep( clscls, name, bases_, namespace, arguments_, decorators_ )
+        cls = superf( clscls, name, tuple( bases_ ), namespace, **arguments_ )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
         in_progress = _utilities.getattr0( cls, progress_name, False )
         if in_progress: return cls
         setattr( cls, progress_name, True )
-        setattr( cls, decorators_name, decorators )
-        decorators_ = list( decorators )
-        for postprocessor in postprocessors:
-            postprocessor( cls, decorators_ )
-        for decorator in decorators_:
-            cls_ = decorator( cls )
-            if cls is cls_: continue
-            _utilities.repair_class_reproduction( cls, cls_ )
-            cls = cls_
+        for postp in postprocessors: postp( cls, decorators_ )
+        cls = apply_decorators( cls, decorators_ )
         setattr( cls, progress_name, False )
         return cls
 
@@ -242,7 +277,7 @@ initializer_default = produce_initializer( )
 
 def produce_class_factory( # noqa: PLR0913
     clscls_base: type[ _T ], *,
-    # TODO: clscls_decorators (e.g., 'with_docstring')
+    clscls_decorators: _nomina.Decorators = ( ),
     constructor: ProduceFactoryConstructorArgument = constructor_default,
     initializer: ProduceFactoryInitializerArgument = initializer_default,
     assigner: ProduceFactoryAssignerArgument = None,
@@ -289,9 +324,7 @@ def produce_class_factory( # noqa: PLR0913
             if surveyor is None: return dir_base( )
             return surveyor( cls, dir_base )
 
-
-    # TODO: Run decorators on metaclass.
-    return Class
+    return apply_decorators( Class, clscls_decorators )
 
 
 def produce_decorator(
@@ -308,11 +341,7 @@ def produce_decorator(
         decorators_ = list( decorators )
         for preprocessor in preprocessors:
             preprocessor( cls, decorators_ )
-        for decorator in decorators_:
-            cls_ = decorator( cls )
-            if cls is cls_: continue
-            _utilities.repair_class_reproduction( cls, cls_ )
-            cls = cls_
+        cls = apply_decorators( cls, decorators_ )
         for postprocessor in postprocessors:
             postprocessor( cls )
         return cls
