@@ -37,3 +37,36 @@ DecorationPreprocessor: __.typx.TypeAlias = (
     __.cabc.Callable[ [ type, DecoratorsMutable ], None ] )
 DecorationPreprocessors: __.typx.TypeAlias = (
     __.cabc.Sequence[ DecorationPreprocessor ] )
+
+InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ ..., None ],
+    __.typx.Doc(
+        ''' Bound initializer function.
+
+            Usually from ``super( ).__init__`` or a partial function.
+        ''' ),
+]
+AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str, __.typx.Any ], None ],
+    __.typx.Doc(
+        ''' Bound attributes assigner function.
+
+            Usually from ``super( ).__setattr__`` or a partial function.
+        ''' ),
+]
+DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str ], None ],
+    __.typx.Doc(
+        ''' Bound attributes deleter function.
+
+            Usually from ``super( ).__delattr__`` or a partial function.
+        ''' ),
+]
+SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
+    __.typx.Doc(
+        ''' Bound attributes surveyor function.
+
+            Usually from ``super( ).__dir__`` or a partial function.
+        ''' ),
+]

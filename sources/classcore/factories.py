@@ -36,16 +36,6 @@ ConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., type ],
     __.typx.Doc( ''' Constructor method from base metaclass. ''' ),
 ]
-InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ ..., None ],
-    __.typx.Doc(
-        ''' Bound initializer function.
-
-            Usually from ``super( ).__init__``, but may also be a partial
-            function.
-        ''' ),
-]
-
 ConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
         [
@@ -83,18 +73,6 @@ InitializationCompleter: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 
-Initializer: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [
-            type,
-            InitializerLigation,
-            __.PositionalArguments,
-            __.NominativeArguments,
-        ],
-        None
-    ],
-    __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
-]
 
 Constructor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
@@ -111,16 +89,35 @@ Constructor: __.typx.TypeAlias = __.typx.Annotated[
     ],
     __.typx.Doc( ''' Constructor to use with metaclass. ''' ),
 ]
+Initializer: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[
+        [
+            type,
+            _nomina.InitializerLigation,
+            __.PositionalArguments,
+            __.NominativeArguments,
+        ],
+        None
+    ],
+    __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
+]
+Assigner: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[
+        [ type, _nomina.AssignerLigation, str, __.typx.Any ], None ],
+    __.typx.Doc( ''' Attribute assigner to use with metaclass. ''' ),
+]
+Deleter: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[
+        [ type, _nomina.DeleterLigation, str ], None ],
+    __.typx.Doc( ''' Attribute deleter to use with metaclass. ''' ),
+]
+Surveyor: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[
+        [ type, _nomina.SurveyorLigation ], __.cabc.Iterable[ str ] ],
+    __.typx.Doc( ''' Attribute surveyor to use with metaclass. ''' ),
+]
 
 
-ProduceFactoryConstructorArgument: __.typx.TypeAlias = __.typx.Annotated[
-    Constructor,
-    __.typx.Doc( ''' Default constructor to use with metaclasses. ''' ),
-]
-ProduceFactoryInitializerArgument: __.typx.TypeAlias = __.typx.Annotated[
-    Initializer,
-    __.typx.Doc( ''' Default initializer to use with metaclasses. ''' ),
-]
 ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Sequence[ ConstructionPreprocessor ],
     __.typx.Doc( ''' Processors to apply before construction of class. ''' ),
@@ -198,7 +195,7 @@ def produce_initializer(
 
     def initialize(
         cls: type,
-        superf: InitializerLigation,
+        superf: _nomina.InitializerLigation,
         posargs: __.PositionalArguments,
         nomargs: __.NominativeArguments,
     ) -> None:
@@ -217,9 +214,12 @@ initializer_default = produce_initializer( )
 
 
 def produce_class_construction_decorator(
-    constructor: ProduceFactoryConstructorArgument = constructor_default
+    constructor: Constructor = constructor_default
 ) -> _nomina.Decorator:
-    ''' Produces metaclass decorator to control class construction. '''
+    ''' Produces metaclass decorator to control class construction.
+
+        Decorator overrides ``__new__`` on metaclass.
+    '''
     def decorate( clscls: type[ _T ] ) -> type[ _T ]:
         original = getattr( clscls, '__new__' )
 
@@ -242,9 +242,12 @@ def produce_class_construction_decorator(
 
 
 def produce_class_initialization_decorator(
-    initializer: ProduceFactoryInitializerArgument = initializer_default
+    initializer: Initializer = initializer_default
 ) -> _nomina.Decorator:
-    ''' Produces metaclass decorator to control class initialization. '''
+    ''' Produces metaclass decorator to control class initialization.
+
+        Decorator overrides ``__init__`` on metaclass.
+    '''
     def decorate( clscls: type[ _T ] ) -> type[ _T ]:
         original = getattr( clscls, '__init__' )
 
@@ -257,6 +260,52 @@ def produce_class_initialization_decorator(
                 cls, __.funct.partial( original, cls ), posargs, nomargs )
 
         clscls.__init__ = initialize
+        return clscls
+
+    return decorate
+
+
+def produce_class_mutation_control_decorator(
+    assigner: Assigner, deleter: Deleter
+) -> _nomina.Decorator:
+    ''' Produces metaclass decorator for class mutation control.
+
+        Decorator overrides ``__delattr__`` and ``__setattr__`` on metaclass.
+    '''
+    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        original_assigner = getattr( clscls, '__setattr__' )
+        original_deleter = getattr( clscls, '__delattr__' )
+
+        def assign( cls: type, name: str, value: __.typx.Any ) -> None:
+            ligation = __.funct.partial( original_assigner, cls )
+            assigner( cls, ligation, name, value )
+
+        def delete( cls: type, name: str ) -> None:
+            ligation = __.funct.partial( original_deleter, cls )
+            deleter( cls, ligation, name )
+
+        clscls.__delattr__ = delete
+        clscls.__setattr__ = assign
+        return clscls
+
+    return decorate
+
+
+def produce_class_visibility_control_decorator(
+    surveyor: Surveyor
+) -> _nomina.Decorator:
+    ''' Produces metaclass decorator for class visibility control.
+
+        Decorator overrides ``__dir__`` on metaclass.
+    '''
+    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        original = getattr( clscls, '__dir__' )
+
+        def survey( cls: type ) -> __.cabc.Iterable[ str ]:
+            ligation = __.funct.partial( original, cls )
+            return surveyor( cls, ligation )
+
+        clscls.__dir__ = survey # pyright: ignore[reportAttributeAccessIssue]
         return clscls
 
     return decorate
