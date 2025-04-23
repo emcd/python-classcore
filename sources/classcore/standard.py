@@ -32,6 +32,7 @@ from . import nomina as _nomina
 from . import utilities as _utilities
 
 
+_T = __.typx.TypeVar( '_T', bound = type )
 _U = __.typx.TypeVar( '_U' )
 
 
@@ -59,6 +60,46 @@ ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
 MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
+
+AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str, __.typx.Any ], None ],
+    __.typx.Doc(
+        ''' Bound attributes assigner function.
+
+            Usually from ``super( ).__setattr__``, but may also be a partial
+            function.
+        ''' ),
+]
+DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str ], None ],
+    __.typx.Doc(
+        ''' Bound attributes deleter function.
+
+            Usually from ``super( ).__delattr__``, but may also be a partial
+            function.
+        ''' ),
+]
+SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
+    __.typx.Doc(
+        ''' Bound attributes surveyor function.
+
+            Usually from ``super( ).__dir__``, but may also be a partial
+            function.
+        ''' ),
+]
+Assigner: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, AssignerLigation, str, __.typx.Any ], None ],
+    __.typx.Doc( ''' Attribute assigner to use with metaclass. ''' ),
+]
+Deleter: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, DeleterLigation, str ], None ],
+    __.typx.Doc( ''' Attribute deleter to use with metaclass. ''' ),
+]
+Surveyor: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type, SurveyorLigation ], __.cabc.Iterable[ str ] ],
+    __.typx.Doc( ''' Attribute surveyor to use with metaclass. ''' ),
+]
 
 
 def is_public_identifier( name: str ) -> bool:
@@ -274,7 +315,7 @@ def class_initialization_completer( cls: type ) -> None:
 
 def produce_class_attributes_assigner(
     error_class_provider: ErrorClassProvider
-) -> _factories.Assigner:
+) -> Assigner:
     behaviors_name = _calculate_attrname( 'class', 'behaviors' )
     names_name = _calculate_attrname( 'class', 'mutables_names' )
     regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
@@ -282,7 +323,7 @@ def produce_class_attributes_assigner(
 
     def assign(
         cls: type,
-        superf: _factories.AssignerLigation,
+        superf: AssignerLigation,
         name: str,
         value: __.typx.Any,
     ) -> None:
@@ -302,14 +343,14 @@ def produce_class_attributes_assigner(
 
 def produce_class_attributes_deleter(
     error_class_provider: ErrorClassProvider
-) -> _factories.Deleter:
+) -> Deleter:
     behaviors_name = _calculate_attrname( 'class', 'behaviors' )
     names_name = _calculate_attrname( 'class', 'mutables_names' )
     regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
     predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
 
     def delete(
-        cls: type, superf: _factories.DeleterLigation, name: str
+        cls: type, superf: DeleterLigation, name: str
     ) -> None:
         _delete_attribute_if_mutable(
             cls,
@@ -324,14 +365,14 @@ def produce_class_attributes_deleter(
     return delete
 
 
-def produce_class_attributes_surveyor( ) -> _factories.Surveyor:
+def produce_class_attributes_surveyor( ) -> Surveyor:
     behaviors_name = _calculate_attrname( 'class', 'behaviors' )
     names_name = _calculate_attrname( 'class', 'visibles_names' )
     regexes_name = _calculate_attrname( 'class', 'visibles_regexes' )
     predicates_name = _calculate_attrname( 'class', 'visibles_predicates' )
 
     def survey(
-        cls: type, superf: _factories.SurveyorLigation
+        cls: type, superf: SurveyorLigation
     ) -> __.cabc.Iterable[ str ]:
         return _survey_visible_attributes(
             cls,
@@ -449,20 +490,76 @@ def produce_visibles_postprocessor(
     return postprocess
 
 
-Class = _factories.produce_class_factory(
-    type,
-    constructor = construct_class,
-    initializer = initialize_class,
-    assigner = assign_class_attributes,
-    deleter = delete_class_attributes,
-    surveyor = survey_class_attributes )
-ProtocolClass = _factories.produce_class_factory(
-    type( __.typx.Protocol ), # pyright: ignore[reportArgumentType]
-    constructor = construct_class,
-    initializer = initialize_class,
-    assigner = assign_class_attributes,
-    deleter = delete_class_attributes,
-    surveyor = survey_class_attributes )
+def produce_class_immutability_decorator(
+    assigner: Assigner = assign_class_attributes,
+    deleter: Deleter = delete_class_attributes,
+) -> _nomina.Decorator:
+    ''' Produces metaclass decorator for class attributes immutability. '''
+    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        original_assigner = getattr( clscls, '__setattr__' )
+        original_deleter = getattr( clscls, '__delattr__' )
+
+        def assign( cls: type, name: str, value: __.typx.Any ) -> None:
+            ligation = __.funct.partial( original_assigner, cls )
+            assigner( cls, ligation, name, value )
+
+        def delete( cls: type, name: str ) -> None:
+            ligation = __.funct.partial( original_deleter, cls )
+            deleter( cls, ligation, name )
+
+        clscls.__delattr__ = delete
+        clscls.__setattr__ = assign
+        return clscls
+
+    return decorate
+
+
+def produce_class_concealment_decorator(
+    surveyor: Surveyor = survey_class_attributes
+) -> _nomina.Decorator:
+    ''' Produces metaclass decorator for class attributes concealment. '''
+    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        original = getattr( clscls, '__dir__' )
+
+        def survey( cls: type ) -> __.cabc.Iterable[ str ]:
+            ligation = __.funct.partial( original, cls )
+            return surveyor( cls, ligation )
+
+        clscls.__dir__ = survey # pyright: ignore[reportAttributeAccessIssue]
+        return clscls
+
+    return decorate
+
+
+
+class_construction_decorator = (
+    _factories.produce_class_construction_decorator(
+        constructor = construct_class ) )
+class_initialization_decorator = (
+    _factories.produce_class_initialization_decorator(
+        initializer = initialize_class ) )
+class_concealment_decorator = (
+    produce_class_concealment_decorator(
+        surveyor = survey_class_attributes ) )
+class_immutability_decorator = (
+    produce_class_immutability_decorator(
+        assigner = assign_class_attributes,
+        deleter = delete_class_attributes ) )
+
+
+decorators_standard = (
+    class_construction_decorator,
+    class_initialization_decorator,
+    class_concealment_decorator,
+    class_immutability_decorator,
+)
+
+
+@_factories.decoration_by( decorators_standard )
+class Class( type ): pass
+
+@_factories.decoration_by( decorators_standard )
+class ProtocolClass( type( __.typx.Protocol ) ): pass
 
 
 def _annotate_class(
@@ -477,7 +574,7 @@ def _annotate_class(
 
 def _assign_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
-    ligation: _factories.AssignerLigation,
+    ligation: AssignerLigation,
     error_class_provider: ErrorClassProvider,
     behaviors_name: str,
     names_name: str,
@@ -506,7 +603,7 @@ def _assign_attribute_if_mutable( # noqa: PLR0913
 
 def _delete_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
-    ligation: _factories.DeleterLigation,
+    ligation: DeleterLigation,
     error_class_provider: ErrorClassProvider,
     behaviors_name: str,
     names_name: str,
@@ -534,7 +631,7 @@ def _delete_attribute_if_mutable( # noqa: PLR0913
 
 def _survey_visible_attributes( # noqa: PLR0913
     obj: object, /, *,
-    ligation: _factories.SurveyorLigation,
+    ligation: SurveyorLigation,
     behaviors_name: str,
     names_name: str,
     regexes_name: str,

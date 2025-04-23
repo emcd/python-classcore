@@ -45,33 +45,6 @@ InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
             function.
         ''' ),
 ]
-AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ str, __.typx.Any ], None ],
-    __.typx.Doc(
-        ''' Bound attributes assigner function.
-
-            Usually from ``super( ).__setattr__``, but may also be a partial
-            function.
-        ''' ),
-]
-DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ str ], None ],
-    __.typx.Doc(
-        ''' Bound attributes deleter function.
-
-            Usually from ``super( ).__delattr__``, but may also be a partial
-            function.
-        ''' ),
-]
-SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
-    __.typx.Doc(
-        ''' Bound attributes surveyor function.
-
-            Usually from ``super( ).__dir__``, but may also be a partial
-            function.
-        ''' ),
-]
 
 ConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
@@ -122,19 +95,6 @@ Initializer: __.typx.TypeAlias = __.typx.Annotated[
     ],
     __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
 ]
-Assigner: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, AssignerLigation, str, __.typx.Any ], None ],
-    __.typx.Doc( ''' Attribute assigner to use with metaclass. ''' ),
-]
-Deleter: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, DeleterLigation, str ], None ],
-    __.typx.Doc( ''' Attribute deleter to use with metaclass. ''' ),
-]
-Surveyor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, SurveyorLigation ], __.cabc.Iterable[ str ] ],
-    __.typx.Doc( ''' Attribute surveyor to use with metaclass. ''' ),
-]
-
 
 Constructor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
@@ -161,21 +121,6 @@ ProduceFactoryInitializerArgument: __.typx.TypeAlias = __.typx.Annotated[
     Initializer,
     __.typx.Doc( ''' Default initializer to use with metaclasses. ''' ),
 ]
-ProduceFactoryAssignerArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.typx.Optional[ Assigner ],
-    __.typx.Doc(
-        ''' Default attributes assigner to use with metaclasses. ''' ),
-]
-ProduceFactoryDeleterArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.typx.Optional[ Deleter ],
-    __.typx.Doc(
-        ''' Default attributes deleter to use with metaclasses. ''' ),
-]
-ProduceFactorySurveyorArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.typx.Optional[ Surveyor ],
-    __.typx.Doc(
-        ''' Default attributes surveyor to use with metaclasses. ''' ),
-]
 ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Sequence[ ConstructionPreprocessor ],
     __.typx.Doc( ''' Processors to apply before construction of class. ''' ),
@@ -191,11 +136,7 @@ ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
 ]
 
 
-progress_name = '_class_IN_PROGRESS_'
-initializer_name = '_class_initializer_'
-assigner_name = '_class_attributes_assigner_'
-deleter_name = '_class_attributes_deleter_'
-surveyor_name = '_class_attributes_surveyor_'
+_progress_name = '_class_IN_PROGRESS_'
 
 
 def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
@@ -239,12 +180,12 @@ def produce_constructor(
         cls = superf( clscls, name, tuple( bases_ ), namespace, **arguments_ )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
-        in_progress = _utilities.getattr0( cls, progress_name, False )
+        in_progress = _utilities.getattr0( cls, _progress_name, False )
         if in_progress: return cls
-        setattr( cls, progress_name, True )
+        setattr( cls, _progress_name, True )
         for postp in postprocessors: postp( cls, decorators_ )
         cls = apply_decorators( cls, decorators_ )
-        setattr( cls, progress_name, False )
+        setattr( cls, _progress_name, False )
         return cls
 
     return construct
@@ -263,9 +204,9 @@ def produce_initializer(
     ) -> None:
         ''' Initializes class, applying hooks. '''
         superf( *posargs, **nomargs )
-        in_progress = _utilities.getattr0( cls, progress_name, False )
+        in_progress = _utilities.getattr0( cls, _progress_name, False )
         if in_progress: return # If non-empty, then not top-level.
-        delattr( cls, progress_name )
+        delattr( cls, _progress_name )
         for completer in completers: completer( cls )
 
     return initialize
@@ -275,56 +216,75 @@ constructor_default = produce_constructor( )
 initializer_default = produce_initializer( )
 
 
-def produce_class_factory( # noqa: PLR0913
-    clscls_base: type[ _T ], *,
-    clscls_decorators: _nomina.Decorators = ( ),
-    constructor: ProduceFactoryConstructorArgument = constructor_default,
-    initializer: ProduceFactoryInitializerArgument = initializer_default,
-    assigner: ProduceFactoryAssignerArgument = None,
-    deleter: ProduceFactoryDeleterArgument = None,
-    surveyor: ProduceFactorySurveyorArgument = None,
-) -> type:
-    ''' Produces customized metaclasses from arbitrary base metaclasses. '''
+def produce_class_construction_decorator(
+    constructor: ProduceFactoryConstructorArgument = constructor_default
+) -> _nomina.Decorator:
+    ''' Produces metaclass decorator to control class construction. '''
+    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        original = getattr( clscls, '__new__' )
 
-    class Class( clscls_base ):
-
-        def __new__(
-            clscls: type[ Class ],
+        def construct(
+            clscls_: type[ _T ],
             name: str,
             bases: tuple[ type, ... ],
             namespace: dict[ str, __.typx.Any ], *,
             decorators: _nomina.Decorators = ( ),
             **arguments: __.typx.Any,
-        ) -> Class:
+        ) -> type:
             return constructor(
-                clscls, super( ).__new__,
+                clscls_, original,
                 name, bases, namespace, arguments, decorators )
 
-        def __init__(
+        clscls.__new__ = construct # pyright: ignore[reportAttributeAccessIssue]
+        return clscls
+
+    return decorate
+
+
+def produce_class_initialization_decorator(
+    initializer: ProduceFactoryInitializerArgument = initializer_default
+) -> _nomina.Decorator:
+    ''' Produces metaclass decorator to control class initialization. '''
+    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        original = getattr( clscls, '__init__' )
+
+        def initialize(
             cls: type,
             *posargs: __.typx.Any,
             **nomargs: __.typx.Any,
         ) -> None:
-            init_base = super( ).__init__
-            if initializer is None: init_base( *posargs, **nomargs )
-            else: initializer( cls, init_base, posargs, nomargs )
+            initializer(
+                cls, __.funct.partial( original, cls ), posargs, nomargs )
 
-        def __setattr__( cls: type, name: str, value: __.typx.Any ) -> None:
-            setattr_base = super( ).__setattr__
-            if assigner is None: setattr_base( name, value )
-            else: assigner( cls, setattr_base, name, value )
+        clscls.__init__ = initialize
+        return clscls
 
-        def __delattr__( cls: type, name: str ) -> None:
-            delattr_base = super( ).__delattr__
-            if deleter is None: delattr_base( name )
-            else: deleter( cls, delattr_base, name )
+    return decorate
 
-        def __dir__( cls: type ) -> __.cabc.Iterable[ str ]:
-            dir_base = super( ).__dir__
-            if surveyor is None: return dir_base( )
-            return surveyor( cls, dir_base )
 
-    return apply_decorators( Class, clscls_decorators )
+class_construction_decorator_default = (
+    produce_class_construction_decorator( ) )
+class_initialization_decorator_default = (
+    produce_class_initialization_decorator( ) )
+
+
+decorators_default = (
+    class_construction_decorator_default,
+    class_initialization_decorator_default,
+)
+
+
+def decoration_by(
+    decorators: _nomina.Decorators = ( )
+) -> _nomina.Decorator:
+    ''' Class decorator which applies other class decorators.
+
+        Useful to apply a stack of decorators as a sequence.
+    '''
+    def decorate( cls: type ) -> type:
+        return apply_decorators( cls, decorators )
+
+    return decorate
 
 
 def produce_decorator(
@@ -334,7 +294,7 @@ def produce_decorator(
 ) -> _nomina.Decorator:
     ''' Generic decorator factory.
 
-        Can wrap to adapt specialized arguments into preprocessors and
+        Can be wrapped to adapt specialized arguments into preprocessors and
         postprocessors.
     '''
     def decorate( cls: type[ _T ] ) -> type[ _T ]:
