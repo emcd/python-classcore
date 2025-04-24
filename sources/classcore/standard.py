@@ -36,6 +36,18 @@ _T = __.typx.TypeVar( '_T', bound = type )
 _U = __.typx.TypeVar( '_U' )
 
 
+BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]
+BehaviorExclusionPredicate: __.typx.TypeAlias = __.cabc.Callable[ ..., bool ]
+BehaviorExclusionPredicates: __.typx.TypeAlias = (
+    __.cabc.Sequence[ BehaviorExclusionPredicate ] )
+BehaviorExclusionRegex: __.typx.TypeAlias = __.re.Pattern[ str ]
+BehaviorExclusionRegexes: __.typx.TypeAlias = (
+    __.cabc.Sequence[ BehaviorExclusionRegex ] )
+BehaviorExclusionVerifier: __.typx.TypeAlias = (
+    str | BehaviorExclusionRegex | BehaviorExclusionPredicate )
+BehaviorExclusionVerifiers: __.typx.TypeAlias = (
+    __.cabc.Sequence[ BehaviorExclusionVerifier ] )
+MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 AttributeMutabilityPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str, __.typx.Any ], bool ] )
 AttributeMutabilityPredicates: __.typx.TypeAlias = (
@@ -43,9 +55,10 @@ AttributeMutabilityPredicates: __.typx.TypeAlias = (
 AttributeMutabilityRegexes: __.typx.TypeAlias = (
     __.cabc.Sequence[ __.re.Pattern[ str ] ] )
 AttributeMutabilityVerifier: __.typx.TypeAlias = (
-    str | __.re.Pattern[ str ] | AttributeMutabilityPredicate )
+    str | BehaviorExclusionRegex | AttributeMutabilityPredicate )
 AttributeMutabilityVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ AttributeMutabilityVerifier ] | __.typx.Literal[ '*' ] )
+VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 AttributeVisibilityPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], bool ] )
 AttributeVisibilityPredicates: __.typx.TypeAlias = (
@@ -53,15 +66,13 @@ AttributeVisibilityPredicates: __.typx.TypeAlias = (
 AttributeVisibilityRegexes: __.typx.TypeAlias = (
     __.cabc.Sequence[ __.re.Pattern[ str ] ] )
 AttributeVisibilityVerifier: __.typx.TypeAlias = (
-    str | __.re.Pattern[ str ] | AttributeVisibilityPredicate )
+    str | BehaviorExclusionRegex | AttributeVisibilityPredicate )
 AttributeVisibilityVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ AttributeVisibilityVerifier ] | __.typx.Literal[ '*' ] )
 AttributesNamer: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str, str ], str ] )
 ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
-MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
-VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 
 
 class AssignerCore( __.typx.Protocol ):
@@ -204,6 +215,7 @@ def class_construction_postprocessor(
 
 
 def class_initialization_completer( cls: type ) -> None:
+    attributes_namer = _calculate_attrname
     arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
     arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
         getattr( cls, arguments_name, None ) )
@@ -213,10 +225,12 @@ def class_initialization_completer( cls: type ) -> None:
     class_visibles = arguments.get( 'class_visibles', _visibles_default )
     behaviors: set[ str ] = set( )
     if class_mutables != '*':
-        _record_mutables( cls, _calculate_attrname, 'class', class_mutables )
+        _record_behavior_exclusions(
+            cls, attributes_namer, 'mutables', 'class', class_mutables )
         behaviors.add( _immutability_label )
     if class_visibles != '*':
-        _record_visibles( cls, _calculate_attrname, 'class', class_visibles )
+        _record_behavior_exclusions(
+            cls, attributes_namer, 'visibles', 'class', class_visibles )
         behaviors.add( _concealment_label )
     # Set behaviors attribute last since it enables enforcement.
     setattr( cls, _calculate_attrname( 'class', 'behaviors' ), behaviors )
@@ -480,43 +494,23 @@ def _survey_visible_attributes( # noqa: PLR0913
     return names_
 
 
-def _classify_mutability_verifiers(
-    mutables: AttributeMutabilityVerifiers
+def _classify_behavior_exclusion_verifiers(
+    verifiers: BehaviorExclusionVerifiers
 ) -> tuple[
-    MutablesNames,
-    AttributeMutabilityRegexes,
-    AttributeMutabilityPredicates,
+    BehaviorExclusionNames,
+    BehaviorExclusionRegexes,
+    BehaviorExclusionPredicates,
 ]:
     names: set[ str ] = set( )
     regexes: list[ __.re.Pattern[ str ] ] = [ ]
-    predicates: list[ AttributeMutabilityPredicate ] = [ ]
-    for mutable in mutables:
-        if isinstance( mutable, str ):
-            names.add( mutable )
-        elif isinstance( mutable, __.re.Pattern ):
-            regexes.append( mutable )
-        elif callable( mutable ):
-            predicates.append( mutable )
-    return frozenset( names ), tuple( regexes ), tuple( predicates )
-
-
-def _classify_visibility_verifiers(
-    visibles: AttributeVisibilityVerifiers
-) -> tuple[
-    VisiblesNames,
-    AttributeVisibilityRegexes,
-    AttributeVisibilityPredicates,
-]:
-    names: set[ str ] = set( )
-    regexes: list[ __.re.Pattern[ str ] ] = [ ]
-    predicates: list[ AttributeVisibilityPredicate ] = [ ]
-    for visible in visibles:
-        if isinstance( visible, str ):
-            names.add( visible )
-        elif isinstance( visible, __.re.Pattern ):
-            regexes.append( visible )
-        elif callable( visible ):
-            predicates.append( visible )
+    predicates: list[ __.cabc.Callable[ ..., bool ] ] = [ ]
+    for verifier in verifiers:
+        if isinstance( verifier, str ):
+            names.add( verifier )
+        elif isinstance( verifier, __.re.Pattern ):
+            regexes.append( verifier )
+        elif callable( verifier ):
+            predicates.append( verifier )
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
@@ -573,10 +567,12 @@ def _produce_initialization_postprocessor(
         nomargs_injection = { }
         posargs_injection = [ ]
         if mutables != '*':
-            _record_mutables( cls, attributes_namer, 'instances', mutables )
+            _record_behavior_exclusions(
+                cls, attributes_namer, 'mutables', 'instances', mutables )
             behaviors.add( _immutability_label )
         if visibles != '*':
-            _record_visibles( cls, attributes_namer, 'instances', visibles )
+            _record_behavior_exclusions(
+                cls, attributes_namer, 'visibles', 'instances', visibles )
             behaviors.add( _concealment_label )
         if __.dcls.is_dataclass( cls ):
             # Pass instance variables.
@@ -599,46 +595,24 @@ def _produce_initialization_postprocessor(
     return postprocess
 
 
-def _record_mutables(
+def _record_behavior_exclusions(
     cls: type,
     attributes_namer: AttributesNamer,
+    basename: str,
     level: str,
-    mutables: AttributeMutabilityVerifiers,
+    verifiers: BehaviorExclusionVerifiers,
 ) -> None:
-    names, regexes, predicates = _classify_mutability_verifiers( mutables )
-    names_name = attributes_namer( level, 'mutables_names' )
-    regexes_name = attributes_namer( level, 'mutables_regexes' )
-    predicates_name = attributes_namer( level, 'mutables_predicates' )
-    names_: MutablesNames = frozenset( {
+    names, regexes, predicates = (
+        _classify_behavior_exclusion_verifiers( verifiers ) )
+    names_name = attributes_namer( level, f"{basename}_names" )
+    regexes_name = attributes_namer( level, f"{basename}_regexes" )
+    predicates_name = attributes_namer( level, f"{basename}_predicates" )
+    names_: BehaviorExclusionNames = frozenset( {
         *names, *getattr( cls, names_name, frozenset( ) ) } )
     # TODO: Deduplicating, ordered merge for regexes and predicates.
-    regexes_: AttributeMutabilityRegexes = (
+    regexes_: BehaviorExclusionRegexes = (
         *regexes, *getattr( cls, regexes_name, ( ) ) )
-    predicates_: AttributeMutabilityPredicates = (
-        *predicates, *getattr( cls, predicates_name, ( ) ) )
-    setattr( cls, names_name, names_ )
-    setattr( cls, regexes_name, regexes_ )
-    setattr( cls, predicates_name, predicates_ )
-    # TODO? Add regexes match cache.
-    # TODO? Add predicates match cache.
-
-
-def _record_visibles(
-    cls: type,
-    attributes_namer: AttributesNamer,
-    level: str,
-    visibles: AttributeVisibilityVerifiers
-) -> None:
-    names, regexes, predicates = _classify_visibility_verifiers( visibles )
-    names_name = attributes_namer( level, 'visibles_names' )
-    regexes_name = attributes_namer( level, 'visibles_regexes' )
-    predicates_name = attributes_namer( level, 'visibles_predicates' )
-    names_: VisiblesNames = frozenset( {
-        *names, *getattr( cls, names_name, frozenset( ) ) } )
-    # TODO: Deduplicating, ordered merge for regexes and predicates.
-    regexes_: AttributeVisibilityRegexes = (
-        *regexes, *getattr( cls, regexes_name, ( ) ) )
-    predicates_: AttributeVisibilityPredicates = (
+    predicates_: BehaviorExclusionPredicates = (
         *predicates, *getattr( cls, predicates_name, ( ) ) )
     setattr( cls, names_name, names_ )
     setattr( cls, regexes_name, regexes_ )
