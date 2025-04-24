@@ -56,6 +56,8 @@ AttributeVisibilityVerifier: __.typx.TypeAlias = (
     str | __.re.Pattern[ str ] | AttributeVisibilityPredicate )
 AttributeVisibilityVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ AttributeVisibilityVerifier ] | __.typx.Literal[ '*' ] )
+AttributesNamer: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ str, str ], str ] )
 ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
 MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
@@ -172,50 +174,31 @@ def associate_dir( cls: type[ _U ] ) -> None:
 
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 def dataclass_standard(
-    mutables: AttributeMutabilityVerifiers = ( ),
-    visibles: AttributeVisibilityVerifiers = ( is_public_identifier, ),
-    error_provider: ErrorClassProvider = _provide_error_class,
+    mutables: AttributeMutabilityVerifiers = _mutables_default,
+    visibles: AttributeVisibilityVerifiers = _visibles_default,
     # TODO? attribute value transformer
 ) -> _nomina.Decorator:
     # https://github.com/microsoft/pyright/discussions/10344
-    ''' Dataclass decorator factory.
-
-        Ensures instances have immutable attributes.
-    '''
-    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
-    behaviors: set[ str ] = set( )
-    if mutables != '*': behaviors.add( _immutability_label )
-    if visibles != '*': behaviors.add( _concealment_label )
-    postproc_i = produce_initialization_postprocessor(
-        behaviors = behaviors,
-        nomargs_injection = { behaviors_name: set( ) } )
-    postproc_m = produce_mutables_postprocessor( error_provider, mutables )
-    postproc_v = produce_visibles_postprocessor( visibles )
+    ''' Dataclass decorator factory. '''
+    preprocessors, postprocessors = (
+        _produce_decoration_processors( mutables, visibles ) )
     return _factories.produce_decorator(
         decorators = ( _dataclass_core, ),
-        preprocessors = ( _annotate_class, ),
-        postprocessors = ( postproc_i, postproc_m, postproc_v ) )
+        preprocessors = preprocessors,
+        postprocessors = postprocessors )
 
 
 def standard(
-    mutables: AttributeMutabilityVerifiers = ( ),
-    visibles: AttributeVisibilityVerifiers = ( is_public_identifier, ),
-    error_provider: ErrorClassProvider = _provide_error_class,
+    mutables: AttributeMutabilityVerifiers = _mutables_default,
+    visibles: AttributeVisibilityVerifiers = _visibles_default,
     # TODO? attribute value transformer
 ) -> _nomina.Decorator:
-    ''' Class decorator factory.
-
-        Ensures instances have immutable attributes.
-    '''
-    behaviors: set[ str ] = set( )
-    if mutables != '*': behaviors.add( _immutability_label )
-    if visibles != '*': behaviors.add( _concealment_label )
-    postproc_i = produce_initialization_postprocessor( behaviors = behaviors )
-    postproc_m = produce_mutables_postprocessor( error_provider, mutables )
-    postproc_v = produce_visibles_postprocessor( visibles )
+    ''' Class decorator factory. '''
+    preprocessors, postprocessors = (
+        _produce_decoration_processors( mutables, visibles ) )
     return _factories.produce_decorator(
-        preprocessors = ( _annotate_class, ),
-        postprocessors = ( postproc_i, postproc_m, postproc_v ) )
+        preprocessors = preprocessors,
+        postprocessors = postprocessors )
 
 
 def class_construction_preprocessor( # noqa: PLR0913
@@ -362,13 +345,22 @@ survey_class_attributes = produce_class_attributes_surveyor( )
 
 
 def produce_initialization_postprocessor(
-    behaviors: __.cabc.Set[ str ] = frozenset( ),
-    posargs_injection: __.PositionalArguments = ( ),
-    nomargs_injection: __.NominativeArguments = __.dictproxy_empty,
+    attributes_namer: AttributesNamer,
+    mutables: AttributeMutabilityVerifiers,
+    visibles: AttributeVisibilityVerifiers,
 ) -> _nomina.DecorationPostprocessor:
-    behaviors_name = _calculate_attrname( 'instance', 'behaviors' )
+    behaviors_name = attributes_namer( 'instance', 'behaviors' )
+    behaviors: set[ str ] = set( )
+    if mutables != '*': behaviors.add( _immutability_label )
+    if visibles != '*': behaviors.add( _concealment_label )
+
     def postprocess( cls: type ) -> None:
         original_init = getattr( cls, '__init__' )
+        nomargs_injection = { }
+        posargs_injection = [ ]
+        if __.dcls.is_dataclass( cls ):
+            # Pass instance variables.
+            nomargs_injection[ behaviors_name ] = set( )
 
         @__.funct.wraps( original_init )
         def initialize(
@@ -389,8 +381,11 @@ def produce_initialization_postprocessor(
 
 
 def produce_mutables_postprocessor(
-    error_provider: ErrorClassProvider,
-    mutables: AttributeMutabilityVerifiers = ( )
+    attributes_namer: AttributesNamer,
+    error_class_provider: ErrorClassProvider,
+    mutables: AttributeMutabilityVerifiers,
+    # TODO? assigner_implement
+    # TODO? deleter_implement
 ) -> _nomina.DecorationPostprocessor:
     if mutables == '*':
         def postprocess_null( cls: type ) -> None: pass
@@ -399,9 +394,9 @@ def produce_mutables_postprocessor(
         _classify_mutability_verifiers( mutables ) )
     # TODO? Add regexes match cache.
     # TODO? Add predicates match cache.
-    names_name = _calculate_attrname( 'instances', 'mutables_names' )
-    regexes_name = _calculate_attrname( 'instances', 'mutables_regexes' )
-    predicates_name = _calculate_attrname( 'instances', 'mutables_predicates' )
+    names_name = attributes_namer( 'instances', 'mutables_names' )
+    regexes_name = attributes_namer( 'instances', 'mutables_regexes' )
+    predicates_name = attributes_namer( 'instances', 'mutables_predicates' )
 
     def postprocess( cls: type ) -> None:
         mutables_names_: MutablesNames = frozenset( {
@@ -414,14 +409,16 @@ def produce_mutables_postprocessor(
         mutables_predicates_: AttributeMutabilityPredicates = (
             *mutables_predicates, *getattr( cls, predicates_name, ( ) ) )
         setattr( cls, predicates_name, mutables_predicates_ )
-        associate_delattr( cls, error_provider )
-        associate_setattr( cls, error_provider )
+        associate_delattr( cls, error_class_provider )
+        associate_setattr( cls, error_class_provider )
 
     return postprocess
 
 
 def produce_visibles_postprocessor(
-    visibles: AttributeVisibilityVerifiers = ( )
+    attributes_namer: AttributesNamer,
+    visibles: AttributeVisibilityVerifiers,
+    # TODO? surveyor_implement
 ) -> _nomina.DecorationPostprocessor:
     if visibles == '*':
         def postprocess_null( cls: type ) -> None: pass
@@ -481,10 +478,10 @@ class Class( type ): pass
 class ProtocolClass( type( __.typx.Protocol ) ): pass
 
 
-def _annotate_class(
+def _annotate_class_for_instances(
     cls: type, decorators: _nomina.DecoratorsMutable
 ) -> None:
-    ''' Annotates class in support of machinery. '''
+    ''' Annotates class in support of instantiation machinery. '''
     annotations = __.inspect.get_annotations( cls )
     # TODO: accretive set instead of set
     annotations[ _calculate_attrname( 'instance', 'behaviors' ) ] = set[ str ]
@@ -549,7 +546,7 @@ def _delete_attribute_if_mutable( # noqa: PLR0913
 
 def _survey_visible_attributes( # noqa: PLR0913
     obj: object, /, *,
-    ligation: SurveyorLigation,
+    ligation: _nomina.SurveyorLigation,
     behaviors_name: str,
     names_name: str,
     regexes_name: str,
@@ -614,6 +611,29 @@ def _classify_visibility_verifiers(
         elif callable( visible ):
             predicates.append( visible )
     return frozenset( names ), tuple( regexes ), tuple( predicates )
+
+
+def _produce_decoration_processors(
+    mutables: AttributeMutabilityVerifiers,
+    visibles: AttributeVisibilityVerifiers,
+) -> tuple[
+    _nomina.DecorationPreprocessors, _nomina.DecorationPostprocessors
+]:
+    ''' Produces processors for standard decorators. '''
+    # TODO: Split and capture mutables and visibles with preprocessor.
+    postproc_i = produce_initialization_postprocessor(
+        attributes_namer = _calculate_attrname,
+        mutables = mutables, visibles = visibles )
+    postproc_m = produce_mutables_postprocessor(
+        attributes_namer = _calculate_attrname,
+        error_class_provider = _provide_error_class,
+        mutables = mutables )
+    postproc_v = produce_visibles_postprocessor(
+        attributes_namer = _calculate_attrname,
+        visibles = visibles )
+    preprocessors = ( _annotate_class_for_instances, )
+    postprocessors = ( postproc_i, postproc_m, postproc_v )
+    return preprocessors, postprocessors
 
 
 def _record_class_mutables(
