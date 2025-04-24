@@ -247,10 +247,10 @@ def class_initialization_completer( cls: type ) -> None:
     class_visibles = arguments.get( 'class_visibles', _visibles_default )
     behaviors: set[ str ] = set( )
     if class_mutables != '*':
-        _record_class_mutables( cls, class_mutables )
+        _record_mutables( cls, _calculate_attrname, 'class', class_mutables )
         behaviors.add( _immutability_label )
     if class_visibles != '*':
-        _record_class_visibles( cls, class_visibles )
+        _record_visibles( cls, _calculate_attrname, 'class', class_visibles )
         behaviors.add( _concealment_label )
     # Set behaviors attribute last since it enables enforcement.
     setattr( cls, _calculate_attrname( 'class', 'behaviors' ), behaviors )
@@ -351,13 +351,17 @@ def produce_initialization_postprocessor(
 ) -> _nomina.DecorationPostprocessor:
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
     behaviors: set[ str ] = set( )
-    if mutables != '*': behaviors.add( _immutability_label )
-    if visibles != '*': behaviors.add( _concealment_label )
 
     def postprocess( cls: type ) -> None:
         original_init = getattr( cls, '__init__' )
         nomargs_injection = { }
         posargs_injection = [ ]
+        if mutables != '*':
+            _record_mutables( cls, attributes_namer, 'instances', mutables )
+            behaviors.add( _immutability_label )
+        if visibles != '*':
+            _record_visibles( cls, attributes_namer, 'instances', visibles )
+            behaviors.add( _concealment_label )
         if __.dcls.is_dataclass( cls ):
             # Pass instance variables.
             nomargs_injection[ behaviors_name ] = set( )
@@ -371,8 +375,7 @@ def produce_initialization_postprocessor(
                 *( *posargs_injection, *posargs ),
                 **{ **nomargs_injection, **nomargs } )
             behaviors_ = _utilities.getattr0( self, behaviors_name, set( ) )
-            if not behaviors_:
-                setattr( self, behaviors_name, behaviors_ )
+            if not behaviors_: setattr( self, behaviors_name, behaviors_ )
             behaviors_.update( behaviors )
 
         cls.__init__ = initialize
@@ -383,32 +386,10 @@ def produce_initialization_postprocessor(
 def produce_mutables_postprocessor(
     attributes_namer: AttributesNamer,
     error_class_provider: ErrorClassProvider,
-    mutables: AttributeMutabilityVerifiers,
-    # TODO? assigner_implement
-    # TODO? deleter_implement
+    # TODO? assigner_core
+    # TODO? deleter_core
 ) -> _nomina.DecorationPostprocessor:
-    if mutables == '*':
-        def postprocess_null( cls: type ) -> None: pass
-        return postprocess_null
-    mutables_names, mutables_regexes, mutables_predicates = (
-        _classify_mutability_verifiers( mutables ) )
-    # TODO? Add regexes match cache.
-    # TODO? Add predicates match cache.
-    names_name = attributes_namer( 'instances', 'mutables_names' )
-    regexes_name = attributes_namer( 'instances', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'instances', 'mutables_predicates' )
-
     def postprocess( cls: type ) -> None:
-        mutables_names_: MutablesNames = frozenset( {
-            *mutables_names, *getattr( cls, names_name, frozenset( ) ) } )
-        setattr( cls, names_name, mutables_names_ )
-        # TODO: Deduplicating, ordered merge for regexes and predicates.
-        mutables_regexes_: AttributeMutabilityRegexes = (
-            *mutables_regexes, *getattr( cls, regexes_name, ( ) ) )
-        setattr( cls, regexes_name, mutables_regexes_ )
-        mutables_predicates_: AttributeMutabilityPredicates = (
-            *mutables_predicates, *getattr( cls, predicates_name, ( ) ) )
-        setattr( cls, predicates_name, mutables_predicates_ )
         associate_delattr( cls, error_class_provider )
         associate_setattr( cls, error_class_provider )
 
@@ -417,35 +398,12 @@ def produce_mutables_postprocessor(
 
 def produce_visibles_postprocessor(
     attributes_namer: AttributesNamer,
-    visibles: AttributeVisibilityVerifiers,
-    # TODO? surveyor_implement
+    # TODO? surveyor_core
 ) -> _nomina.DecorationPostprocessor:
-    if visibles == '*':
-        def postprocess_null( cls: type ) -> None: pass
-        return postprocess_null
-    visibles_names, visibles_regexes, visibles_predicates = (
-        _classify_visibility_verifiers( visibles ) )
-    # TODO? Add regexes match cache.
-    # TODO? Add predicates match cache.
-    names_name = _calculate_attrname( 'instances', 'visibles_names' )
-    regexes_name = _calculate_attrname( 'instances', 'visibles_regexes' )
-    predicates_name = _calculate_attrname( 'instances', 'visibles_predicates' )
-
     def postprocess( cls: type ) -> None:
-        visibles_names_: VisiblesNames = frozenset( {
-            *visibles_names, *getattr( cls, names_name, frozenset( ) ) } )
-        setattr( cls, names_name, visibles_names_ )
-        # TODO: Deduplicating, ordered merge for regexes and predicates.
-        visibles_regexes_: AttributeVisibilityRegexes = (
-            *visibles_regexes, *getattr( cls, regexes_name, ( ) ) )
-        setattr( cls, regexes_name, visibles_regexes_ )
-        visibles_predicates_: AttributeVisibilityPredicates = (
-            *visibles_predicates, *getattr( cls, predicates_name, ( ) ) )
-        setattr( cls, predicates_name, visibles_predicates_ )
         associate_dir( cls )
 
     return postprocess
-
 
 
 class_construction_decorator = (
@@ -454,13 +412,13 @@ class_construction_decorator = (
 class_initialization_decorator = (
     _factories.produce_class_initialization_decorator(
         initializer = initialize_class ) )
-class_concealment_decorator = (
-    _factories.produce_class_visibility_control_decorator(
-        surveyor = survey_class_attributes ) )
 class_immutability_decorator = (
     _factories.produce_class_mutation_control_decorator(
         assigner = assign_class_attributes,
         deleter = delete_class_attributes ) )
+class_concealment_decorator = (
+    _factories.produce_class_visibility_control_decorator(
+        surveyor = survey_class_attributes ) )
 
 
 decorators_standard = (
@@ -620,44 +578,71 @@ def _produce_decoration_processors(
     _nomina.DecorationPreprocessors, _nomina.DecorationPostprocessors
 ]:
     ''' Produces processors for standard decorators. '''
-    # TODO: Split and capture mutables and visibles with preprocessor.
-    postproc_i = produce_initialization_postprocessor(
-        attributes_namer = _calculate_attrname,
-        mutables = mutables, visibles = visibles )
-    postproc_m = produce_mutables_postprocessor(
-        attributes_namer = _calculate_attrname,
-        error_class_provider = _provide_error_class,
-        mutables = mutables )
-    postproc_v = produce_visibles_postprocessor(
-        attributes_namer = _calculate_attrname,
-        visibles = visibles )
-    preprocessors = ( _annotate_class_for_instances, )
-    postprocessors = ( postproc_i, postproc_m, postproc_v )
-    return preprocessors, postprocessors
+    preprocessors: list[ _nomina.DecorationPreprocessor ] = [ ]
+    postprocessors: list[ _nomina.DecorationPostprocessor ] = [ ]
+    preprocessors.append( _annotate_class_for_instances )
+    postprocessors.append(
+        produce_initialization_postprocessor(
+            attributes_namer = _calculate_attrname,
+            mutables = mutables, visibles = visibles ) )
+    if mutables != '*':
+        postprocessors.append(
+            produce_mutables_postprocessor(
+                attributes_namer = _calculate_attrname,
+                error_class_provider = _provide_error_class ) )
+    if visibles != '*':
+        postprocessors.append(
+            produce_visibles_postprocessor(
+                attributes_namer = _calculate_attrname ) )
+    return tuple( preprocessors ), tuple( postprocessors )
 
 
-def _record_class_mutables(
-    cls: type, mutables: AttributeMutabilityVerifiers
+def _record_mutables(
+    cls: type,
+    attributes_namer: AttributesNamer,
+    level: str,
+    mutables: AttributeMutabilityVerifiers,
 ) -> None:
     names, regexes, predicates = _classify_mutability_verifiers( mutables )
-    names_name = _calculate_attrname( 'class', 'mutables_names' )
-    regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
-    predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
-    setattr( cls, names_name, names )
-    setattr( cls, regexes_name, regexes )
-    setattr( cls, predicates_name, predicates )
+    names_name = attributes_namer( level, 'mutables_names' )
+    regexes_name = attributes_namer( level, 'mutables_regexes' )
+    predicates_name = attributes_namer( level, 'mutables_predicates' )
+    names_: MutablesNames = frozenset( {
+        *names, *getattr( cls, names_name, frozenset( ) ) } )
+    # TODO: Deduplicating, ordered merge for regexes and predicates.
+    regexes_: AttributeMutabilityRegexes = (
+        *regexes, *getattr( cls, regexes_name, ( ) ) )
+    predicates_: AttributeMutabilityPredicates = (
+        *predicates, *getattr( cls, predicates_name, ( ) ) )
+    setattr( cls, names_name, names_ )
+    setattr( cls, regexes_name, regexes_ )
+    setattr( cls, predicates_name, predicates_ )
+    # TODO? Add regexes match cache.
+    # TODO? Add predicates match cache.
 
 
-def _record_class_visibles(
-    cls: type, mutables: AttributeVisibilityVerifiers
+def _record_visibles(
+    cls: type,
+    attributes_namer: AttributesNamer,
+    level: str,
+    visibles: AttributeVisibilityVerifiers
 ) -> None:
-    names, regexes, predicates = _classify_visibility_verifiers( mutables )
-    names_name = _calculate_attrname( 'class', 'visibles_names' )
-    regexes_name = _calculate_attrname( 'class', 'visibles_regexes' )
-    predicates_name = _calculate_attrname( 'class', 'visibles_predicates' )
-    setattr( cls, names_name, names )
-    setattr( cls, regexes_name, regexes )
-    setattr( cls, predicates_name, predicates )
+    names, regexes, predicates = _classify_visibility_verifiers( visibles )
+    names_name = _calculate_attrname( level, 'visibles_names' )
+    regexes_name = _calculate_attrname( level, 'visibles_regexes' )
+    predicates_name = _calculate_attrname( level, 'visibles_predicates' )
+    names_: VisiblesNames = frozenset( {
+        *names, *getattr( cls, names_name, frozenset( ) ) } )
+    # TODO: Deduplicating, ordered merge for regexes and predicates.
+    regexes_: AttributeVisibilityRegexes = (
+        *regexes, *getattr( cls, regexes_name, ( ) ) )
+    predicates_: AttributeVisibilityPredicates = (
+        *predicates, *getattr( cls, predicates_name, ( ) ) )
+    setattr( cls, names_name, names_ )
+    setattr( cls, regexes_name, regexes_ )
+    setattr( cls, predicates_name, predicates_ )
+    # TODO? Add regexes match cache.
+    # TODO? Add predicates match cache.
 
 
 def _record_class_construction_arguments(
