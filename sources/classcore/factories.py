@@ -315,8 +315,6 @@ class_construction_decorator_default = (
     produce_class_construction_decorator( ) )
 class_initialization_decorator_default = (
     produce_class_initialization_decorator( ) )
-
-
 decorators_default = (
     class_construction_decorator_default,
     class_initialization_decorator_default,

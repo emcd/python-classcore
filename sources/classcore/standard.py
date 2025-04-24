@@ -186,6 +186,7 @@ def class_construction_preprocessor( # noqa: PLR0913
     arguments: dict[ str, __.typx.Any ],
     decorators: _nomina.DecoratorsMutable,
 ) -> None:
+    # TODO: Produce function via factory to customize attributes namer.
     _record_class_construction_arguments( namespace, arguments )
     annotations = namespace.get( '__annotations__', { } )
     # annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
@@ -199,6 +200,7 @@ def class_construction_preprocessor( # noqa: PLR0913
 def class_construction_postprocessor(
     cls: type, decorators: _nomina.DecoratorsMutable
 ) -> None:
+    # TODO: Produce function via factory to customize attributes namer.
     arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
     arguments = getattr( cls, arguments_name, { } )
     dcls_spec = getattr( cls, '__dataclass_transform__', None )
@@ -215,8 +217,9 @@ def class_construction_postprocessor(
 
 
 def class_initialization_completer( cls: type ) -> None:
+    # TODO: Produce function via factory to customize attributes namer.
     attributes_namer = _calculate_attrname
-    arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
+    arguments_name = attributes_namer( 'class', 'construction_arguments' )
     arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
         getattr( cls, arguments_name, None ) )
     if arguments is not None: delattr( cls, arguments_name )
@@ -233,16 +236,18 @@ def class_initialization_completer( cls: type ) -> None:
             cls, attributes_namer, 'visibles', 'class', class_visibles )
         behaviors.add( _concealment_label )
     # Set behaviors attribute last since it enables enforcement.
-    setattr( cls, _calculate_attrname( 'class', 'behaviors' ), behaviors )
+    setattr( cls, attributes_namer( 'class', 'behaviors' ), behaviors )
 
 
 def produce_class_attributes_assigner(
-    error_class_provider: ErrorClassProvider
+    attributes_namer: AttributesNamer,
+    error_class_provider: ErrorClassProvider,
+    implementation_core: AssignerCore,
 ) -> _factories.Assigner:
-    behaviors_name = _calculate_attrname( 'class', 'behaviors' )
-    names_name = _calculate_attrname( 'class', 'mutables_names' )
-    regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
-    predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
+    behaviors_name = attributes_namer( 'class', 'behaviors' )
+    names_name = attributes_namer( 'class', 'mutables_names' )
+    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
+    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
 
     def assign(
         cls: type,
@@ -250,7 +255,7 @@ def produce_class_attributes_assigner(
         name: str,
         value: __.typx.Any,
     ) -> None:
-        _assign_attribute_if_mutable(
+        implementation_core(
             cls,
             ligation = superf,
             error_class_provider = error_class_provider,
@@ -265,17 +270,19 @@ def produce_class_attributes_assigner(
 
 
 def produce_class_attributes_deleter(
-    error_class_provider: ErrorClassProvider
+    attributes_namer: AttributesNamer,
+    error_class_provider: ErrorClassProvider,
+    implementation_core: DeleterCore,
 ) -> _factories.Deleter:
-    behaviors_name = _calculate_attrname( 'class', 'behaviors' )
-    names_name = _calculate_attrname( 'class', 'mutables_names' )
-    regexes_name = _calculate_attrname( 'class', 'mutables_regexes' )
-    predicates_name = _calculate_attrname( 'class', 'mutables_predicates' )
+    behaviors_name = attributes_namer( 'class', 'behaviors' )
+    names_name = attributes_namer( 'class', 'mutables_names' )
+    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
+    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
 
     def delete(
         cls: type, superf: _nomina.DeleterLigation, name: str
     ) -> None:
-        _delete_attribute_if_mutable(
+        implementation_core(
             cls,
             ligation = superf,
             error_class_provider = error_class_provider,
@@ -288,16 +295,19 @@ def produce_class_attributes_deleter(
     return delete
 
 
-def produce_class_attributes_surveyor( ) -> _factories.Surveyor:
-    behaviors_name = _calculate_attrname( 'class', 'behaviors' )
-    names_name = _calculate_attrname( 'class', 'visibles_names' )
-    regexes_name = _calculate_attrname( 'class', 'visibles_regexes' )
-    predicates_name = _calculate_attrname( 'class', 'visibles_predicates' )
+def produce_class_attributes_surveyor(
+    attributes_namer: AttributesNamer,
+    implementation_core: SurveyorCore,
+) -> _factories.Surveyor:
+    behaviors_name = attributes_namer( 'class', 'behaviors' )
+    names_name = attributes_namer( 'class', 'visibles_names' )
+    regexes_name = attributes_namer( 'class', 'visibles_regexes' )
+    predicates_name = attributes_namer( 'class', 'visibles_predicates' )
 
     def survey(
         cls: type, superf: _nomina.SurveyorLigation
     ) -> __.cabc.Iterable[ str ]:
-        return _survey_visible_attributes(
+        return implementation_core(
             cls,
             ligation = superf,
             behaviors_name = behaviors_name,
@@ -645,11 +655,18 @@ initialize_class = (
         completers = ( class_initialization_completer, ) ) )
 assign_class_attributes = (
     produce_class_attributes_assigner(
-        error_class_provider = _provide_error_class ) )
+        attributes_namer = _calculate_attrname,
+        error_class_provider = _provide_error_class,
+        implementation_core = _assign_attribute_if_mutable ) )
 delete_class_attributes = (
     produce_class_attributes_deleter(
-        error_class_provider = _provide_error_class ) )
-survey_class_attributes = produce_class_attributes_surveyor( )
+        attributes_namer = _calculate_attrname,
+        error_class_provider = _provide_error_class,
+        implementation_core = _delete_attribute_if_mutable ) )
+survey_class_attributes = (
+    produce_class_attributes_surveyor(
+        attributes_namer = _calculate_attrname,
+        implementation_core = _survey_visible_attributes ) )
 
 
 class_construction_decorator = (
