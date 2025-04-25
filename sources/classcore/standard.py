@@ -134,6 +134,92 @@ _mutables_default = ( )
 _visibles_default = ( is_public_identifier, )
 
 
+def _assign_attribute_if_mutable( # noqa: PLR0913
+    obj: object, /, *,
+    ligation: _nomina.AssignerLigation,
+    error_class_provider: ErrorClassProvider,
+    behaviors_name: str,
+    names_name: str,
+    regexes_name: str,
+    predicates_name: str,
+    name: str,
+    value: __.typx.Any,
+) -> None:
+    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
+    if _immutability_label not in behaviors:
+        ligation( name, value )
+        return
+    names: MutablesNames = getattr( obj, names_name, frozenset( ) )
+    # regexes: AttributeMutabilityRegexes = (
+    #     getattr( self, regexes_name, ( ) ) )
+    # predicates: AttributeMutabilityPredicates = (
+    #     getattr( self, predicates_name, ( ) ) )
+    if name in names:
+        ligation( name, value )
+        return
+    # TODO: Sweep predicates.
+    # TODO: Sweep regexes.
+    target = _utilities.qualify_object_name( obj )
+    raise error_class_provider( 'AttributeImmutability' )( name, target )
+
+
+def _delete_attribute_if_mutable( # noqa: PLR0913
+    obj: object, /, *,
+    ligation: _nomina.DeleterLigation,
+    error_class_provider: ErrorClassProvider,
+    behaviors_name: str,
+    names_name: str,
+    regexes_name: str,
+    predicates_name: str,
+    name: str,
+) -> None:
+    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
+    if _immutability_label not in behaviors:
+        ligation( name )
+        return
+    names: MutablesNames = getattr( obj, names_name, frozenset( ) )
+    # regexes: AttributeMutabilityRegexes = (
+    #     getattr( self, regexes_name, ( ) ) )
+    # predicates: AttributeMutabilityPredicates = (
+    #     getattr( self, predicates_name, ( ) ) )
+    if name in names:
+        ligation( name )
+        return
+    # TODO: Sweep predicates.
+    # TODO: Sweep regexes.
+    target = _utilities.qualify_object_name( obj )
+    raise error_class_provider( 'AttributeImmutability' )( name, target )
+
+
+def _survey_visible_attributes( # noqa: PLR0913
+    obj: object, /, *,
+    ligation: _nomina.SurveyorLigation,
+    behaviors_name: str,
+    names_name: str,
+    regexes_name: str,
+    predicates_name: str,
+) -> __.cabc.Iterable[ str ]:
+    names_base = ligation( )
+    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
+    if _concealment_label not in behaviors: return names_base
+    names: VisiblesNames = getattr( obj, names_name, frozenset( ) )
+    predicates: AttributeVisibilityPredicates = (
+        getattr( obj, predicates_name, ( ) ) )
+    # regexes: AttributeVisibilityRegexes = (
+    #     getattr( obj, regexes_name, ( ) ) )
+    names_: list[ str ] = [ ]
+    for name in names_base:
+        if name in names:
+            names_.append( name )
+            continue
+        for predicate in predicates:
+            if predicate( name ):
+                names_.append( name )
+                continue
+        # TODO: Sweep regexes.
+    return names_
+
+
 def _calculate_attrname( level: str, core: str ) -> str:
     return f"_{__.package_name}_{level}_{core}_"
 
@@ -147,175 +233,6 @@ def _provide_error_class( name: str ) -> type[ Exception ]:
             from .exceptions import ErrorProductionFailure
             raise ErrorProductionFailure( name, reason = 'Does not exist.' )
     return error
-
-
-@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-def dataclass_standard(
-    mutables: AttributeMutabilityVerifiers = _mutables_default,
-    visibles: AttributeVisibilityVerifiers = _visibles_default,
-    # TODO? attribute value transformer
-) -> _nomina.Decorator:
-    # https://github.com/microsoft/pyright/discussions/10344
-    ''' Dataclass decorator factory. '''
-    preprocessors, postprocessors = (
-        _produce_decoration_processors( mutables, visibles ) )
-    return _factories.produce_decorator(
-        decorators = ( _dataclass_core, ),
-        preprocessors = preprocessors,
-        postprocessors = postprocessors )
-
-
-def standard(
-    mutables: AttributeMutabilityVerifiers = _mutables_default,
-    visibles: AttributeVisibilityVerifiers = _visibles_default,
-    # TODO? attribute value transformer
-) -> _nomina.Decorator:
-    ''' Class decorator factory. '''
-    preprocessors, postprocessors = (
-        _produce_decoration_processors( mutables, visibles ) )
-    return _factories.produce_decorator(
-        preprocessors = preprocessors,
-        postprocessors = postprocessors )
-
-
-def class_construction_preprocessor( # noqa: PLR0913
-    clscls: type,
-    name: str,
-    bases: list[ type ],
-    namespace: dict[ str, __.typx.Any ],
-    arguments: dict[ str, __.typx.Any ],
-    decorators: _nomina.DecoratorsMutable,
-) -> None:
-    # TODO: Produce function via factory to customize attributes namer.
-    _record_class_construction_arguments( namespace, arguments )
-    annotations = namespace.get( '__annotations__', { } )
-    # annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
-    namespace[ '__annotations__' ] = annotations
-    if '__slots__' in namespace:
-        slots = list( namespace[ '__slots__' ] )
-        # slots.append( _cfc_behaviors_name )
-        namespace[ '__slots__' ] = slots
-
-
-def class_construction_postprocessor(
-    cls: type, decorators: _nomina.DecoratorsMutable
-) -> None:
-    # TODO: Produce function via factory to customize attributes namer.
-    arguments_name = _calculate_attrname( 'class', 'construction_arguments' )
-    arguments = getattr( cls, arguments_name, { } )
-    dcls_spec = getattr( cls, '__dataclass_transform__', None )
-    instance_mutables = arguments.get( 'instance_mutables', _mutables_default )
-    instance_visibles = arguments.get( 'instance_visibles', _visibles_default )
-    if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
-        decorator_factory = dataclass_standard
-        if not dcls_spec.get( 'frozen_default', True ):
-            instance_mutables = instance_mutables or '*'
-    else: decorator_factory = standard
-    decorator = decorator_factory(
-        mutables = instance_mutables, visibles = instance_visibles )
-    decorators.append( decorator )
-
-
-def class_initialization_completer( cls: type ) -> None:
-    # TODO: Produce function via factory to customize attributes namer.
-    attributes_namer = _calculate_attrname
-    arguments_name = attributes_namer( 'class', 'construction_arguments' )
-    arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
-        getattr( cls, arguments_name, None ) )
-    if arguments is not None: delattr( cls, arguments_name )
-    arguments = arguments or { }
-    class_mutables = arguments.get( 'class_mutables', _mutables_default )
-    class_visibles = arguments.get( 'class_visibles', _visibles_default )
-    behaviors: set[ str ] = set( )
-    if class_mutables != '*':
-        _record_behavior_exclusions(
-            cls, attributes_namer, 'mutables', 'class', class_mutables )
-        behaviors.add( _immutability_label )
-    if class_visibles != '*':
-        _record_behavior_exclusions(
-            cls, attributes_namer, 'visibles', 'class', class_visibles )
-        behaviors.add( _concealment_label )
-    # Set behaviors attribute last since it enables enforcement.
-    setattr( cls, attributes_namer( 'class', 'behaviors' ), behaviors )
-
-
-def produce_class_attributes_assigner(
-    attributes_namer: AttributesNamer,
-    error_class_provider: ErrorClassProvider,
-    implementation_core: AssignerCore,
-) -> _factories.Assigner:
-    behaviors_name = attributes_namer( 'class', 'behaviors' )
-    names_name = attributes_namer( 'class', 'mutables_names' )
-    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
-
-    def assign(
-        cls: type,
-        superf: _nomina.AssignerLigation,
-        name: str,
-        value: __.typx.Any,
-    ) -> None:
-        implementation_core(
-            cls,
-            ligation = superf,
-            error_class_provider = error_class_provider,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name,
-            name = name,
-            value = value )
-
-    return assign
-
-
-def produce_class_attributes_deleter(
-    attributes_namer: AttributesNamer,
-    error_class_provider: ErrorClassProvider,
-    implementation_core: DeleterCore,
-) -> _factories.Deleter:
-    behaviors_name = attributes_namer( 'class', 'behaviors' )
-    names_name = attributes_namer( 'class', 'mutables_names' )
-    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
-
-    def delete(
-        cls: type, superf: _nomina.DeleterLigation, name: str
-    ) -> None:
-        implementation_core(
-            cls,
-            ligation = superf,
-            error_class_provider = error_class_provider,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name,
-            name = name )
-
-    return delete
-
-
-def produce_class_attributes_surveyor(
-    attributes_namer: AttributesNamer,
-    implementation_core: SurveyorCore,
-) -> _factories.Surveyor:
-    behaviors_name = attributes_namer( 'class', 'behaviors' )
-    names_name = attributes_namer( 'class', 'visibles_names' )
-    regexes_name = attributes_namer( 'class', 'visibles_regexes' )
-    predicates_name = attributes_namer( 'class', 'visibles_predicates' )
-
-    def survey(
-        cls: type, superf: _nomina.SurveyorLigation
-    ) -> __.cabc.Iterable[ str ]:
-        return implementation_core(
-            cls,
-            ligation = superf,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name )
-
-    return survey
 
 
 def _annotate_class_for_instances(
@@ -418,92 +335,6 @@ def _associate_instances_attributes_surveyor(
     cls.__dir__ = survey
 
 
-def _assign_attribute_if_mutable( # noqa: PLR0913
-    obj: object, /, *,
-    ligation: _nomina.AssignerLigation,
-    error_class_provider: ErrorClassProvider,
-    behaviors_name: str,
-    names_name: str,
-    regexes_name: str,
-    predicates_name: str,
-    name: str,
-    value: __.typx.Any,
-) -> None:
-    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if _immutability_label not in behaviors:
-        ligation( name, value )
-        return
-    names: MutablesNames = getattr( obj, names_name, frozenset( ) )
-    # regexes: AttributeMutabilityRegexes = (
-    #     getattr( self, regexes_name, ( ) ) )
-    # predicates: AttributeMutabilityPredicates = (
-    #     getattr( self, predicates_name, ( ) ) )
-    if name in names:
-        ligation( name, value )
-        return
-    # TODO: Sweep predicates.
-    # TODO: Sweep regexes.
-    target = _utilities.qualify_object_name( obj )
-    raise error_class_provider( 'AttributeImmutability' )( name, target )
-
-
-def _delete_attribute_if_mutable( # noqa: PLR0913
-    obj: object, /, *,
-    ligation: _nomina.DeleterLigation,
-    error_class_provider: ErrorClassProvider,
-    behaviors_name: str,
-    names_name: str,
-    regexes_name: str,
-    predicates_name: str,
-    name: str,
-) -> None:
-    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if _immutability_label not in behaviors:
-        ligation( name )
-        return
-    names: MutablesNames = getattr( obj, names_name, frozenset( ) )
-    # regexes: AttributeMutabilityRegexes = (
-    #     getattr( self, regexes_name, ( ) ) )
-    # predicates: AttributeMutabilityPredicates = (
-    #     getattr( self, predicates_name, ( ) ) )
-    if name in names:
-        ligation( name )
-        return
-    # TODO: Sweep predicates.
-    # TODO: Sweep regexes.
-    target = _utilities.qualify_object_name( obj )
-    raise error_class_provider( 'AttributeImmutability' )( name, target )
-
-
-def _survey_visible_attributes( # noqa: PLR0913
-    obj: object, /, *,
-    ligation: _nomina.SurveyorLigation,
-    behaviors_name: str,
-    names_name: str,
-    regexes_name: str,
-    predicates_name: str,
-) -> __.cabc.Iterable[ str ]:
-    names_base = ligation( )
-    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if _concealment_label not in behaviors: return names_base
-    names: VisiblesNames = getattr( obj, names_name, frozenset( ) )
-    predicates: AttributeVisibilityPredicates = (
-        getattr( obj, predicates_name, ( ) ) )
-    # regexes: AttributeVisibilityRegexes = (
-    #     getattr( obj, regexes_name, ( ) ) )
-    names_: list[ str ] = [ ]
-    for name in names_base:
-        if name in names:
-            names_.append( name )
-            continue
-        for predicate in predicates:
-            if predicate( name ):
-                names_.append( name )
-                continue
-        # TODO: Sweep regexes.
-    return names_
-
-
 def _classify_behavior_exclusion_verifiers(
     verifiers: BehaviorExclusionVerifiers
 ) -> tuple[
@@ -524,6 +355,207 @@ def _classify_behavior_exclusion_verifiers(
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
+def _produce_class_construction_preprocessor(
+    attributes_namer: AttributesNamer
+) -> _factories.ConstructionPreprocessor:
+    # arguments_name = attributes_namer( 'class', 'construction_arguments' )
+
+    def preprocess( # noqa: PLR0913
+        clscls: type,
+        name: str,
+        bases: list[ type ],
+        namespace: dict[ str, __.typx.Any ],
+        arguments: dict[ str, __.typx.Any ],
+        decorators: _nomina.DecoratorsMutable,
+    ) -> None:
+        # TODO: Produce function via factory to customize attributes namer.
+        _record_class_construction_arguments( namespace, arguments )
+        annotations = namespace.get( '__annotations__', { } )
+        # annotations[ _cfc_behaviors_name ] = __.typx.ClassVar[ set[ str ] ]
+        namespace[ '__annotations__' ] = annotations
+        if '__slots__' in namespace:
+            slots = list( namespace[ '__slots__' ] )
+            # slots.append( _cfc_behaviors_name )
+            namespace[ '__slots__' ] = slots
+
+    return preprocess
+
+
+def _produce_class_construction_postprocessor(
+    attributes_namer: AttributesNamer
+) -> _factories.ConstructionPostprocessor:
+    arguments_name = attributes_namer( 'class', 'construction_arguments' )
+
+    def postprocess(
+        cls: type, decorators: _nomina.DecoratorsMutable
+    ) -> None:
+        arguments = getattr( cls, arguments_name, { } )
+        dcls_spec = getattr( cls, '__dataclass_transform__', None )
+        instance_mutables = arguments.get(
+            'instance_mutables', _mutables_default )
+        instance_visibles = arguments.get(
+            'instance_visibles', _visibles_default )
+        if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
+            decorator_factory = dataclass_standard
+            if not dcls_spec.get( 'frozen_default', True ):
+                instance_mutables = instance_mutables or '*'
+        else: decorator_factory = standard
+        decorator = decorator_factory(
+            mutables = instance_mutables, visibles = instance_visibles )
+        decorators.append( decorator )
+
+    return postprocess
+
+
+def _produce_class_initialization_completer(
+    attributes_namer: AttributesNamer
+) -> _factories.InitializationCompleter:
+    arguments_name = attributes_namer( 'class', 'construction_arguments' )
+
+    def complete( cls: type ) -> None:
+        arguments: __.typx.Optional[ dict[ str, __.typx.Any ] ] = (
+            getattr( cls, arguments_name, None ) )
+        if arguments is not None: delattr( cls, arguments_name )
+        arguments = arguments or { }
+        class_mutables = arguments.get( 'class_mutables', _mutables_default )
+        class_visibles = arguments.get( 'class_visibles', _visibles_default )
+        behaviors: set[ str ] = set( )
+        if class_mutables != '*':
+            _record_behavior_exclusions(
+                cls, attributes_namer, 'mutables', 'class', class_mutables )
+            behaviors.add( _immutability_label )
+        if class_visibles != '*':
+            _record_behavior_exclusions(
+                cls, attributes_namer, 'visibles', 'class', class_visibles )
+            behaviors.add( _concealment_label )
+        # Set behaviors attribute last since it enables enforcement.
+        setattr( cls, attributes_namer( 'class', 'behaviors' ), behaviors )
+
+    return complete
+
+
+def _produce_class_attributes_assigner(
+    attributes_namer: AttributesNamer,
+    error_class_provider: ErrorClassProvider,
+    implementation_core: AssignerCore,
+) -> _factories.Assigner:
+    behaviors_name = attributes_namer( 'class', 'behaviors' )
+    names_name = attributes_namer( 'class', 'mutables_names' )
+    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
+    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
+
+    def assign(
+        cls: type,
+        superf: _nomina.AssignerLigation,
+        name: str,
+        value: __.typx.Any,
+    ) -> None:
+        implementation_core(
+            cls,
+            ligation = superf,
+            error_class_provider = error_class_provider,
+            behaviors_name = behaviors_name,
+            names_name = names_name,
+            regexes_name = regexes_name,
+            predicates_name = predicates_name,
+            name = name,
+            value = value )
+
+    return assign
+
+
+def _produce_class_attributes_deleter(
+    attributes_namer: AttributesNamer,
+    error_class_provider: ErrorClassProvider,
+    implementation_core: DeleterCore,
+) -> _factories.Deleter:
+    behaviors_name = attributes_namer( 'class', 'behaviors' )
+    names_name = attributes_namer( 'class', 'mutables_names' )
+    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
+    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
+
+    def delete(
+        cls: type, superf: _nomina.DeleterLigation, name: str
+    ) -> None:
+        implementation_core(
+            cls,
+            ligation = superf,
+            error_class_provider = error_class_provider,
+            behaviors_name = behaviors_name,
+            names_name = names_name,
+            regexes_name = regexes_name,
+            predicates_name = predicates_name,
+            name = name )
+
+    return delete
+
+
+def _produce_class_attributes_surveyor(
+    attributes_namer: AttributesNamer,
+    implementation_core: SurveyorCore,
+) -> _factories.Surveyor:
+    behaviors_name = attributes_namer( 'class', 'behaviors' )
+    names_name = attributes_namer( 'class', 'visibles_names' )
+    regexes_name = attributes_namer( 'class', 'visibles_regexes' )
+    predicates_name = attributes_namer( 'class', 'visibles_predicates' )
+
+    def survey(
+        cls: type, superf: _nomina.SurveyorLigation
+    ) -> __.cabc.Iterable[ str ]:
+        return implementation_core(
+            cls,
+            ligation = superf,
+            behaviors_name = behaviors_name,
+            names_name = names_name,
+            regexes_name = regexes_name,
+            predicates_name = predicates_name )
+
+    return survey
+
+
+def _produce_class_operations(
+    attributes_namer: AttributesNamer,
+    error_class_provider: ErrorClassProvider,
+    assigner_core: AssignerCore,
+    deleter_core: DeleterCore,
+    surveyor_core: SurveyorCore,
+) -> tuple[
+    _factories.Constructor,
+    _factories.Initializer,
+    _factories.Assigner,
+    _factories.Deleter,
+    _factories.Surveyor,
+]:
+    constructor = (
+        _factories.produce_constructor(
+            preprocessors = (
+                _produce_class_construction_preprocessor(
+                    attributes_namer = attributes_namer ), ),
+            postprocessors = (
+                _produce_class_construction_postprocessor(
+                    attributes_namer = attributes_namer ), ) ) )
+    initializer = (
+        _factories.produce_initializer(
+            completers = (
+                _produce_class_initialization_completer(
+                    attributes_namer = attributes_namer ), ) ) )
+    assigner = (
+        _produce_class_attributes_assigner(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = assigner_core ) )
+    deleter = (
+        _produce_class_attributes_deleter(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = deleter_core ) )
+    surveyor = (
+        _produce_class_attributes_surveyor(
+            attributes_namer = attributes_namer,
+            implementation_core = surveyor_core ) )
+    return constructor, initializer, assigner, deleter, surveyor
+
+
 def _produce_decoration_processors(
     mutables: AttributeMutabilityVerifiers,
     visibles: AttributeVisibilityVerifiers,
@@ -539,7 +571,7 @@ def _produce_decoration_processors(
     postprocessors: list[ _nomina.DecorationPostprocessor ] = [ ]
     preprocessors.append( _annotate_class_for_instances )
     postprocessors.append(
-        _produce_initialization_postprocessor(
+        _produce_instances_initialization_postprocessor(
             attributes_namer = attributes_namer,
             mutables = mutables, visibles = visibles ) )
     if mutables != '*':
@@ -564,7 +596,7 @@ def _produce_decoration_processors(
     return tuple( preprocessors ), tuple( postprocessors )
 
 
-def _produce_initialization_postprocessor(
+def _produce_instances_initialization_postprocessor(
     attributes_namer: AttributesNamer,
     mutables: AttributeMutabilityVerifiers,
     visibles: AttributeVisibilityVerifiers,
@@ -646,57 +678,77 @@ def _record_class_construction_arguments(
     namespace[ arguments_name ] = arguments_
 
 
-construct_class = (
-    _factories.produce_constructor(
-        preprocessors = ( class_construction_preprocessor, ),
-        postprocessors = ( class_construction_postprocessor, ) ) )
-initialize_class = (
-    _factories.produce_initializer(
-        completers = ( class_initialization_completer, ) ) )
-assign_class_attributes = (
-    produce_class_attributes_assigner(
-        attributes_namer = _calculate_attrname,
-        error_class_provider = _provide_error_class,
-        implementation_core = _assign_attribute_if_mutable ) )
-delete_class_attributes = (
-    produce_class_attributes_deleter(
-        attributes_namer = _calculate_attrname,
-        error_class_provider = _provide_error_class,
-        implementation_core = _delete_attribute_if_mutable ) )
-survey_class_attributes = (
-    produce_class_attributes_surveyor(
-        attributes_namer = _calculate_attrname,
-        implementation_core = _survey_visible_attributes ) )
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
+def dataclass_standard(
+    mutables: AttributeMutabilityVerifiers = _mutables_default,
+    visibles: AttributeVisibilityVerifiers = _visibles_default,
+    # TODO? attribute value transformer
+) -> _nomina.Decorator:
+    # https://github.com/microsoft/pyright/discussions/10344
+    ''' Dataclass decorator factory. '''
+    preprocessors, postprocessors = (
+        _produce_decoration_processors( mutables, visibles ) )
+    return _factories.produce_decorator(
+        decorators = ( _dataclass_core, ),
+        preprocessors = preprocessors,
+        postprocessors = postprocessors )
 
 
-class_construction_decorator = (
-    _factories.produce_class_construction_decorator(
-        constructor = construct_class ) )
-class_initialization_decorator = (
-    _factories.produce_class_initialization_decorator(
-        initializer = initialize_class ) )
-class_immutability_decorator = (
-    _factories.produce_class_mutation_control_decorator(
-        assigner = assign_class_attributes,
-        deleter = delete_class_attributes ) )
-class_concealment_decorator = (
-    _factories.produce_class_visibility_control_decorator(
-        surveyor = survey_class_attributes ) )
+def standard(
+    mutables: AttributeMutabilityVerifiers = _mutables_default,
+    visibles: AttributeVisibilityVerifiers = _visibles_default,
+    # TODO? attribute value transformer
+) -> _nomina.Decorator:
+    ''' Class decorator factory. '''
+    preprocessors, postprocessors = (
+        _produce_decoration_processors( mutables, visibles ) )
+    return _factories.produce_decorator(
+        preprocessors = preprocessors,
+        postprocessors = postprocessors )
 
 
-decorators_standard = (
-    class_construction_decorator,
-    class_initialization_decorator,
-    class_concealment_decorator,
-    class_immutability_decorator,
-)
+def produce_class_factory_decorators(
+    attributes_namer: AttributesNamer = _calculate_attrname,
+    error_class_provider: ErrorClassProvider = _provide_error_class,
+    assigner_core: AssignerCore = _assign_attribute_if_mutable,
+    deleter_core: DeleterCore = _delete_attribute_if_mutable,
+    surveyor_core: SurveyorCore = _survey_visible_attributes,
+) -> _nomina.Decorators:
+    constructor, initializer, assigner, deleter, surveyor = (
+        _produce_class_operations(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            assigner_core = assigner_core,
+            deleter_core = deleter_core,
+            surveyor_core = surveyor_core ) )
+    class_construction_decorator = (
+        _factories.produce_class_construction_decorator(
+            constructor = constructor ) )
+    class_initialization_decorator = (
+        _factories.produce_class_initialization_decorator(
+            initializer = initializer ) )
+    class_immutability_decorator = (
+        _factories.produce_class_mutation_control_decorator(
+            assigner = assigner, deleter = deleter ) )
+    class_concealment_decorator = (
+        _factories.produce_class_visibility_control_decorator(
+            surveyor = surveyor ) )
+    return (
+        class_construction_decorator,
+        class_initialization_decorator,
+        class_concealment_decorator,
+        class_immutability_decorator,
+    )
 
 
-@_factories.decoration_by( decorators_standard )
+class_factory_decorators = produce_class_factory_decorators( )
+
+
+@_factories.decoration_by( class_factory_decorators )
 class Class( type ): pass
 
 
-@_factories.decoration_by( decorators_standard )
+@_factories.decoration_by( class_factory_decorators )
 class ProtocolClass( type( __.typx.Protocol ) ): pass
 
 
