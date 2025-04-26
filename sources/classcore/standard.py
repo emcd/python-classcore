@@ -20,7 +20,13 @@
 
 ''' Decorators and metaclasses with concealment and immutability. '''
 # TODO: Support introspection of PEP 593 annotations for markers.
-#       Behaviors enum for mutability and visibility.
+#       Maybe behaviors enum for mutability and visibility.
+# TODO? Add attribute value transformer as standard decorator argument.
+# TODO: Convert instances association functions from postproceesors to
+#       decorators and append to end of decorators list.
+#       Then, generalize and collapse metaclass and class decorators
+#       for operations.
+#       Drop notion of postprocessors for creation of instances decorators.
 
 
 from __future__ import annotations
@@ -161,15 +167,19 @@ def _assign_attribute_if_mutable( # noqa: PLR0913
         ligation( name, value )
         return
     names: MutablesNames = getattr( obj, names_name, frozenset( ) )
-    # regexes: AttributeMutabilityRegexes = (
-    #     getattr( self, regexes_name, ( ) ) )
+    regexes: AttributeMutabilityRegexes = (
+        getattr( obj, regexes_name, ( ) ) )
     # predicates: AttributeMutabilityPredicates = (
-    #     getattr( self, predicates_name, ( ) ) )
+    #     getattr( obj, predicates_name, ( ) ) )
     if name in names:
         ligation( name, value )
         return
     # TODO: Sweep predicates.
-    # TODO: Sweep regexes.
+    for regex in regexes:
+        if regex.fullmatch( name ):
+            # TODO? Cache regex hit.
+            ligation( name, value )
+            return
     target = _utilities.qualify_object_name( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
@@ -189,15 +199,19 @@ def _delete_attribute_if_mutable( # noqa: PLR0913
         ligation( name )
         return
     names: MutablesNames = getattr( obj, names_name, frozenset( ) )
-    # regexes: AttributeMutabilityRegexes = (
-    #     getattr( self, regexes_name, ( ) ) )
+    regexes: AttributeMutabilityRegexes = (
+        getattr( obj, regexes_name, ( ) ) )
     # predicates: AttributeMutabilityPredicates = (
-    #     getattr( self, predicates_name, ( ) ) )
+    #     getattr( obj, predicates_name, ( ) ) )
     if name in names:
         ligation( name )
         return
     # TODO: Sweep predicates.
-    # TODO: Sweep regexes.
+    for regex in regexes:
+        if regex.fullmatch( name ):
+            # TODO? Cache regex hit.
+            ligation( name )
+            return
     target = _utilities.qualify_object_name( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
@@ -216,8 +230,8 @@ def _survey_visible_attributes( # noqa: PLR0913
     names: VisiblesNames = getattr( obj, names_name, frozenset( ) )
     predicates: AttributeVisibilityPredicates = (
         getattr( obj, predicates_name, ( ) ) )
-    # regexes: AttributeVisibilityRegexes = (
-    #     getattr( obj, regexes_name, ( ) ) )
+    regexes: AttributeVisibilityRegexes = (
+        getattr( obj, regexes_name, ( ) ) )
     names_: list[ str ] = [ ]
     for name in names_base:
         if name in names:
@@ -225,9 +239,14 @@ def _survey_visible_attributes( # noqa: PLR0913
             continue
         for predicate in predicates:
             if predicate( name ):
+                # TODO? Cache predicate hit.
                 names_.append( name )
                 continue
-        # TODO: Sweep regexes.
+        for regex in regexes:
+            if regex.fullmatch( name ):
+                # TODO? Cache regex hit.
+                names_.append( name )
+                continue
     return names_
 
 
@@ -370,10 +389,21 @@ def _classify_behavior_exclusion_verifiers(
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
+def _deduplicate_merge_sequences(
+    addends: __.cabc.Sequence[ __.typx.Any ],
+    augends: __.cabc.Sequence[ __.typx.Any ],
+) -> __.cabc.Sequence[ __.typx.Any ]:
+    result = list( augends )
+    augends_ = set( augends )
+    for addend in addends:
+        if addend in augends_: continue
+        result.append( addend )
+    return tuple( result )
+
+
 def _produce_class_construction_preprocessor(
     attributes_namer: AttributesNamer
 ) -> _factories.ConstructionPreprocessor:
-    # TODO? Accept attributes preparer function.
 
     def preprocess( # noqa: PLR0913
         clscls: type,
@@ -385,13 +415,6 @@ def _produce_class_construction_preprocessor(
     ) -> None:
         _record_class_construction_arguments(
             attributes_namer, namespace, arguments )
-        # TODO? Allocate, annotate, and assign default class attributes.
-        # _annotate_class_namespace( attributes_namer, namespace )
-        # allocations = namespace.get( '__slots__' )
-        # if allocations:
-        #     _augment_class_attributes_allocations(
-        #         attributes_namer, namespace, list( allocations ) )
-        # _initialize_class_attributes_default( attributes_namer, namespace )
 
     return preprocess
 
@@ -619,11 +642,12 @@ def _record_behavior_exclusions(
     predicates_name = attributes_namer( level, f"{basename}_predicates" )
     names_: BehaviorExclusionNames = frozenset( {
         *names, *getattr( cls, names_name, frozenset( ) ) } )
-    # TODO: Deduplicating, ordered merge for regexes and predicates.
     regexes_: BehaviorExclusionRegexes = (
-        *regexes, *getattr( cls, regexes_name, ( ) ) )
+        _deduplicate_merge_sequences(
+            regexes, getattr( cls, regexes_name, ( ) ) ) )
     predicates_: BehaviorExclusionPredicates = (
-        *predicates, *getattr( cls, predicates_name, ( ) ) )
+        _deduplicate_merge_sequences(
+            predicates, getattr( cls, predicates_name, ( ) ) ) )
     setattr( cls, names_name, names_ )
     setattr( cls, regexes_name, regexes_ )
     setattr( cls, predicates_name, predicates_ )
@@ -704,7 +728,6 @@ def produce_decoration_processors_factory( # noqa: PLR0913
 def dataclass_standard(
     mutables: AttributeMutabilityVerifiers = _mutables_default,
     visibles: AttributeVisibilityVerifiers = _visibles_default,
-    # TODO? attribute value transformer
 ) -> _nomina.Decorator:
     # https://github.com/microsoft/pyright/discussions/10344
     ''' Dataclass decorator factory. '''
@@ -720,7 +743,6 @@ def dataclass_standard(
 def standard(
     mutables: AttributeMutabilityVerifiers = _mutables_default,
     visibles: AttributeVisibilityVerifiers = _visibles_default,
-    # TODO? attribute value transformer
 ) -> _nomina.Decorator:
     ''' Class decorator factory. '''
     processors_factory = produce_decoration_processors_factory( )

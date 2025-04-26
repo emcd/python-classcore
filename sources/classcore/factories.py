@@ -251,6 +251,7 @@ def produce_class_initialization_decorator(
     def decorate( clscls: type[ _T ] ) -> type[ _T ]:
         original = getattr( clscls, '__init__' )
 
+        @__.funct.wraps( original )
         def initialize(
             cls: type,
             *posargs: __.typx.Any,
@@ -276,10 +277,12 @@ def produce_class_mutation_control_decorator(
         original_assigner = getattr( clscls, '__setattr__' )
         original_deleter = getattr( clscls, '__delattr__' )
 
+        @__.funct.wraps( original_assigner )
         def assign( cls: type, name: str, value: __.typx.Any ) -> None:
             ligation = __.funct.partial( original_assigner, cls )
             assigner( cls, ligation, name, value )
 
+        @__.funct.wraps( original_deleter )
         def delete( cls: type, name: str ) -> None:
             ligation = __.funct.partial( original_deleter, cls )
             deleter( cls, ligation, name )
@@ -301,6 +304,7 @@ def produce_class_visibility_control_decorator(
     def decorate( clscls: type[ _T ] ) -> type[ _T ]:
         original = getattr( clscls, '__dir__' )
 
+        @__.funct.wraps( original )
         def survey( cls: type ) -> __.cabc.Iterable[ str ]:
             ligation = __.funct.partial( original, cls )
             return surveyor( cls, ligation )
