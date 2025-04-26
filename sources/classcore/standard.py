@@ -38,7 +38,6 @@ from . import nomina as _nomina
 from . import utilities as _utilities
 
 
-_T = __.typx.TypeVar( '_T', bound = type )
 _U = __.typx.TypeVar( '_U' )
 
 
@@ -265,108 +264,110 @@ def _provide_error_class( name: str ) -> type[ Exception ]:
     return error
 
 
-def prepare_dataclass_for_instances(
-    cls: type,
-    decorators: _nomina.DecoratorsMutable, /, *,
-    attributes_namer: AttributesNamer,
-) -> None:
-    ''' Annotates dataclass in support of instantiation machinery. '''
-    annotations = __.inspect.get_annotations( cls )
-    behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    annotations[ behaviors_name ] = set[ str ]
-    setattr( cls, '__annotations__', annotations ) # in case of absence
-    setattr( cls, behaviors_name, __.dcls.field( init = False ) )
-
-
-def _associate_instances_attributes_assigner(
-    cls: type[ _U ], /, *,
+def _produce_attributes_assignment_decorator(
+    level: str,
     attributes_namer: AttributesNamer,
     error_class_provider: ErrorClassProvider,
     implementation_core: AssignerCore,
-) -> None:
-    assigner_name = attributes_namer( 'instances', 'assigner' )
-    extant = getattr( cls, assigner_name, None )
-    original = getattr( cls, '__setattr__' )
-    if extant is original: return
-    behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    names_name = attributes_namer( 'instances', 'mutables_names' )
-    regexes_name = attributes_namer( 'instances', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'instances', 'mutables_predicates' )
+) -> _nomina.Decorator:
+    def decorate( cls: type[ _U ] ) -> type[ _U ]:
+        assigner_name = attributes_namer( level, 'assigner' )
+        extant = getattr( cls, assigner_name, None )
+        original = getattr( cls, '__setattr__' )
+        if extant is original: return cls
+        leveli = 'instance' if level == 'instances' else level
+        behaviors_name = attributes_namer( leveli, 'behaviors' )
+        names_name = attributes_namer( level, 'mutables_names' )
+        regexes_name = attributes_namer( level, 'mutables_regexes' )
+        predicates_name = attributes_namer( level, 'mutables_predicates' )
 
-    @__.funct.wraps( original )
-    def assign( self: object, name: str, value: __.typx.Any ) -> None:
-        implementation_core(
-            self,
-            ligation = __.funct.partial( original, self ),
-            error_class_provider = error_class_provider,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name,
-            name = name,
-            value = value )
+        @__.funct.wraps( original )
+        def assign( self: object, name: str, value: __.typx.Any ) -> None:
+            implementation_core(
+                self,
+                ligation = __.funct.partial( original, self ),
+                error_class_provider = error_class_provider,
+                behaviors_name = behaviors_name,
+                names_name = names_name,
+                regexes_name = regexes_name,
+                predicates_name = predicates_name,
+                name = name,
+                value = value )
 
-    setattr( cls, assigner_name, assign )
-    cls.__setattr__ = assign
+        setattr( cls, assigner_name, assign )
+        cls.__setattr__ = assign
+        return cls
+
+    return decorate
 
 
-def _associate_instances_attributes_deleter(
-    cls: type[ _U ],
+def _produce_attributes_deletion_decorator(
+    level: str,
     attributes_namer: AttributesNamer,
     error_class_provider: ErrorClassProvider,
     implementation_core: DeleterCore,
-) -> None:
-    deleter_name = attributes_namer( 'instances', 'deleter' )
-    extant = getattr( cls, deleter_name, None )
-    original = getattr( cls, '__delattr__' )
-    if extant is original: return
-    behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    names_name = attributes_namer( 'instances', 'mutables_names' )
-    regexes_name = attributes_namer( 'instances', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'instances', 'mutables_predicates' )
+) -> _nomina.Decorator:
+    def decorate( cls: type[ _U ] ) -> type[ _U ]:
+        deleter_name = attributes_namer( level, 'deleter' )
+        extant = getattr( cls, deleter_name, None )
+        original = getattr( cls, '__delattr__' )
+        if extant is original: return cls
+        leveli = 'instance' if level == 'instances' else level
+        behaviors_name = attributes_namer( leveli, 'behaviors' )
+        names_name = attributes_namer( level, 'mutables_names' )
+        regexes_name = attributes_namer( level, 'mutables_regexes' )
+        predicates_name = attributes_namer( level, 'mutables_predicates' )
 
-    @__.funct.wraps( original )
-    def delete( self: object, name: str ) -> None:
-        implementation_core(
-            self,
-            ligation = __.funct.partial( original, self ),
-            error_class_provider = error_class_provider,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name,
-            name = name )
+        @__.funct.wraps( original )
+        def delete( self: object, name: str ) -> None:
+            implementation_core(
+                self,
+                ligation = __.funct.partial( original, self ),
+                error_class_provider = error_class_provider,
+                behaviors_name = behaviors_name,
+                names_name = names_name,
+                regexes_name = regexes_name,
+                predicates_name = predicates_name,
+                name = name )
 
-    setattr( cls, deleter_name, delete )
-    cls.__delattr__ = delete
+        setattr( cls, deleter_name, delete )
+        cls.__delattr__ = delete
+        return cls
+
+    return decorate
 
 
-def _associate_instances_attributes_surveyor(
-    cls: type[ _U ],
+def _produce_attributes_surveillance_decorator(
+    level: str,
     attributes_namer: AttributesNamer,
     implementation_core: SurveyorCore,
-) -> None:
-    surveyor_name = attributes_namer( 'instances', 'surveyor' )
-    extant = getattr( cls, surveyor_name, None )
-    original = getattr( cls, '__dir__' )
-    if extant is original: return
-    behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    names_name = attributes_namer( 'instances', 'visibles_names' )
-    regexes_name = attributes_namer( 'instances', 'visibles_regexes' )
-    predicates_name = attributes_namer( 'instances', 'visibles_predicates' )
+) -> _nomina.Decorator:
+    def decorate( cls: type[ _U ] ) -> type[ _U ]:
+        surveyor_name = attributes_namer( level, 'surveyor' )
+        extant = getattr( cls, surveyor_name, None )
+        original = getattr( cls, '__dir__' )
+        if extant is original: return cls
+        leveli = 'instance' if level == 'instances' else level
+        behaviors_name = attributes_namer( leveli, 'behaviors' )
+        names_name = attributes_namer( level, 'visibles_names' )
+        regexes_name = attributes_namer( level, 'visibles_regexes' )
+        predicates_name = attributes_namer( level, 'visibles_predicates' )
 
-    @__.funct.wraps( original )
-    def survey( self: object ) -> __.cabc.Iterable[ str ]:
-        return implementation_core(
-            self,
-            ligation = __.funct.partial( original, self ),
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name )
+        @__.funct.wraps( original )
+        def survey( self: object ) -> __.cabc.Iterable[ str ]:
+            return implementation_core(
+                self,
+                ligation = __.funct.partial( original, self ),
+                behaviors_name = behaviors_name,
+                names_name = names_name,
+                regexes_name = regexes_name,
+                predicates_name = predicates_name )
 
-    setattr( cls, surveyor_name, survey )
-    cls.__dir__ = survey
+        setattr( cls, surveyor_name, survey )
+        cls.__dir__ = survey
+        return cls
+
+    return decorate
 
 
 def _classify_behavior_exclusion_verifiers(
@@ -472,98 +473,10 @@ def _produce_class_initialization_completer(
     return complete
 
 
-def _produce_class_attributes_assigner(
-    attributes_namer: AttributesNamer,
-    error_class_provider: ErrorClassProvider,
-    implementation_core: AssignerCore,
-) -> _factories.Assigner:
-    behaviors_name = attributes_namer( 'class', 'behaviors' )
-    names_name = attributes_namer( 'class', 'mutables_names' )
-    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
-
-    def assign(
-        cls: type,
-        superf: _nomina.AssignerLigation,
-        name: str,
-        value: __.typx.Any,
-    ) -> None:
-        implementation_core(
-            cls,
-            ligation = superf,
-            error_class_provider = error_class_provider,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name,
-            name = name,
-            value = value )
-
-    return assign
-
-
-def _produce_class_attributes_deleter(
-    attributes_namer: AttributesNamer,
-    error_class_provider: ErrorClassProvider,
-    implementation_core: DeleterCore,
-) -> _factories.Deleter:
-    behaviors_name = attributes_namer( 'class', 'behaviors' )
-    names_name = attributes_namer( 'class', 'mutables_names' )
-    regexes_name = attributes_namer( 'class', 'mutables_regexes' )
-    predicates_name = attributes_namer( 'class', 'mutables_predicates' )
-
-    def delete(
-        cls: type, superf: _nomina.DeleterLigation, name: str
-    ) -> None:
-        implementation_core(
-            cls,
-            ligation = superf,
-            error_class_provider = error_class_provider,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name,
-            name = name )
-
-    return delete
-
-
-def _produce_class_attributes_surveyor(
-    attributes_namer: AttributesNamer,
-    implementation_core: SurveyorCore,
-) -> _factories.Surveyor:
-    behaviors_name = attributes_namer( 'class', 'behaviors' )
-    names_name = attributes_namer( 'class', 'visibles_names' )
-    regexes_name = attributes_namer( 'class', 'visibles_regexes' )
-    predicates_name = attributes_namer( 'class', 'visibles_predicates' )
-
-    def survey(
-        cls: type, superf: _nomina.SurveyorLigation
-    ) -> __.cabc.Iterable[ str ]:
-        return implementation_core(
-            cls,
-            ligation = superf,
-            behaviors_name = behaviors_name,
-            names_name = names_name,
-            regexes_name = regexes_name,
-            predicates_name = predicates_name )
-
-    return survey
-
-
 def _produce_class_operations(
     attributes_namer: AttributesNamer,
     error_class_provider: ErrorClassProvider,
-    assigner_core: AssignerCore,
-    deleter_core: DeleterCore,
-    surveyor_core: SurveyorCore,
-) -> tuple[
-    _factories.Constructor,
-    _factories.Initializer,
-    _factories.Assigner,
-    _factories.Deleter,
-    _factories.Surveyor,
-]:
+) -> tuple[ _factories.Constructor, _factories.Initializer ]:
     constructor = (
         _factories.produce_constructor(
             preprocessors = (
@@ -577,21 +490,7 @@ def _produce_class_operations(
             completers = (
                 _produce_class_initialization_completer(
                     attributes_namer = attributes_namer ), ) ) )
-    assigner = (
-        _produce_class_attributes_assigner(
-            attributes_namer = attributes_namer,
-            error_class_provider = error_class_provider,
-            implementation_core = assigner_core ) )
-    deleter = (
-        _produce_class_attributes_deleter(
-            attributes_namer = attributes_namer,
-            error_class_provider = error_class_provider,
-            implementation_core = deleter_core ) )
-    surveyor = (
-        _produce_class_attributes_surveyor(
-            attributes_namer = attributes_namer,
-            implementation_core = surveyor_core ) )
-    return constructor, initializer, assigner, deleter, surveyor
+    return constructor, initializer
 
 
 def _produce_instances_initialization_postprocessor(
@@ -599,7 +498,7 @@ def _produce_instances_initialization_postprocessor(
     mutables: AttributeMutabilityVerifiers,
     visibles: AttributeVisibilityVerifiers,
 ) -> _nomina.DecorationPostprocessor:
-    # TODO: Replace with associater.
+    # TODO: Replace with decorator.
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
     behaviors: set[ str ] = set( )
 
@@ -671,13 +570,65 @@ def _record_class_construction_arguments(
     namespace[ arguments_name ] = arguments_
 
 
-def produce_decoration_processors_factory( # noqa: PLR0913
+def prepare_dataclass_for_instances(
+    cls: type,
+    decorators: _nomina.DecoratorsMutable, /, *,
+    attributes_namer: AttributesNamer,
+) -> None:
+    ''' Annotates dataclass in support of instantiation machinery. '''
+    annotations = __.inspect.get_annotations( cls )
+    behaviors_name = attributes_namer( 'instance', 'behaviors' )
+    annotations[ behaviors_name ] = set[ str ]
+    setattr( cls, '__annotations__', annotations ) # in case of absence
+    setattr( cls, behaviors_name, __.dcls.field( init = False ) )
+
+
+def produce_decorators_factory( # noqa: PLR0913
+    level: str,
     attributes_namer: AttributesNamer = _calculate_attrname,
     error_class_provider: ErrorClassProvider = _provide_error_class,
-    class_preparer: __.typx.Optional[ ClassPreparer ] = None,
     assigner_core: AssignerCore = _assign_attribute_if_mutable,
     deleter_core: DeleterCore = _delete_attribute_if_mutable,
     surveyor_core: SurveyorCore = _survey_visible_attributes,
+) -> __.cabc.Callable[
+    [ AttributeMutabilityVerifiers, AttributeVisibilityVerifiers ],
+    _nomina.Decorators
+]:
+    def produce(
+        mutables: AttributeMutabilityVerifiers,
+        visibles: AttributeVisibilityVerifiers,
+    ) -> _nomina.Decorators:
+        ''' Produces standard decorators. '''
+        decorators: list[ _nomina.Decorator ] = [ ]
+        # TODO: Initialization decorator.
+        if mutables != '*':
+            decorators.append(
+                _produce_attributes_assignment_decorator(
+                    level = level,
+                    attributes_namer = attributes_namer,
+                    error_class_provider = error_class_provider,
+                    implementation_core = assigner_core ) )
+            decorators.append(
+                _produce_attributes_deletion_decorator(
+                    level = level,
+                    attributes_namer = attributes_namer,
+                    error_class_provider = error_class_provider,
+                    implementation_core = deleter_core ) )
+        if visibles != '*':
+            decorators.append(
+                _produce_attributes_surveillance_decorator(
+                    level = level,
+                    attributes_namer = attributes_namer,
+                    implementation_core = surveyor_core ) )
+        return decorators
+
+    return produce
+
+
+def produce_decoration_processors_factory(
+    attributes_namer: AttributesNamer = _calculate_attrname,
+    error_class_provider: ErrorClassProvider = _provide_error_class,
+    class_preparer: __.typx.Optional[ ClassPreparer ] = None,
 ) -> __.cabc.Callable[
     [ AttributeMutabilityVerifiers, AttributeVisibilityVerifiers ],
     tuple[ _nomina.DecorationPreprocessors, _nomina.DecorationPostprocessors ]
@@ -700,25 +651,6 @@ def produce_decoration_processors_factory( # noqa: PLR0913
             _produce_instances_initialization_postprocessor(
                 attributes_namer = attributes_namer,
                 mutables = mutables, visibles = visibles ) )
-        if mutables != '*':
-            postprocessors.append(
-                __.funct.partial(
-                    _associate_instances_attributes_assigner,
-                    attributes_namer = attributes_namer,
-                    error_class_provider = error_class_provider,
-                    implementation_core = assigner_core ) )
-            postprocessors.append(
-                __.funct.partial(
-                    _associate_instances_attributes_deleter,
-                    attributes_namer = attributes_namer,
-                    error_class_provider = error_class_provider,
-                    implementation_core = deleter_core ) )
-        if visibles != '*':
-            postprocessors.append(
-                __.funct.partial(
-                    _associate_instances_attributes_surveyor,
-                    attributes_namer = attributes_namer,
-                    implementation_core = surveyor_core ) )
         return tuple( preprocessors ), tuple( postprocessors )
 
     return produce
@@ -731,11 +663,13 @@ def dataclass_standard(
 ) -> _nomina.Decorator:
     # https://github.com/microsoft/pyright/discussions/10344
     ''' Dataclass decorator factory. '''
+    decorators_factory = produce_decorators_factory( level = 'instances' )
+    decorators = decorators_factory( mutables, visibles )
     processors_factory = produce_decoration_processors_factory(
         class_preparer = prepare_dataclass_for_instances )
     preprocessors, postprocessors = processors_factory( mutables, visibles )
     return _factories.produce_decorator(
-        decorators = ( _dataclass_core, ),
+        decorators = ( _dataclass_core, *decorators ),
         preprocessors = preprocessors,
         postprocessors = postprocessors )
 
@@ -745,9 +679,12 @@ def standard(
     visibles: AttributeVisibilityVerifiers = _visibles_default,
 ) -> _nomina.Decorator:
     ''' Class decorator factory. '''
+    decorators_factory = produce_decorators_factory( level = 'instances' )
+    decorators = decorators_factory( mutables, visibles )
     processors_factory = produce_decoration_processors_factory( )
     preprocessors, postprocessors = processors_factory( mutables, visibles )
     return _factories.produce_decorator(
+        decorators = decorators,
         preprocessors = preprocessors,
         postprocessors = postprocessors )
 
@@ -759,31 +696,35 @@ def produce_class_factory_decorators(
     deleter_core: DeleterCore = _delete_attribute_if_mutable,
     surveyor_core: SurveyorCore = _survey_visible_attributes,
 ) -> _nomina.Decorators:
-    constructor, initializer, assigner, deleter, surveyor = (
+    decorators: list[ _nomina.Decorator ] = [ ]
+    constructor, initializer = (
         _produce_class_operations(
             attributes_namer = attributes_namer,
-            error_class_provider = error_class_provider,
-            assigner_core = assigner_core,
-            deleter_core = deleter_core,
-            surveyor_core = surveyor_core ) )
-    class_construction_decorator = (
+            error_class_provider = error_class_provider ) )
+    decorators.append(
         _factories.produce_class_construction_decorator(
             constructor = constructor ) )
-    class_initialization_decorator = (
+    decorators.append(
         _factories.produce_class_initialization_decorator(
             initializer = initializer ) )
-    class_immutability_decorator = (
-        _factories.produce_class_mutation_control_decorator(
-            assigner = assigner, deleter = deleter ) )
-    class_concealment_decorator = (
-        _factories.produce_class_visibility_control_decorator(
-            surveyor = surveyor ) )
-    return (
-        class_construction_decorator,
-        class_initialization_decorator,
-        class_concealment_decorator,
-        class_immutability_decorator,
-    )
+    decorators.append(
+        _produce_attributes_assignment_decorator(
+            level = 'class',
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = assigner_core ) )
+    decorators.append(
+        _produce_attributes_deletion_decorator(
+            level = 'class',
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = deleter_core ) )
+    decorators.append(
+        _produce_attributes_surveillance_decorator(
+            level = 'class',
+            attributes_namer = attributes_namer,
+            implementation_core = surveyor_core ) )
+    return decorators
 
 
 class_factory_decorators = produce_class_factory_decorators( )

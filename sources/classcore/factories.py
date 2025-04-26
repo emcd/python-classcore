@@ -101,21 +101,6 @@ Initializer: __.typx.TypeAlias = __.typx.Annotated[
     ],
     __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
 ]
-Assigner: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [ type, _nomina.AssignerLigation, str, __.typx.Any ], None ],
-    __.typx.Doc( ''' Attribute assigner to use with metaclass. ''' ),
-]
-Deleter: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [ type, _nomina.DeleterLigation, str ], None ],
-    __.typx.Doc( ''' Attribute deleter to use with metaclass. ''' ),
-]
-Surveyor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [ type, _nomina.SurveyorLigation ], __.cabc.Iterable[ str ] ],
-    __.typx.Doc( ''' Attribute surveyor to use with metaclass. ''' ),
-]
 
 
 ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
@@ -261,55 +246,6 @@ def produce_class_initialization_decorator(
                 cls, __.funct.partial( original, cls ), posargs, nomargs )
 
         clscls.__init__ = initialize
-        return clscls
-
-    return decorate
-
-
-def produce_class_mutation_control_decorator(
-    assigner: Assigner, deleter: Deleter
-) -> _nomina.Decorator:
-    ''' Produces metaclass decorator for class mutation control.
-
-        Decorator overrides ``__delattr__`` and ``__setattr__`` on metaclass.
-    '''
-    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
-        original_assigner = getattr( clscls, '__setattr__' )
-        original_deleter = getattr( clscls, '__delattr__' )
-
-        @__.funct.wraps( original_assigner )
-        def assign( cls: type, name: str, value: __.typx.Any ) -> None:
-            ligation = __.funct.partial( original_assigner, cls )
-            assigner( cls, ligation, name, value )
-
-        @__.funct.wraps( original_deleter )
-        def delete( cls: type, name: str ) -> None:
-            ligation = __.funct.partial( original_deleter, cls )
-            deleter( cls, ligation, name )
-
-        clscls.__delattr__ = delete
-        clscls.__setattr__ = assign
-        return clscls
-
-    return decorate
-
-
-def produce_class_visibility_control_decorator(
-    surveyor: Surveyor
-) -> _nomina.Decorator:
-    ''' Produces metaclass decorator for class visibility control.
-
-        Decorator overrides ``__dir__`` on metaclass.
-    '''
-    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
-        original = getattr( clscls, '__dir__' )
-
-        @__.funct.wraps( original )
-        def survey( cls: type ) -> __.cabc.Iterable[ str ]:
-            ligation = __.funct.partial( original, cls )
-            return surveyor( cls, ligation )
-
-        clscls.__dir__ = survey # pyright: ignore[reportAttributeAccessIssue]
         return clscls
 
     return decorate
