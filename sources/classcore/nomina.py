@@ -29,11 +29,10 @@ Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
 Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
 DecoratorsMutable: __.typx.TypeAlias = __.cabc.MutableSequence[ Decorator ]
 
-# TODO: Rename to DecorationPreparer.
-DecorationPreprocessor: __.typx.TypeAlias = (
+DecorationPreparer: __.typx.TypeAlias = (
     __.cabc.Callable[ [ type, DecoratorsMutable ], None ] )
-DecorationPreprocessors: __.typx.TypeAlias = (
-    __.cabc.Sequence[ DecorationPreprocessor ] )
+DecorationPreparers: __.typx.TypeAlias = (
+    __.cabc.Sequence[ DecorationPreparer ] )
 
 InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., None ],

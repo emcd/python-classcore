@@ -251,42 +251,22 @@ def produce_class_initialization_decorator(
     return decorate
 
 
-class_construction_decorator_default = (
-    produce_class_construction_decorator( ) )
-class_initialization_decorator_default = (
-    produce_class_initialization_decorator( ) )
-decorators_default = (
-    class_construction_decorator_default,
-    class_initialization_decorator_default,
-)
-
-
 def decoration_by(
-    decorators: _nomina.Decorators = ( )
+    *decorators: _nomina.Decorator,
+    preparers: _nomina.DecorationPreparers = ( ),
 ) -> _nomina.Decorator:
     ''' Class decorator which applies other class decorators.
 
         Useful to apply a stack of decorators as a sequence.
+
+        Can optionally execute a sequence of decoration preparers before
+        applying the decorators proper. These can be used to alter the
+        decorators list itself, such as to inject decorators based on
+        introspection of the class.
     '''
     def decorate( cls: type ) -> type:
-        return apply_decorators( cls, decorators )
-
-    return decorate
-
-
-def produce_decorator(
-    decorators: _nomina.Decorators = ( ),
-    preprocessors: _nomina.DecorationPreprocessors = ( ),
-) -> _nomina.Decorator:
-    # TODO: Merge with 'decoration_by' decorator.
-    ''' Generic decorator factory.
-
-        Can be wrapped to adapt specialized arguments into preparers.
-    '''
-    def decorate( cls: type[ _T ] ) -> type[ _T ]:
         decorators_ = list( decorators )
-        for preprocessor in preprocessors:
-            preprocessor( cls, decorators_ )
+        for preparer in preparers: preparer( cls, decorators_ )
         return apply_decorators( cls, decorators_ )
 
     return decorate

@@ -448,15 +448,18 @@ def _produce_class_construction_postprocessor(
     ) -> None:
         arguments = getattr( cls, arguments_name, { } )
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
+        if not dcls_spec: # either base class or metaclass may be marked
+            clscls = type( cls )
+            dcls_spec = getattr( clscls, '__dataclass_transform__', None )
         instances_mutables = arguments.get(
             'instances_mutables', _mutables_default )
         instances_visibles = arguments.get(
             'instances_visibles', _visibles_default )
         if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
-            decorator_factory = dataclass_standard
+            decorator_factory = dataclass_with_standard_behaviors
             if not dcls_spec.get( 'frozen_default', True ):
                 instances_mutables = instances_mutables or '*'
-        else: decorator_factory = standard
+        else: decorator_factory = with_standard_behaviors
         decorator = decorator_factory(
             mutables = instances_mutables, visibles = instances_visibles )
         decorators.append( decorator )
@@ -612,14 +615,14 @@ def produce_decorators_factory( # noqa: PLR0913
     return produce
 
 
-def produce_decoration_processors_factory(
+def produce_decoration_preparers_factory(
     attributes_namer: AttributesNamer = _calculate_attrname,
     error_class_provider: ErrorClassProvider = _provide_error_class,
     class_preparer: __.typx.Optional[ ClassPreparer ] = None,
-) -> __.cabc.Callable[ [ ], _nomina.DecorationPreprocessors ]:
-    def produce( ) -> _nomina.DecorationPreprocessors:
+) -> __.cabc.Callable[ [ ], _nomina.DecorationPreparers ]:
+    def produce( ) -> _nomina.DecorationPreparers:
         ''' Produces processors for standard decorators. '''
-        preprocessors: list[ _nomina.DecorationPreprocessor ] = [ ]
+        preprocessors: list[ _nomina.DecorationPreparer ] = [ ]
         if class_preparer is not None:
             preprocessors.append(
                 __.funct.partial(
@@ -631,7 +634,7 @@ def produce_decoration_processors_factory(
 
 
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-def dataclass_standard(
+def dataclass_with_standard_behaviors(
     mutables: BehaviorExclusionVerifiersOmni = _mutables_default,
     visibles: BehaviorExclusionVerifiersOmni = _visibles_default,
 ) -> _nomina.Decorator:
@@ -639,26 +642,23 @@ def dataclass_standard(
     ''' Dataclass decorator factory. '''
     decorators_factory = produce_decorators_factory( level = 'instances' )
     decorators = decorators_factory( mutables, visibles )
-    processors_factory = produce_decoration_processors_factory(
+    processors_factory = produce_decoration_preparers_factory(
         class_preparer = prepare_dataclass_for_instances )
-    preprocessors = processors_factory( )
-    return _factories.produce_decorator(
-        decorators = ( _dataclass_core, *decorators ),
-        preprocessors = preprocessors )
+    preparers = processors_factory( )
+    return _factories.decoration_by(
+        _dataclass_core, *decorators, preparers = preparers )
 
 
-def standard(
+def with_standard_behaviors(
     mutables: BehaviorExclusionVerifiersOmni = _mutables_default,
     visibles: BehaviorExclusionVerifiersOmni = _visibles_default,
 ) -> _nomina.Decorator:
     ''' Class decorator factory. '''
     decorators_factory = produce_decorators_factory( level = 'instances' )
     decorators = decorators_factory( mutables, visibles )
-    processors_factory = produce_decoration_processors_factory( )
-    preprocessors = processors_factory( )
-    return _factories.produce_decorator(
-        decorators = decorators,
-        preprocessors = preprocessors )
+    processors_factory = produce_decoration_preparers_factory( )
+    preparers = processors_factory( )
+    return _factories.decoration_by( *decorators, preparers = preparers )
 
 
 def produce_class_factory_decorators(
@@ -702,11 +702,11 @@ def produce_class_factory_decorators(
 class_factory_decorators = produce_class_factory_decorators( )
 
 
-@_factories.decoration_by( class_factory_decorators )
+@_factories.decoration_by( *class_factory_decorators )
 class Class( type ): pass
 
 
-@_factories.decoration_by( class_factory_decorators )
+@_factories.decoration_by( *class_factory_decorators )
 class ProtocolClass( type( __.typx.Protocol ) ): pass
 
 
