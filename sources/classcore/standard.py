@@ -19,8 +19,8 @@
 
 
 ''' Decorators and metaclasses with concealment and immutability. '''
-# TODO: Support introspection of PEP 593 annotations for markers.
-#       Maybe behaviors enum for mutability and visibility.
+# TODO? Support introspection of PEP 593 annotations for behavior exclusions.
+#       Maybe enum for mutability and visibility.
 # TODO? Add attribute value transformer as standard decorator argument.
 
 
@@ -36,8 +36,11 @@ from . import utilities as _utilities
 _U = __.typx.TypeVar( '_U' )
 
 
+AttributesNamer: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ str, str ], str ] )
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]
-BehaviorExclusionPredicate: __.typx.TypeAlias = __.cabc.Callable[ ..., bool ]
+BehaviorExclusionPredicate: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ str ], bool ] )
 BehaviorExclusionPredicates: __.typx.TypeAlias = (
     __.cabc.Sequence[ BehaviorExclusionPredicate ] )
 BehaviorExclusionRegex: __.typx.TypeAlias = __.re.Pattern[ str ]
@@ -47,30 +50,8 @@ BehaviorExclusionVerifier: __.typx.TypeAlias = (
     str | BehaviorExclusionRegex | BehaviorExclusionPredicate )
 BehaviorExclusionVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ BehaviorExclusionVerifier ] )
-MutablesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
-AttributeMutabilityPredicate: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str, __.typx.Any ], bool ] )
-AttributeMutabilityPredicates: __.typx.TypeAlias = (
-    __.cabc.Sequence[ AttributeMutabilityPredicate ] )
-AttributeMutabilityRegexes: __.typx.TypeAlias = (
-    __.cabc.Sequence[ __.re.Pattern[ str ] ] )
-AttributeMutabilityVerifier: __.typx.TypeAlias = (
-    str | BehaviorExclusionRegex | AttributeMutabilityPredicate )
-AttributeMutabilityVerifiers: __.typx.TypeAlias = (
-    __.cabc.Sequence[ AttributeMutabilityVerifier ] | __.typx.Literal[ '*' ] )
-VisiblesNames: __.typx.TypeAlias = __.cabc.Set[ str ]
-AttributeVisibilityPredicate: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str ], bool ] )
-AttributeVisibilityPredicates: __.typx.TypeAlias = (
-    __.cabc.Sequence[ AttributeVisibilityPredicate ] )
-AttributeVisibilityRegexes: __.typx.TypeAlias = (
-    __.cabc.Sequence[ __.re.Pattern[ str ] ] )
-AttributeVisibilityVerifier: __.typx.TypeAlias = (
-    str | BehaviorExclusionRegex | AttributeVisibilityPredicate )
-AttributeVisibilityVerifiers: __.typx.TypeAlias = (
-    __.cabc.Sequence[ AttributeVisibilityVerifier ] | __.typx.Literal[ '*' ] )
-AttributesNamer: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str, str ], str ] )
+BehaviorExclusionVerifiersOmni: __.typx.TypeAlias = (
+    BehaviorExclusionVerifiers | __.typx.Literal[ '*' ] )
 ErrorClassProvider: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], type[ Exception ] ] )
 
@@ -160,15 +141,18 @@ def _assign_attribute_if_mutable( # noqa: PLR0913
     if _immutability_label not in behaviors:
         ligation( name, value )
         return
-    names: MutablesNames = getattr( obj, names_name, frozenset( ) )
-    regexes: AttributeMutabilityRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    # predicates: AttributeMutabilityPredicates = (
-    #     getattr( obj, predicates_name, ( ) ) )
+    names: BehaviorExclusionNames = getattr( obj, names_name, frozenset( ) )
+    regexes: BehaviorExclusionRegexes = getattr( obj, regexes_name, ( ) )
+    predicates: BehaviorExclusionPredicates = (
+        getattr( obj, predicates_name, ( ) ) )
     if name in names:
         ligation( name, value )
         return
-    # TODO: Sweep predicates.
+    for predicate in predicates:
+        if predicate( name ):
+            # TODO? Cache predicate hit.
+            ligation( name, value )
+            return
     for regex in regexes:
         if regex.fullmatch( name ):
             # TODO? Cache regex hit.
@@ -192,15 +176,18 @@ def _delete_attribute_if_mutable( # noqa: PLR0913
     if _immutability_label not in behaviors:
         ligation( name )
         return
-    names: MutablesNames = getattr( obj, names_name, frozenset( ) )
-    regexes: AttributeMutabilityRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    # predicates: AttributeMutabilityPredicates = (
-    #     getattr( obj, predicates_name, ( ) ) )
+    names: BehaviorExclusionNames = getattr( obj, names_name, frozenset( ) )
+    regexes: BehaviorExclusionRegexes = getattr( obj, regexes_name, ( ) )
+    predicates: BehaviorExclusionPredicates = (
+        getattr( obj, predicates_name, ( ) ) )
     if name in names:
         ligation( name )
         return
-    # TODO: Sweep predicates.
+    for predicate in predicates:
+        if predicate( name ):
+            # TODO? Cache predicate hit.
+            ligation( name )
+            return
     for regex in regexes:
         if regex.fullmatch( name ):
             # TODO? Cache regex hit.
@@ -221,11 +208,10 @@ def _survey_visible_attributes( # noqa: PLR0913
     names_base = ligation( )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
     if _concealment_label not in behaviors: return names_base
-    names: VisiblesNames = getattr( obj, names_name, frozenset( ) )
-    predicates: AttributeVisibilityPredicates = (
+    names: BehaviorExclusionNames = getattr( obj, names_name, frozenset( ) )
+    regexes: BehaviorExclusionRegexes = getattr( obj, regexes_name, ( ) )
+    predicates: BehaviorExclusionPredicates = (
         getattr( obj, predicates_name, ( ) ) )
-    regexes: AttributeVisibilityRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
     names_: list[ str ] = [ ]
     for name in names_base:
         if name in names:
@@ -254,15 +240,15 @@ def _provide_error_class( name: str ) -> type[ Exception ]:
         case 'AttributeImmutability':
             from .exceptions import AttributeImmutability as error
         case _:
-            from .exceptions import ErrorProductionFailure
-            raise ErrorProductionFailure( name, reason = 'Does not exist.' )
+            from .exceptions import ErrorProvideFailure
+            raise ErrorProvideFailure( name, reason = 'Does not exist.' )
     return error
 
 
 def _produce_instances_initialization_decorator(
     attributes_namer: AttributesNamer,
-    mutables: AttributeMutabilityVerifiers,
-    visibles: AttributeVisibilityVerifiers,
+    mutables: BehaviorExclusionVerifiersOmni,
+    visibles: BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorator:
     def decorate( cls: type[ _U ] ) -> type[ _U ]:
         initializer_name = attributes_namer( 'instances', 'initializer' )
@@ -589,12 +575,12 @@ def produce_decorators_factory( # noqa: PLR0913
     deleter_core: DeleterCore = _delete_attribute_if_mutable,
     surveyor_core: SurveyorCore = _survey_visible_attributes,
 ) -> __.cabc.Callable[
-    [ AttributeMutabilityVerifiers, AttributeVisibilityVerifiers ],
+    [ BehaviorExclusionVerifiersOmni, BehaviorExclusionVerifiersOmni ],
     _nomina.Decorators
 ]:
     def produce(
-        mutables: AttributeMutabilityVerifiers,
-        visibles: AttributeVisibilityVerifiers,
+        mutables: BehaviorExclusionVerifiersOmni,
+        visibles: BehaviorExclusionVerifiersOmni,
     ) -> _nomina.Decorators:
         ''' Produces standard decorators. '''
         decorators: list[ _nomina.Decorator ] = [ ]
@@ -630,14 +616,8 @@ def produce_decoration_processors_factory(
     attributes_namer: AttributesNamer = _calculate_attrname,
     error_class_provider: ErrorClassProvider = _provide_error_class,
     class_preparer: __.typx.Optional[ ClassPreparer ] = None,
-) -> __.cabc.Callable[
-    [ AttributeMutabilityVerifiers, AttributeVisibilityVerifiers ],
-    _nomina.DecorationPreprocessors
-]:
-    def produce(
-        mutables: AttributeMutabilityVerifiers,
-        visibles: AttributeVisibilityVerifiers,
-    ) -> _nomina.DecorationPreprocessors:
+) -> __.cabc.Callable[ [ ], _nomina.DecorationPreprocessors ]:
+    def produce( ) -> _nomina.DecorationPreprocessors:
         ''' Produces processors for standard decorators. '''
         preprocessors: list[ _nomina.DecorationPreprocessor ] = [ ]
         if class_preparer is not None:
@@ -652,8 +632,8 @@ def produce_decoration_processors_factory(
 
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 def dataclass_standard(
-    mutables: AttributeMutabilityVerifiers = _mutables_default,
-    visibles: AttributeVisibilityVerifiers = _visibles_default,
+    mutables: BehaviorExclusionVerifiersOmni = _mutables_default,
+    visibles: BehaviorExclusionVerifiersOmni = _visibles_default,
 ) -> _nomina.Decorator:
     # https://github.com/microsoft/pyright/discussions/10344
     ''' Dataclass decorator factory. '''
@@ -661,21 +641,21 @@ def dataclass_standard(
     decorators = decorators_factory( mutables, visibles )
     processors_factory = produce_decoration_processors_factory(
         class_preparer = prepare_dataclass_for_instances )
-    preprocessors = processors_factory( mutables, visibles )
+    preprocessors = processors_factory( )
     return _factories.produce_decorator(
         decorators = ( _dataclass_core, *decorators ),
         preprocessors = preprocessors )
 
 
 def standard(
-    mutables: AttributeMutabilityVerifiers = _mutables_default,
-    visibles: AttributeVisibilityVerifiers = _visibles_default,
+    mutables: BehaviorExclusionVerifiersOmni = _mutables_default,
+    visibles: BehaviorExclusionVerifiersOmni = _visibles_default,
 ) -> _nomina.Decorator:
     ''' Class decorator factory. '''
     decorators_factory = produce_decorators_factory( level = 'instances' )
     decorators = decorators_factory( mutables, visibles )
     processors_factory = produce_decoration_processors_factory( )
-    preprocessors = processors_factory( mutables, visibles )
+    preprocessors = processors_factory( )
     return _factories.produce_decorator(
         decorators = decorators,
         preprocessors = preprocessors )

@@ -23,27 +23,26 @@
 
 from __future__ import annotations
 
-# from . import standard as _standard
+from . import standard as _standard
 
 
-class Omniexception( BaseException ):
-    # TODO: Inherit from _standard.Object.
-    ''' Base exception for the module. '''
+class Omniexception( BaseException, _standard.Object ):
+    ''' Base exception for package. '''
 
 
-class Omnierror( Omniexception, Exception ):
-    ''' Base error for the module. '''
+class Omnierror( Exception, Omniexception ):
+    ''' Base error for package. '''
 
 
-class AttributeImmutability( Omnierror, AttributeError ):
+class AttributeImmutability( AttributeError, Omnierror ):
 
     def __init__( self, name: str, target: str ):
         super( ).__init__(
             f"Could not assign or delete attribute {name!r} on {target}." )
 
 
-class ErrorProductionFailure( Omnierror, RuntimeError ):
+class ErrorProvideFailure( RuntimeError, Omnierror ):
 
     def __init__( self, name: str, reason: str ):
         super( ).__init__(
-            f"Could not produce error {name!r}. Reason: {reason}" )
+            f"Could not provide error class {name!r}. Reason: {reason}" )
