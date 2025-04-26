@@ -18,8 +18,9 @@
 #============================================================================#
 
 
-''' Common constants, imports, and utilities. '''
+''' Standard module classes and reclassifers. '''
 
 
-from .imports import *
-from .nomina import *
+from __future__ import annotations
+
+# from . import __

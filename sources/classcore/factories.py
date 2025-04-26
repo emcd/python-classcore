@@ -135,7 +135,7 @@ def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
     return cls
 
 
-def produce_constructor(
+def produce_class_constructor(
     attributes_namer: _nomina.AttributesNamer,
     preprocessors: ProduceConstructorPreprocsArgument = ( ),
     postprocessors: ProduceConstructorPostprocsArgument = ( ),
@@ -172,7 +172,7 @@ def produce_constructor(
     return construct
 
 
-def produce_initializer(
+def produce_class_initializer(
     attributes_namer: _nomina.AttributesNamer,
     completers: ProduceInitializerCompletersArgument = ( ),
 ) -> Initializer:

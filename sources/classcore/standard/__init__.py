@@ -18,8 +18,10 @@
 #============================================================================#
 
 
-''' Common constants, imports, and utilities. '''
+''' Decorators and class factories with concealment and immutability. '''
 
 
-from .imports import *
-from .nomina import *
+from __future__ import annotations
+
+from .classes import *
+from .decorators import *

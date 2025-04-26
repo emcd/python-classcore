@@ -21,5 +21,26 @@
 ''' Common constants, imports, and utilities. '''
 
 
-from .imports import *
-from .nomina import *
+from __future__ import annotations
+
+from ..__ import * # noqa: F403
+
+
+def is_public_identifier( name: str ) -> bool:
+    ''' Is Python identifier public? '''
+    return not name.startswith( '_' )
+
+
+def provide_error_class( name: str ) -> type[ Exception ]:
+    ''' Produces error class for this package. '''
+    match name:
+        case 'AttributeImmutability':
+            from ..exceptions import AttributeImmutability as error
+        case _:
+            from ..exceptions import ErrorProvideFailure
+            raise ErrorProvideFailure( name, reason = 'Does not exist.' )
+    return error
+
+
+mutables_default = ( )
+visibles_default = ( is_public_identifier, )
