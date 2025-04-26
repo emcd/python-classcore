@@ -118,9 +118,6 @@ ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
 ]
 
 
-_progress_name = '_class_IN_PROGRESS_'
-
-
 def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
     ''' Applies sequence of decorators to class.
 
@@ -139,6 +136,7 @@ def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
 
 
 def produce_constructor(
+    attributes_namer: _nomina.AttributesNamer,
     preprocessors: ProduceConstructorPreprocsArgument = ( ),
     postprocessors: ProduceConstructorPostprocsArgument = ( ),
 ) -> Constructor:
@@ -162,18 +160,20 @@ def produce_constructor(
         cls = superf( clscls, name, tuple( bases_ ), namespace, **arguments_ )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
-        in_progress = _utilities.getattr0( cls, _progress_name, False )
+        progress_name = attributes_namer( 'class', 'in_progress' )
+        in_progress = _utilities.getattr0( cls, progress_name, False )
         if in_progress: return cls
-        setattr( cls, _progress_name, True )
+        setattr( cls, progress_name, True )
         for postp in postprocessors: postp( cls, decorators_ )
         cls = apply_decorators( cls, decorators_ )
-        setattr( cls, _progress_name, False )
+        setattr( cls, progress_name, False )
         return cls
 
     return construct
 
 
 def produce_initializer(
+    attributes_namer: _nomina.AttributesNamer,
     completers: ProduceInitializerCompletersArgument = ( ),
 ) -> Initializer:
     ''' Produces initializers for classes. '''
@@ -186,27 +186,28 @@ def produce_initializer(
     ) -> None:
         ''' Initializes class, applying hooks. '''
         superf( *posargs, **nomargs )
-        in_progress = _utilities.getattr0( cls, _progress_name, False )
+        progress_name = attributes_namer( 'class', 'in_progress' )
+        in_progress = _utilities.getattr0( cls, progress_name, False )
         if in_progress: return # If non-empty, then not top-level.
-        delattr( cls, _progress_name )
+        delattr( cls, progress_name )
         for completer in completers: completer( cls )
 
     return initialize
 
 
-constructor_default = produce_constructor( )
-initializer_default = produce_initializer( )
-
-
 def produce_class_construction_decorator(
-    constructor: Constructor = constructor_default
+    attributes_namer: _nomina.AttributesNamer,
+    constructor: Constructor,
 ) -> _nomina.Decorator:
     ''' Produces metaclass decorator to control class construction.
 
         Decorator overrides ``__new__`` on metaclass.
     '''
     def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        constructor_name = attributes_namer( 'classes', 'constructor' )
+        extant = getattr( clscls, constructor_name, None )
         original = getattr( clscls, '__new__' )
+        if extant is original: return clscls
 
         def construct(
             clscls_: type[ _T ],
@@ -215,36 +216,40 @@ def produce_class_construction_decorator(
             namespace: dict[ str, __.typx.Any ], *,
             decorators: _nomina.Decorators = ( ),
             **arguments: __.typx.Any,
-        ) -> type:
+        ) -> type[ object ]:
             return constructor(
                 clscls_, original,
                 name, bases, namespace, arguments, decorators )
 
-        clscls.__new__ = construct # pyright: ignore[reportAttributeAccessIssue]
+        setattr( clscls, constructor_name, construct )
+        setattr( clscls, '__new__', construct )
         return clscls
 
     return decorate
 
 
 def produce_class_initialization_decorator(
-    initializer: Initializer = initializer_default
+    attributes_namer: _nomina.AttributesNamer,
+    initializer: Initializer,
 ) -> _nomina.Decorator:
     ''' Produces metaclass decorator to control class initialization.
 
         Decorator overrides ``__init__`` on metaclass.
     '''
     def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+        initializer_name = attributes_namer( 'classes', 'initializer' )
+        extant = getattr( clscls, initializer_name, None )
         original = getattr( clscls, '__init__' )
+        if extant is original: return clscls
 
         @__.funct.wraps( original )
         def initialize(
-            cls: type,
-            *posargs: __.typx.Any,
-            **nomargs: __.typx.Any,
+            cls: type, *posargs: __.typx.Any, **nomargs: __.typx.Any
         ) -> None:
-            initializer(
-                cls, __.funct.partial( original, cls ), posargs, nomargs )
+            ligation = __.funct.partial( original, cls )
+            initializer( cls, ligation, posargs, nomargs )
 
+        setattr( clscls, initializer_name, initialize )
         clscls.__init__ = initialize
         return clscls
 

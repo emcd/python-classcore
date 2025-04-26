@@ -35,8 +35,6 @@ from . import utilities as _utilities
 _U = __.typx.TypeVar( '_U' )
 
 
-AttributesNamer: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str, str ], str ] )
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 BehaviorExclusionPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], bool ] )
@@ -109,7 +107,7 @@ class ClassPreparer( __.typx.Protocol ):
     def __call__(
         class_: type,
         decorators: _nomina.DecoratorsMutable, /, *,
-        attributes_namer: AttributesNamer,
+        attributes_namer: _nomina.AttributesNamer,
     ) -> None: raise NotImplementedError
 
 
@@ -157,7 +155,7 @@ def _assign_attribute_if_mutable( # noqa: PLR0913
             # TODO? Cache regex hit.
             ligation( name, value )
             return
-    target = _utilities.qualify_object_name( obj )
+    target = _utilities.describe_object( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
 
@@ -192,7 +190,7 @@ def _delete_attribute_if_mutable( # noqa: PLR0913
             # TODO? Cache regex hit.
             ligation( name )
             return
-    target = _utilities.qualify_object_name( obj )
+    target = _utilities.describe_object( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
 
@@ -229,10 +227,6 @@ def _survey_visible_attributes( # noqa: PLR0913
     return names_
 
 
-def _calculate_attrname( level: str, core: str ) -> str:
-    return f"_{__.package_name}_{level}_{core}_"
-
-
 def _provide_error_class( name: str ) -> type[ Exception ]:
     ''' Produces error class for this package. '''
     match name:
@@ -245,7 +239,7 @@ def _provide_error_class( name: str ) -> type[ Exception ]:
 
 
 def _produce_instances_initialization_decorator(
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     mutables: BehaviorExclusionVerifiersOmni,
     visibles: BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorator:
@@ -283,7 +277,7 @@ def _produce_instances_initialization_decorator(
 
 def _produce_attributes_assignment_decorator(
     level: str,
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     error_class_provider: ErrorClassProvider,
     implementation_core: AssignerCore,
 ) -> _nomina.Decorator:
@@ -320,7 +314,7 @@ def _produce_attributes_assignment_decorator(
 
 def _produce_attributes_deletion_decorator(
     level: str,
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     error_class_provider: ErrorClassProvider,
     implementation_core: DeleterCore,
 ) -> _nomina.Decorator:
@@ -356,7 +350,7 @@ def _produce_attributes_deletion_decorator(
 
 def _produce_attributes_surveillance_decorator(
     level: str,
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     implementation_core: SurveyorCore,
 ) -> _nomina.Decorator:
     def decorate( cls: type[ _U ] ) -> type[ _U ]:
@@ -420,7 +414,7 @@ def _deduplicate_merge_sequences(
 
 
 def _produce_class_construction_preprocessor(
-    attributes_namer: AttributesNamer
+    attributes_namer: _nomina.AttributesNamer
 ) -> _factories.ConstructionPreprocessor:
 
     def preprocess( # noqa: PLR0913
@@ -438,7 +432,7 @@ def _produce_class_construction_preprocessor(
 
 
 def _produce_class_construction_postprocessor(
-    attributes_namer: AttributesNamer
+    attributes_namer: _nomina.AttributesNamer
 ) -> _factories.ConstructionPostprocessor:
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
@@ -467,7 +461,7 @@ def _produce_class_construction_postprocessor(
 
 
 def _produce_class_initialization_completer(
-    attributes_namer: AttributesNamer
+    attributes_namer: _nomina.AttributesNamer
 ) -> _factories.InitializationCompleter:
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
@@ -494,28 +488,33 @@ def _produce_class_initialization_completer(
 
 
 def _produce_class_factory_core(
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     error_class_provider: ErrorClassProvider,
 ) -> tuple[ _factories.Constructor, _factories.Initializer ]:
+    preprocessors = (
+        _produce_class_construction_preprocessor(
+            attributes_namer = attributes_namer ), )
+    postprocessors = (
+        _produce_class_construction_postprocessor(
+            attributes_namer = attributes_namer ), )
+    completers = (
+        _produce_class_initialization_completer(
+            attributes_namer = attributes_namer ), )
     constructor = (
         _factories.produce_constructor(
-            preprocessors = (
-                _produce_class_construction_preprocessor(
-                    attributes_namer = attributes_namer ), ),
-            postprocessors = (
-                _produce_class_construction_postprocessor(
-                    attributes_namer = attributes_namer ), ) ) )
+            attributes_namer = attributes_namer,
+            preprocessors = preprocessors,
+            postprocessors = postprocessors ) )
     initializer = (
         _factories.produce_initializer(
-            completers = (
-                _produce_class_initialization_completer(
-                    attributes_namer = attributes_namer ), ) ) )
+            attributes_namer = attributes_namer,
+            completers = completers ) )
     return constructor, initializer
 
 
 def _record_behavior_exclusions(
     cls: type,
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     basename: str,
     level: str,
     verifiers: BehaviorExclusionVerifiers,
@@ -541,7 +540,7 @@ def _record_behavior_exclusions(
 
 
 def _record_class_construction_arguments(
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
     namespace: dict[ str, __.typx.Any ],
     arguments: dict[ str, __.typx.Any ],
 ) -> None:
@@ -559,7 +558,7 @@ def _record_class_construction_arguments(
 def prepare_dataclass_for_instances(
     cls: type,
     decorators: _nomina.DecoratorsMutable, /, *,
-    attributes_namer: AttributesNamer,
+    attributes_namer: _nomina.AttributesNamer,
 ) -> None:
     ''' Annotates dataclass in support of instantiation machinery. '''
     annotations = __.inspect.get_annotations( cls )
@@ -571,7 +570,7 @@ def prepare_dataclass_for_instances(
 
 def produce_decorators_factory( # noqa: PLR0913
     level: str,
-    attributes_namer: AttributesNamer = _calculate_attrname,
+    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: ErrorClassProvider = _provide_error_class,
     assigner_core: AssignerCore = _assign_attribute_if_mutable,
     deleter_core: DeleterCore = _delete_attribute_if_mutable,
@@ -615,7 +614,7 @@ def produce_decorators_factory( # noqa: PLR0913
 
 
 def produce_decoration_preparers_factory(
-    attributes_namer: AttributesNamer = _calculate_attrname,
+    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: ErrorClassProvider = _provide_error_class,
     class_preparer: __.typx.Optional[ ClassPreparer ] = None,
 ) -> __.cabc.Callable[ [ ], _nomina.DecorationPreparers ]:
@@ -661,7 +660,7 @@ def with_standard_behaviors(
 
 
 def produce_class_factory_decorators(
-    attributes_namer: AttributesNamer = _calculate_attrname,
+    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: ErrorClassProvider = _provide_error_class,
     assigner_core: AssignerCore = _assign_attribute_if_mutable,
     deleter_core: DeleterCore = _delete_attribute_if_mutable,
@@ -674,9 +673,11 @@ def produce_class_factory_decorators(
             error_class_provider = error_class_provider ) )
     decorators.append(
         _factories.produce_class_construction_decorator(
+            attributes_namer = attributes_namer,
             constructor = constructor ) )
     decorators.append(
         _factories.produce_class_initialization_decorator(
+            attributes_namer = attributes_namer,
             initializer = initializer ) )
     decorators.append(
         _produce_attributes_assignment_decorator(

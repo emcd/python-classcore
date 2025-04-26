@@ -25,6 +25,10 @@ from __future__ import annotations
 
 from . import __
 
+
+AttributesNamer: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ str, str ], str ] )
+
 Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
 Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
 DecoratorsMutable: __.typx.TypeAlias = __.cabc.MutableSequence[ Decorator ]

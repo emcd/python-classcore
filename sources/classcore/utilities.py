@@ -26,6 +26,13 @@ from __future__ import annotations
 from . import __
 
 
+def describe_object( obj: object ) -> str:
+    if __.inspect.isclass( obj ):
+        return "class '{}'".format( qualify_class_name( obj ) )
+    # TODO? functions, methods, etc...
+    return "instance of {}".format( describe_object( type( obj ) ) )
+
+
 def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
     ''' Returns attribute from object without inheritance. '''
     # Inspect object dictionary directly to suppress getattr inheritance.
@@ -37,11 +44,8 @@ def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
     return default
 
 
-def qualify_object_name( obj: object ) -> str:
-    if __.inspect.isclass( obj ):
-        return f"class '{obj.__module__}.{obj.__qualname__}'"
-    # TODO? functions, methods, etc...
-    return "instance of {}".format( qualify_object_name( type( obj ) ) )
+def qualify_class_name( cls: type ) -> str:
+    return f"{cls.__module__}.{cls.__qualname__}"
 
 
 def repair_class_reproduction( original: type, reproduction: type ) -> None:
