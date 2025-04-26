@@ -22,11 +22,6 @@
 # TODO: Support introspection of PEP 593 annotations for markers.
 #       Maybe behaviors enum for mutability and visibility.
 # TODO? Add attribute value transformer as standard decorator argument.
-# TODO: Convert instances association functions from postproceesors to
-#       decorators and append to end of decorators list.
-#       Then, generalize and collapse metaclass and class decorators
-#       for operations.
-#       Drop notion of postprocessors for creation of instances decorators.
 
 
 from __future__ import annotations
@@ -264,6 +259,43 @@ def _provide_error_class( name: str ) -> type[ Exception ]:
     return error
 
 
+def _produce_instances_initialization_decorator(
+    attributes_namer: AttributesNamer,
+    mutables: AttributeMutabilityVerifiers,
+    visibles: AttributeVisibilityVerifiers,
+) -> _nomina.Decorator:
+    def decorate( cls: type[ _U ] ) -> type[ _U ]:
+        initializer_name = attributes_namer( 'instances', 'initializer' )
+        extant = getattr( cls, initializer_name, None )
+        original = getattr( cls, '__init__' )
+        if extant is original: return cls
+        behaviors_name = attributes_namer( 'instance', 'behaviors' )
+        behaviors: set[ str ] = set( )
+        if mutables != '*':
+            _record_behavior_exclusions(
+                cls, attributes_namer, 'mutables', 'instances', mutables )
+            behaviors.add( _immutability_label )
+        if visibles != '*':
+            _record_behavior_exclusions(
+                cls, attributes_namer, 'visibles', 'instances', visibles )
+            behaviors.add( _concealment_label )
+
+        @__.funct.wraps( original )
+        def initialize(
+            self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
+        ) -> None:
+            original( self, *posargs, **nomargs )
+            behaviors_ = _utilities.getattr0( self, behaviors_name, set( ) )
+            if not behaviors_: setattr( self, behaviors_name, behaviors_ )
+            behaviors_.update( behaviors )
+
+        setattr( cls, initializer_name, initialize )
+        cls.__init__ = initialize
+        return cls
+
+    return decorate
+
+
 def _produce_attributes_assignment_decorator(
     level: str,
     attributes_namer: AttributesNamer,
@@ -473,7 +505,7 @@ def _produce_class_initialization_completer(
     return complete
 
 
-def _produce_class_operations(
+def _produce_class_factory_core(
     attributes_namer: AttributesNamer,
     error_class_provider: ErrorClassProvider,
 ) -> tuple[ _factories.Constructor, _factories.Initializer ]:
@@ -491,40 +523,6 @@ def _produce_class_operations(
                 _produce_class_initialization_completer(
                     attributes_namer = attributes_namer ), ) ) )
     return constructor, initializer
-
-
-def _produce_instances_initialization_postprocessor(
-    attributes_namer: AttributesNamer,
-    mutables: AttributeMutabilityVerifiers,
-    visibles: AttributeVisibilityVerifiers,
-) -> _nomina.DecorationPostprocessor:
-    # TODO: Replace with decorator.
-    behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    behaviors: set[ str ] = set( )
-
-    def postprocess( cls: type ) -> None:
-        original_init = getattr( cls, '__init__' )
-        if mutables != '*':
-            _record_behavior_exclusions(
-                cls, attributes_namer, 'mutables', 'instances', mutables )
-            behaviors.add( _immutability_label )
-        if visibles != '*':
-            _record_behavior_exclusions(
-                cls, attributes_namer, 'visibles', 'instances', visibles )
-            behaviors.add( _concealment_label )
-
-        @__.funct.wraps( original_init )
-        def initialize(
-            self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
-        ) -> None:
-            original_init( self, *posargs, **nomargs )
-            behaviors_ = _utilities.getattr0( self, behaviors_name, set( ) )
-            if not behaviors_: setattr( self, behaviors_name, behaviors_ )
-            behaviors_.update( behaviors )
-
-        cls.__init__ = initialize
-
-    return postprocess
 
 
 def _record_behavior_exclusions(
@@ -600,7 +598,10 @@ def produce_decorators_factory( # noqa: PLR0913
     ) -> _nomina.Decorators:
         ''' Produces standard decorators. '''
         decorators: list[ _nomina.Decorator ] = [ ]
-        # TODO: Initialization decorator.
+        decorators.append(
+            _produce_instances_initialization_decorator(
+                attributes_namer = attributes_namer,
+                mutables = mutables, visibles = visibles ) )
         if mutables != '*':
             decorators.append(
                 _produce_attributes_assignment_decorator(
@@ -631,27 +632,20 @@ def produce_decoration_processors_factory(
     class_preparer: __.typx.Optional[ ClassPreparer ] = None,
 ) -> __.cabc.Callable[
     [ AttributeMutabilityVerifiers, AttributeVisibilityVerifiers ],
-    tuple[ _nomina.DecorationPreprocessors, _nomina.DecorationPostprocessors ]
+    _nomina.DecorationPreprocessors
 ]:
     def produce(
         mutables: AttributeMutabilityVerifiers,
         visibles: AttributeVisibilityVerifiers,
-    ) -> tuple[
-        _nomina.DecorationPreprocessors, _nomina.DecorationPostprocessors
-    ]:
+    ) -> _nomina.DecorationPreprocessors:
         ''' Produces processors for standard decorators. '''
         preprocessors: list[ _nomina.DecorationPreprocessor ] = [ ]
-        postprocessors: list[ _nomina.DecorationPostprocessor ] = [ ]
         if class_preparer is not None:
             preprocessors.append(
                 __.funct.partial(
                     class_preparer,
                     attributes_namer = attributes_namer  ) )
-        postprocessors.append(
-            _produce_instances_initialization_postprocessor(
-                attributes_namer = attributes_namer,
-                mutables = mutables, visibles = visibles ) )
-        return tuple( preprocessors ), tuple( postprocessors )
+        return tuple( preprocessors )
 
     return produce
 
@@ -667,11 +661,10 @@ def dataclass_standard(
     decorators = decorators_factory( mutables, visibles )
     processors_factory = produce_decoration_processors_factory(
         class_preparer = prepare_dataclass_for_instances )
-    preprocessors, postprocessors = processors_factory( mutables, visibles )
+    preprocessors = processors_factory( mutables, visibles )
     return _factories.produce_decorator(
         decorators = ( _dataclass_core, *decorators ),
-        preprocessors = preprocessors,
-        postprocessors = postprocessors )
+        preprocessors = preprocessors )
 
 
 def standard(
@@ -682,11 +675,10 @@ def standard(
     decorators_factory = produce_decorators_factory( level = 'instances' )
     decorators = decorators_factory( mutables, visibles )
     processors_factory = produce_decoration_processors_factory( )
-    preprocessors, postprocessors = processors_factory( mutables, visibles )
+    preprocessors = processors_factory( mutables, visibles )
     return _factories.produce_decorator(
         decorators = decorators,
-        preprocessors = preprocessors,
-        postprocessors = postprocessors )
+        preprocessors = preprocessors )
 
 
 def produce_class_factory_decorators(
@@ -698,7 +690,7 @@ def produce_class_factory_decorators(
 ) -> _nomina.Decorators:
     decorators: list[ _nomina.Decorator ] = [ ]
     constructor, initializer = (
-        _produce_class_operations(
+        _produce_class_factory_core(
             attributes_namer = attributes_namer,
             error_class_provider = error_class_provider ) )
     decorators.append(

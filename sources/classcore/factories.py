@@ -277,20 +277,16 @@ def decoration_by(
 def produce_decorator(
     decorators: _nomina.Decorators = ( ),
     preprocessors: _nomina.DecorationPreprocessors = ( ),
-    postprocessors: _nomina.DecorationPostprocessors = ( ),
 ) -> _nomina.Decorator:
+    # TODO: Merge with 'decoration_by' decorator.
     ''' Generic decorator factory.
 
-        Can be wrapped to adapt specialized arguments into preprocessors and
-        postprocessors.
+        Can be wrapped to adapt specialized arguments into preparers.
     '''
     def decorate( cls: type[ _T ] ) -> type[ _T ]:
         decorators_ = list( decorators )
         for preprocessor in preprocessors:
             preprocessor( cls, decorators_ )
-        cls = apply_decorators( cls, decorators_ )
-        for postprocessor in postprocessors:
-            postprocessor( cls )
-        return cls
+        return apply_decorators( cls, decorators_ )
 
     return decorate
