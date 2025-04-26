@@ -27,7 +27,6 @@
 from __future__ import annotations
 
 from . import __
-from . import bases as _bases
 from . import factories as _factories
 from . import nomina as _nomina
 from . import utilities as _utilities
@@ -707,32 +706,46 @@ class Class( type ): pass
 
 
 @_factories.decoration_by( *class_factory_decorators )
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
+class Dataclass( type ): pass
+
+
+@_factories.decoration_by( *class_factory_decorators )
+@__.typx.dataclass_transform( kw_only_default = True )
+class DataclassMutable( type ): pass
+
+
+@_factories.decoration_by( *class_factory_decorators )
 class ProtocolClass( type( __.typx.Protocol ) ): pass
+
+
+@_factories.decoration_by( *class_factory_decorators )
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
+class ProtocolDataclass( type( __.typx.Protocol ) ): pass
+
+
+@_factories.decoration_by( *class_factory_decorators )
+@__.typx.dataclass_transform( kw_only_default = True )
+class ProtocolDataclassMutable( type( __.typx.Protocol ) ): pass
 
 
 class Object( metaclass = Class ): pass
 
 
-class DataclassObject(
-    _bases.DataclassObjectBase, metaclass = Class
-): pass
+class DataclassObject( metaclass = Dataclass ): pass
 
 
-class DataclassObjectMutable(
-    _bases.DataclassObjectMutableBase, metaclass = Class
-): pass
+class DataclassObjectMutable( metaclass = DataclassMutable ): pass
 
 
 class Protocol( __.typx.Protocol, metaclass = ProtocolClass ): pass
 
 
 class DataclassProtocol(
-    _bases.DataclassProtocolBase, __.typx.Protocol,
-    metaclass = ProtocolClass,
+    __.typx.Protocol, metaclass = ProtocolDataclass,
 ): pass
 
 
 class DataclassProtocolMutable(
-    _bases.DataclassProtocolMutableBase, __.typx.Protocol,
-    metaclass = ProtocolClass,
+    __.typx.Protocol, metaclass = ProtocolDataclassMutable,
 ): pass

@@ -27,7 +27,6 @@ from . import standard
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---
 
-from .bases import *
 from .factories import *
 
 
