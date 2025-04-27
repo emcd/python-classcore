@@ -28,6 +28,7 @@ from . import standard
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---
 
+from .decorators import *
 from .factories import *
 
 

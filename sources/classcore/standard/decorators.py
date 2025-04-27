@@ -21,11 +21,18 @@
 ''' Standard decorators. '''
 # TODO? Add attribute value transformer as standard decorator argument.
 
+# ruff: noqa: F401
+
 
 from __future__ import annotations
 
 from .. import factories as _factories
 from .. import utilities as _utilities
+from ..decorators import (
+    decoration_by,
+    produce_class_construction_decorator,
+    produce_class_initialization_decorator,
+)
 from . import __
 from . import behaviors as _behaviors
 from . import nomina as _nomina
@@ -35,6 +42,31 @@ _U = __.typx.TypeVar( '_U' )
 
 
 _dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
+
+
+def _produce_class_factory_core(
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
+) -> tuple[ _nomina.ClassConstructor, _nomina.ClassInitializer ]:
+    preprocessors = (
+        _behaviors.produce_class_construction_preprocessor(
+            attributes_namer = attributes_namer ), )
+    postprocessors = (
+        _behaviors.produce_class_construction_postprocessor(
+            attributes_namer = attributes_namer ), )
+    completers = (
+        _behaviors.produce_class_initialization_completer(
+            attributes_namer = attributes_namer ), )
+    constructor = (
+        _factories.produce_class_constructor(
+            attributes_namer = attributes_namer,
+            preprocessors = preprocessors,
+            postprocessors = postprocessors ) )
+    initializer = (
+        _factories.produce_class_initializer(
+            attributes_namer = attributes_namer,
+            completers = completers ) )
+    return constructor, initializer
 
 
 def prepare_dataclass_for_instances(
@@ -48,6 +80,49 @@ def prepare_dataclass_for_instances(
     annotations[ behaviors_name ] = set[ str ]
     setattr( cls, '__annotations__', annotations ) # in case of absence
     setattr( cls, behaviors_name, __.dcls.field( init = False ) )
+
+
+def produce_class_factory_decorators(
+    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
+    error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
+    assigner_core: _nomina.AssignerCore = (
+        _behaviors.assign_attribute_if_mutable ),
+    deleter_core: _nomina.DeleterCore = (
+        _behaviors.delete_attribute_if_mutable ),
+    surveyor_core: _nomina.SurveyorCore = (
+        _behaviors.survey_visible_attributes ),
+) -> _nomina.Decorators:
+    decorators: list[ _nomina.Decorator ] = [ ]
+    constructor, initializer = (
+        _produce_class_factory_core(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider ) )
+    decorators.append(
+        produce_class_construction_decorator(
+            attributes_namer = attributes_namer,
+            constructor = constructor ) )
+    decorators.append(
+        produce_class_initialization_decorator(
+            attributes_namer = attributes_namer,
+            initializer = initializer ) )
+    decorators.append(
+        produce_attributes_assignment_decorator(
+            level = 'class',
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = assigner_core ) )
+    decorators.append(
+        produce_attributes_deletion_decorator(
+            level = 'class',
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = deleter_core ) )
+    decorators.append(
+        produce_attributes_surveillance_decorator(
+            level = 'class',
+            attributes_namer = attributes_namer,
+            implementation_core = surveyor_core ) )
+    return decorators
 
 
 def produce_instances_initialization_decorator(
@@ -262,6 +337,9 @@ def produce_decoration_preparers_factory(
     return produce
 
 
+class_factory_decorators = produce_class_factory_decorators( )
+
+
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 def dataclass_with_standard_behaviors(
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
@@ -274,8 +352,7 @@ def dataclass_with_standard_behaviors(
     preparers_factory = produce_decoration_preparers_factory(
         class_preparer = prepare_dataclass_for_instances )
     preparers = preparers_factory( )
-    return _factories.decoration_by(
-        _dataclass_core, *decorators, preparers = preparers )
+    return decoration_by( _dataclass_core, *decorators, preparers = preparers )
 
 
 def with_standard_behaviors(
@@ -287,4 +364,4 @@ def with_standard_behaviors(
     decorators = decorators_factory( mutables, visibles )
     preparers_factory = produce_decoration_preparers_factory( )
     preparers = preparers_factory( )
-    return _factories.decoration_by( *decorators, preparers = preparers )
+    return decoration_by( *decorators, preparers = preparers )
