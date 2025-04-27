@@ -18,7 +18,7 @@
 #============================================================================#
 
 
-''' Decorators and class factories with concealment and immutability. '''
+''' Decorators and class factories providing concealment and immutability. '''
 
 
 from __future__ import annotations
