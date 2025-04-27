@@ -60,6 +60,12 @@ class ProtocolDataclassMutable( type( __.typx.Protocol ) ): pass
 class Object( metaclass = Class ): pass
 
 
+class ObjectMutable( # pyright: ignore[reportGeneralTypeIssues]
+    metaclass = Class,
+    instances_mutables = '*', # pyright: ignore[reportCallIssue]
+): pass
+
+
 class DataclassObject( metaclass = Dataclass ): pass
 
 
@@ -67,6 +73,13 @@ class DataclassObjectMutable( metaclass = DataclassMutable ): pass
 
 
 class Protocol( __.typx.Protocol, metaclass = ProtocolClass ): pass
+
+
+class ProtocolMutable( # pyright: ignore[reportGeneralTypeIssues]
+    __.typx.Protocol,
+    metaclass = ProtocolClass,
+    instances_mutables = '*', # pyright: ignore[reportCallIssue]
+): pass
 
 
 class DataclassProtocol(
