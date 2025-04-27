@@ -29,93 +29,6 @@ from . import utilities as _utilities
 
 
 _T = __.typx.TypeVar( '_T', bound = type )
-_U = __.typx.TypeVar( '_U' )
-
-
-ConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ ..., type ],
-    __.typx.Doc( ''' Constructor method from base metaclass. ''' ),
-]
-ConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [
-            type[ type ],               # metaclass
-            str,                        # class name
-            list[ type ],               # bases (mutable)
-            dict[ str, __.typx.Any ],   # namespace (mutable)
-            dict[ str, __.typx.Any ],   # arguments (mutable)
-            _nomina.DecoratorsMutable,  # decorators (mutable)
-        ],
-        None
-    ],
-    __.typx.Doc(
-        ''' Processes class data before construction.
-
-            For use cases, such as argument conversion.
-        ''' ),
-]
-ConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, _nomina.DecoratorsMutable ], None ],
-    __.typx.Doc(
-        ''' Processes class before decoration.
-
-            For use cases, such as decorator list manipulation.
-        ''' ),
-]
-# TODO: InitializationPreparer (arguments mutation)
-InitializationCompleter: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type ], None ],
-    __.typx.Doc(
-        ''' Completes initialization of class.
-
-            For use cases, such as enabling immutability once all other
-            initialization has occurred.
-        ''' ),
-]
-
-
-Constructor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [
-            type,
-            ConstructorLigation,
-            str,
-            tuple[ type, ... ],
-            dict[ str, __.typx.Any ],
-            __.NominativeArguments,
-            _nomina.Decorators,
-        ],
-        type
-    ],
-    __.typx.Doc( ''' Constructor to use with metaclass. ''' ),
-]
-Initializer: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[
-        [
-            type,
-            _nomina.InitializerLigation,
-            __.PositionalArguments,
-            __.NominativeArguments,
-        ],
-        None
-    ],
-    __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
-]
-
-
-ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ ConstructionPreprocessor ],
-    __.typx.Doc( ''' Processors to apply before construction of class. ''' ),
-]
-ProduceConstructorPostprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ ConstructionPostprocessor ],
-    __.typx.Doc( ''' Processors to apply before decoration of class. ''' ),
-]
-ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ InitializationCompleter ],
-    __.typx.Doc(
-        ''' Processors to apply at final stage of class initialization. ''' ),
-]
 
 
 def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
@@ -137,14 +50,14 @@ def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
 
 def produce_class_constructor(
     attributes_namer: _nomina.AttributesNamer,
-    preprocessors: ProduceConstructorPreprocsArgument = ( ),
-    postprocessors: ProduceConstructorPostprocsArgument = ( ),
-) -> Constructor:
+    preprocessors: _nomina.ProduceConstructorPreprocsArgument = ( ),
+    postprocessors: _nomina.ProduceConstructorPostprocsArgument = ( ),
+) -> _nomina.ClassConstructor:
     ''' Produces constructors for classes. '''
 
     def construct( # noqa: PLR0913
         clscls: type[ _T ],
-        superf: ConstructorLigation,
+        superf: _nomina.ClassConstructorLigation,
         name: str,
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ],
@@ -174,8 +87,8 @@ def produce_class_constructor(
 
 def produce_class_initializer(
     attributes_namer: _nomina.AttributesNamer,
-    completers: ProduceInitializerCompletersArgument = ( ),
-) -> Initializer:
+    completers: _nomina.ProduceInitializerCompletersArgument = ( ),
+) -> _nomina.ClassInitializer:
     ''' Produces initializers for classes. '''
 
     def initialize(
@@ -197,7 +110,7 @@ def produce_class_initializer(
 
 def produce_class_construction_decorator(
     attributes_namer: _nomina.AttributesNamer,
-    constructor: Constructor,
+    constructor: _nomina.ClassConstructor,
 ) -> _nomina.Decorator:
     ''' Produces metaclass decorator to control class construction.
 
@@ -230,7 +143,7 @@ def produce_class_construction_decorator(
 
 def produce_class_initialization_decorator(
     attributes_namer: _nomina.AttributesNamer,
-    initializer: Initializer,
+    initializer: _nomina.ClassInitializer,
 ) -> _nomina.Decorator:
     ''' Produces metaclass decorator to control class initialization.
 

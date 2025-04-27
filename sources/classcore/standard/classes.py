@@ -33,7 +33,7 @@ from . import nomina as _nomina
 def _produce_class_factory_core(
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-) -> tuple[ _factories.Constructor, _factories.Initializer ]:
+) -> tuple[ _nomina.ClassConstructor, _nomina.ClassInitializer ]:
     preprocessors = (
         _behaviors.produce_class_construction_preprocessor(
             attributes_namer = attributes_namer ), )

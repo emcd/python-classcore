@@ -24,14 +24,14 @@
 from . import __
 from . import exceptions
 from . import nomina
+from . import standard
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---
 
 from .factories import *
-from .standard import *
 
 
 __version__ = '1.0a0'
 
 
-reclassify_modules( __name__ )
+standard.reclassify_modules( __name__ )

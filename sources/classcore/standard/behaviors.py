@@ -25,7 +25,6 @@
 
 from __future__ import annotations
 
-from .. import factories as _factories
 from .. import utilities as _utilities
 from . import __
 from . import nomina as _nomina
@@ -167,7 +166,7 @@ def classify_behavior_exclusion_verifiers(
 
 def produce_class_construction_preprocessor(
     attributes_namer: _nomina.AttributesNamer
-) -> _factories.ConstructionPreprocessor:
+) -> _nomina.ClassConstructionPreprocessor:
 
     def preprocess( # noqa: PLR0913
         clscls: type,
@@ -185,7 +184,7 @@ def produce_class_construction_preprocessor(
 
 def produce_class_construction_postprocessor(
     attributes_namer: _nomina.AttributesNamer
-) -> _factories.ConstructionPostprocessor:
+) -> _nomina.ClassConstructionPostprocessor:
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def postprocess(
@@ -217,7 +216,7 @@ def produce_class_construction_postprocessor(
 
 def produce_class_initialization_completer(
     attributes_namer: _nomina.AttributesNamer
-) -> _factories.InitializationCompleter:
+) -> _nomina.ClassInitializationCompleter:
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def complete( cls: type ) -> None:
