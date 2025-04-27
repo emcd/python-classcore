@@ -17,7 +17,7 @@
    +--------------------------------------------------------------------------+
 
 *******************************************************************************
-                                   classcore                                   
+                                   classcore
 *******************************************************************************
 
 .. image:: https://img.shields.io/pypi/v/classcore
@@ -45,7 +45,119 @@
    :target: https://pypi.org/project/classcore/
 
 
-.. todo:: Provide content.
+🏭 A Python library package which provides **foundational class factories and
+decorators** for providing classes with attributes immutability and concealment
+and other custom behaviors.
+
+
+Key Features ⭐
+===============================================================================
+
+* 🔧 **Class Customization**: Composable decorators and metaclasses providing
+  classes with customizable behaviors.
+* 🔒 **Attribute Immutability**: Standard collection of metaclasses and
+  decorators to provide immutability for class and instance attributes, with
+  support for selective mutability via names, regexes, or predicates.
+* 👁️ **Attribute Concealment**: Standard collection of metaclasses and
+  decorators to provide concealment for class and instance attributes, with
+  support for selective visibility via names, regexes, or predicates.
+* 📚 **Dataclass Integration**: Decorators like
+  ``dataclass_with_standard_behaviors`` make standard Python dataclasses with
+  immutability and concealment. (Unlike ``dataclass( frozen = True )``,
+  attributes can still be manipulated via ``__post_init__`` when one of these
+  decorators is applied.)
+* 🧩 **Protocol Support**: Immutable protocol classes for defining static type
+  interfaces, compatible with ``typing.Protocol``. Immutability and concealment
+  are inherited by subclassed implementations of these protocols.
+* 🗂️ **Module Reclassification**: Apply immutability and concealment to entire
+  modules.
+
+
+Installation 📦
+===============================================================================
+
+::
+
+    pip install classcore
+
+
+Note on Immutability 📢
+===============================================================================
+
+   Enforcement of immutability is quite difficult in Python. While this library
+   encourages immutability by default, it can be circumvented by anyone who has
+   intermediate knowledge of Python machinery and who is determined to
+   circumvent the immutability. Use the library in the spirit of making
+   programs safer, but understand that it cannot truly prevent unwanted state
+   tampering.
+
+
+Examples 💡
+===============================================================================
+
+
+Immutable Dataclasses 📊
+-------------------------------------------------------------------------------
+
+Seamlessly integrate with Python's dataclass system for immutable data classes.
+
+.. code-block:: python
+
+    from classcore.standard import DataclassObject
+
+    class Point( DataclassObject ):
+        x: int
+        y: int
+
+    point = Point( x = 10, y = 20 )
+    point.x = 15  # ❌ Error
+
+
+Selectively Mutable Classes 🔓
+-------------------------------------------------------------------------------
+
+Allow specific attributes to be modified while keeping others immutable.
+
+.. code-block:: python
+
+    import re
+    from classcore.standard import with_standard_behaviors
+
+    @with_standard_behaviors(
+        mutables = ( 'counter', re.compile( r'temp_.*' ) )
+    )
+    class Analytics:
+        def __init__( self ):
+            self.data = { }  # Immutable
+            self.counter = 0  # Mutable (explicitly allowed)
+            self.temp_buffer = [ ]  # Mutable (matches regex pattern)
+
+    analytics = Analytics( )
+    analytics.counter = 1             # ✅ Works
+    analytics.temp_buffer.append(42)  # ✅ Works
+    analytics.data = { }              # ❌ Error
+
+
+Module Immutability 📦
+-------------------------------------------------------------------------------
+
+Make modules (or entire packages) immutable to prevent modification of their
+contents.
+
+.. code-block:: python
+
+    from classcore.standard import reclassify_modules
+
+    reclassify_modules( __name__ )
+
+
+Use Cases 🎯
+===============================================================================
+
+* 📊 **Data Transfer Objects**: Ensure data integrity with immutable DTOs.
+* 🏛️ **API Interfaces**: Define stable, well-controlled interfaces.
+* 🧩 **Plugin Systems**: Plugin systems with controlled extension points.
+* 📦 **Frameworks**: Frameworks with controlled extension and modification.
 
 
 `More Flair <https://www.imdb.com/title/tt0151804/characters/nm0431918>`_
