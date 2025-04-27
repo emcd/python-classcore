@@ -135,16 +135,18 @@ def produce_instances_initialization_decorator(
         extant = getattr( cls, initializer_name, None )
         original = getattr( cls, '__init__' )
         if extant is original: return cls
-        behaviors_name = attributes_namer( 'instance', 'behaviors' )
         behaviors: set[ str ] = set( )
-        if mutables != '*':
-            _behaviors.record_behavior_exclusions(
-                cls, attributes_namer, 'mutables', 'instances', mutables )
-            behaviors.add( _behaviors.immutability_label )
-        if visibles != '*':
-            _behaviors.record_behavior_exclusions(
-                cls, attributes_namer, 'visibles', 'instances', visibles )
-            behaviors.add( _behaviors.concealment_label )
+        behaviors_name = attributes_namer( 'instance', 'behaviors' )
+        _behaviors.record_behavior(
+            cls, attributes_namer = attributes_namer,
+            level = 'instances', basename = 'mutables',
+            label = _behaviors.immutability_label, behaviors = behaviors,
+            verifiers = mutables )
+        _behaviors.record_behavior(
+            cls, attributes_namer = attributes_namer,
+            level = 'instances', basename = 'visibles',
+            label = _behaviors.concealment_label, behaviors = behaviors,
+            verifiers = visibles )
 
         @__.funct.wraps( original )
         def initialize(

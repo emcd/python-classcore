@@ -49,13 +49,13 @@ def assign_attribute_if_mutable( # noqa: PLR0913
     if immutability_label not in behaviors:
         ligation( name, value )
         return
-    names: _nomina.BehaviorExclusionNames = (
+    names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( obj, regexes_name, ( ) ) )
     predicates: _nomina.BehaviorExclusionPredicates = (
         getattr( obj, predicates_name, ( ) ) )
-    if name in names:
+    if names == '*' or name in names:
         ligation( name, value )
         return
     for predicate in predicates:
@@ -86,13 +86,13 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     if immutability_label not in behaviors:
         ligation( name )
         return
-    names: _nomina.BehaviorExclusionNames = (
+    names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( obj, regexes_name, ( ) ) )
     predicates: _nomina.BehaviorExclusionPredicates = (
         getattr( obj, predicates_name, ( ) ) )
-    if name in names:
+    if names == '*' or name in names:
         ligation( name )
         return
     for predicate in predicates:
@@ -120,8 +120,9 @@ def survey_visible_attributes( # noqa: PLR0913
     names_base = ligation( )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
     if concealment_label not in behaviors: return names_base
-    names: _nomina.BehaviorExclusionNames = (
+    names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
+    if names == '*': return names_base
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( obj, regexes_name, ( ) ) )
     predicates: _nomina.BehaviorExclusionPredicates = (
@@ -224,37 +225,47 @@ def produce_class_initialization_completer(
             getattr( cls, arguments_name, None ) )
         if arguments is not None: delattr( cls, arguments_name )
         arguments = arguments or { }
-        class_mutables = arguments.get( 'class_mutables', __.mutables_default )
-        class_visibles = arguments.get( 'class_visibles', __.visibles_default )
+        mutables = arguments.get( 'class_mutables', __.mutables_default )
+        visibles = arguments.get( 'class_visibles', __.visibles_default )
         behaviors: set[ str ] = set( )
-        if class_mutables != '*':
-            record_behavior_exclusions(
-                cls, attributes_namer, 'mutables', 'class', class_mutables )
-            behaviors.add( immutability_label )
-        if class_visibles != '*':
-            record_behavior_exclusions(
-                cls, attributes_namer, 'visibles', 'class', class_visibles )
-            behaviors.add( concealment_label )
+        record_behavior(
+            cls, attributes_namer = attributes_namer,
+            level = 'class', basename = 'mutables',
+            label = immutability_label, behaviors = behaviors,
+            verifiers = mutables )
+        record_behavior(
+            cls, attributes_namer = attributes_namer,
+            level = 'class', basename = 'visibles',
+            label = concealment_label, behaviors = behaviors,
+            verifiers = visibles )
         # Set behaviors attribute last since it enables enforcement.
         setattr( cls, attributes_namer( 'class', 'behaviors' ), behaviors )
 
     return complete
 
 
-def record_behavior_exclusions(
-    cls: type,
+def record_behavior( # noqa: PLR0913
+    cls: type, /, *,
     attributes_namer: _nomina.AttributesNamer,
-    basename: str,
     level: str,
-    verifiers: _nomina.BehaviorExclusionVerifiers,
+    basename: str,
+    label: str,
+    behaviors: set[ str ],
+    verifiers: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> None:
+    names_name = attributes_namer( level, f"{basename}_names" )
+    if verifiers == '*':
+        setattr( cls, names_name, '*' )
+        return
+    names_omni: _nomina.BehaviorExclusionNamesOmni = (
+        getattr( cls, names_name, frozenset( ) ) )
+    if names_omni == '*': return
     names, regexes, predicates = (
         classify_behavior_exclusion_verifiers( verifiers ) )
-    names_name = attributes_namer( level, f"{basename}_names" )
     regexes_name = attributes_namer( level, f"{basename}_regexes" )
     predicates_name = attributes_namer( level, f"{basename}_predicates" )
-    names_: _nomina.BehaviorExclusionNames = frozenset( {
-        *names, *getattr( cls, names_name, frozenset( ) ) } )
+    names_: _nomina.BehaviorExclusionNames = (
+        frozenset( { *names, *names_omni } ) )
     regexes_: _nomina.BehaviorExclusionRegexes = (
         _deduplicate_merge_sequences(
             regexes, getattr( cls, regexes_name, ( ) ) ) )
@@ -266,6 +277,7 @@ def record_behavior_exclusions(
     setattr( cls, predicates_name, predicates_ )
     # TODO? Add regexes match cache.
     # TODO? Add predicates match cache.
+    behaviors.add( label )
 
 
 def record_class_construction_arguments(

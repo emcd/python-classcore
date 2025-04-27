@@ -29,6 +29,8 @@ from ..nomina import *
 
 
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]
+BehaviorExclusionNamesOmni: __.typx.TypeAlias = (
+    BehaviorExclusionNames | __.typx.Literal[ '*' ] )
 BehaviorExclusionPredicate: __.typx.TypeAlias = (
     __.cabc.Callable[ [ str ], bool ] )
 BehaviorExclusionPredicates: __.typx.TypeAlias = (
