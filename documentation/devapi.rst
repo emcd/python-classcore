@@ -33,3 +33,9 @@ Module ``classcore.__.imports``
 -------------------------------------------------------------------------------
 
 .. automodule:: classcore.__.imports
+
+
+Module ``classcore.__.nomina``
+-------------------------------------------------------------------------------
+
+.. automodule:: classcore.__.nomina
