@@ -26,7 +26,10 @@ from __future__ import annotations
 from . import standard as _standard
 
 
-class Omniexception( BaseException, _standard.Object ):
+class Omniexception( # pyright: ignore[reportGeneralTypeIssues]
+    BaseException, _standard.Object,
+    instances_visibles = ( '__cause__', '__context__' ), # pyright: ignore[reportCallIssue]
+):
     ''' Base exception for package. '''
 
 

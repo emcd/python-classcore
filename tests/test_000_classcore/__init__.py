@@ -30,7 +30,7 @@ from pathlib import Path
 
 
 PACKAGE_NAME = 'classcore'
-PACKAGES_NAMES = ( PACKAGE_NAME, )
+PACKAGES_NAMES = ( PACKAGE_NAME, f"{PACKAGE_NAME}.standard" )
 
 
 _modules_cache: dict[ str, types.ModuleType ] = { }
