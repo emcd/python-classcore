@@ -81,4 +81,4 @@ def _repair_cpython_class_closures(
             for aname in ( 'fget', 'fset', 'fdel' ):
                 accessor = getattr( attribute_, aname )
                 if None is accessor: continue
-                if try_repair_closure( accessor ): return # pragma: no branch
+                if try_repair_closure( accessor ): return

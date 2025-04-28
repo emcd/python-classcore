@@ -18,9 +18,6 @@
 #============================================================================#
 
 
-''' Pacakge exceptions. '''
-
-
 import pytest
 
 from . import PACKAGE_NAME, cache_import_module
