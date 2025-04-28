@@ -48,7 +48,8 @@ def reclassify_modules(
         bool, __.typx.Doc( 'Recursively reclassify package modules?' )
     ] = False,
 ) -> None:
-    ''' Reclassifies modules to be immutable.
+    # TODO? Ensure correct operation with namespace packages.
+    ''' Reclassifies modules to have attributes concealment and immutability.
 
         Can operate on individual modules or entire package hierarchies.
 
@@ -58,7 +59,7 @@ def reclassify_modules(
           modifications to external modules.
         * When used with a dictionary, converts any module objects found as
           values if they belong to the same package.
-        * Has no effect on already-immutable modules.
+        * Has no effect on already-reclassified modules.
     '''
     if isinstance( attributes, str ):
         attributes = __.sys.modules[ attributes ]

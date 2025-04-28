@@ -52,7 +52,7 @@ class AssignerCore( __.typx.Protocol ):
     ''' Core implementation of attributes assigner. '''
 
     @staticmethod
-    def __call__( # noqa: PLR0913
+    def __call__( # noqa: PLR0913 # pragma: no branch
         obj: object, /, *,
         ligation: AssignerLigation,
         error_class_provider: ErrorClassProvider,
@@ -69,7 +69,7 @@ class DeleterCore( __.typx.Protocol ):
     ''' Core implementation of attributes deleter. '''
 
     @staticmethod
-    def __call__( # noqa: PLR0913
+    def __call__( # noqa: PLR0913 # pragma: no branch
         obj: object, /, *,
         ligation: DeleterLigation,
         error_class_provider: ErrorClassProvider,
@@ -85,7 +85,7 @@ class SurveyorCore( __.typx.Protocol ):
     ''' Core implementation of attributes surveyor. '''
 
     @staticmethod
-    def __call__( # noqa: PLR0913
+    def __call__( # noqa: PLR0913 # pragma: no branch
         obj: object, /, *,
         ligation: SurveyorLigation,
         behaviors_name: str,
@@ -99,7 +99,7 @@ class ClassPreparer( __.typx.Protocol ):
     ''' Prepares class for decorator application. '''
 
     @staticmethod
-    def __call__(
+    def __call__( # pragma: no branch
         class_: type,
         decorators: DecoratorsMutable, /, *,
         attributes_namer: AttributesNamer,

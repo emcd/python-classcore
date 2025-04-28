@@ -18,21 +18,18 @@
 #============================================================================#
 
 
-''' Foundational class factories and decorators. '''
+import pytest
+
+from . import PACKAGE_NAME, cache_import_module
 
 
-from . import __
-from . import exceptions
-from . import nomina
-from . import standard
-# --- BEGIN: Injected by Copier ---
-# --- END: Injected by Copier ---
-
-from .decorators import *
-from .factories import *
+MODULE_QNAME = f"{PACKAGE_NAME}.standard.__"
 
 
-__version__ = '1.0a0'
-
-
-standard.reclassify_modules( __name__, recursive = True )
+def test_200_provide_error_class( ):
+    module = cache_import_module( MODULE_QNAME )
+    exceptions = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    error_class = module.provide_error_class( 'AttributeImmutability' )
+    assert exceptions.AttributeImmutability is error_class
+    with pytest.raises( exceptions.ErrorProvideFailure ):
+        module.provide_error_class( 'DoesNotExist' )
