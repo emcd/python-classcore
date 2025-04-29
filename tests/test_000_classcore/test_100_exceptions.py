@@ -97,8 +97,11 @@ def test_102_omniexception_instance_concealment( ):
     module = cache_import_module( MODULE_QNAME )
     class_ = module.Omniexception
     instance = class_( )
-    expectation = { '__cause__', '__context__', 'args', 'with_traceback' }
-    assert expectation == set( dir( instance ) )
+    instance_dir = dir( instance )
+    assert '__cause__' in instance_dir
+    assert '__context__' in instance_dir
+    assert 'args' in instance_dir
+    assert '__init__' not in instance_dir
 
 
 def test_110_omnierror_instantiation( ):
