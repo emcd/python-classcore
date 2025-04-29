@@ -109,9 +109,9 @@ Note on Immutability 📢
 Examples 💡
 ===============================================================================
 
-.. Please see the `examples directory
-.. <https://github.com/emcd/python-classcore/tree/master/examples>`_ for
-.. greater detail.
+Please see the `examples directory
+<https://github.com/emcd/python-classcore/tree/master/documentation/examples>`_
+for greater detail.
 
 Standard Behaviors 🔒
 -------------------------------------------------------------------------------
