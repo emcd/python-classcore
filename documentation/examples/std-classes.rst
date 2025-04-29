@@ -29,13 +29,13 @@ The ``standard`` subpackage provides base classes, decorators, and class
 factories (metaclasses) to imbue classes, and the instances which they produce,
 with attributes concealment and immutability.
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> import classcore.standard as ccstd
 
 Inheriting from a standard base class:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> class Point2d( ccstd.Object ):
     ...     def __init__( self, x: float, y: float ) -> None:
@@ -48,7 +48,7 @@ Inheriting from a standard base class:
 
 is essentially equivalent to producing a new class with a standard metaclass:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> class Point2d( metaclass = ccstd.Class ):
     ...     def __init__( self, x: float, y: float ) -> None:
@@ -64,7 +64,7 @@ Concealment and Immutability
 Both classes have immutable attributes. For example, we cannot delete the
 ``__init__`` method that we defined:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> del Point2d.__init__
     Traceback (most recent call last):
@@ -73,7 +73,7 @@ Both classes have immutable attributes. For example, we cannot delete the
 
 Nor, for example, can we add a default value for ``x``:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> Point2d.x = 3
     Traceback (most recent call last):
@@ -82,14 +82,14 @@ Nor, for example, can we add a default value for ``x``:
 
 Also, all non-public attributes on the class are concealed from :py:func:`dir`:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> dir( Point2d )
     []
 
 The instances of these classes also have immutable attributes:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> point.x = 3
     Traceback (most recent call last):
@@ -98,7 +98,7 @@ The instances of these classes also have immutable attributes:
 
 And concealed non-public attributes:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> dir( point )
     ['x', 'y']
@@ -111,7 +111,7 @@ By contrast, if we decorate an existing class, then it retains the default
 Python behavior (full mutability and visibility) with respect to its
 class attributes:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> @ccstd.with_standard_behaviors( )
     ... class Point2d:
@@ -127,9 +127,9 @@ class attributes:
     >>> del Point2d.__init__
 
 However, attributes on its instances are immutable and concealed, which is the
-same behavior as the classes we produced:
+same behavior as for the classes we produced:
 
-.. doctest:: Standard.Introduction
+.. doctest:: Standard.Classes
 
     >>> dir( point )
     ['x', 'y']
@@ -142,37 +142,7 @@ Thus, if you do not desire class attributes concealment and immutability, you
 can choose to decorate classes rather than produce them.
 
 
-Dataclasses
-===============================================================================
-
-.. todo:: Contents
-
-
-Protocol Classes
-===============================================================================
-
-.. todo:: Contents
-
-
 Mutable Instances
-===============================================================================
-
-.. todo:: Contents
-
-
-Selective Mutability and Visibility
-===============================================================================
-
-.. todo:: Contents, including inheritance examples.
-
-
-Inline Decoration
-===============================================================================
-
-.. todo:: Contents
-
-
-Modules and Reclassification
 ===============================================================================
 
 .. todo:: Contents

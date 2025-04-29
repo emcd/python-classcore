@@ -18,14 +18,17 @@
 
 
 *******************************************************************************
-Examples
+Standard Behaviors
 *******************************************************************************
 
-.. toctree::
-   :maxdepth: 2
 
-   std-classes
-   std-dataclasses
-   std-protocols
-   std-behaviors
-   std-modules
+Behavioral Selectivity
+===============================================================================
+
+.. todo:: Contents, including inheritance examples.
+
+
+Inline Decoration
+===============================================================================
+
+.. todo:: Contents
