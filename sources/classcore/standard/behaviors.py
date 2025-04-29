@@ -294,6 +294,12 @@ def record_class_construction_arguments(
     namespace: dict[ str, __.typx.Any ],
     arguments: dict[ str, __.typx.Any ],
 ) -> None:
+    arguments_name = attributes_namer( 'class', 'construction_arguments' )
+    arguments_ = namespace.get( arguments_name, { } )
+    # Decorators, which replace classes, will cause construction of the
+    # replacements without arguments. If we had previously recorded them in
+    # the class namespace, then we do not want to clobber them.
+    if arguments_: return
     arguments_ = { }
     for name in (
         'class_mutables', 'class_visibles',
@@ -301,7 +307,6 @@ def record_class_construction_arguments(
     ):
         if name not in arguments: continue
         arguments_[ name ] = arguments.pop( name )
-    arguments_name = attributes_namer( 'class', 'construction_arguments' )
     namespace[ arguments_name ] = arguments_
 
 
