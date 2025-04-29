@@ -34,7 +34,7 @@ classifiers = [ # https://pypi.org/classifiers
   # --- END: Injected by Copier ---
   'Topic :: Software Development',
 ]
-keywords = [ 'class', 'decorator', 'metaclass' ]
+keywords = [ 'dataclass', 'decorator', 'metaclass', 'protocol' ]
 [[project.authors]]
 name = 'Eric McDonald'
 email = 'emcd@users.noreply.github.com'
@@ -119,8 +119,6 @@ PYTHONUNBUFFERED = 'TRUE' # TODO: Only for coverage/pytest.
 # --- END: Injected by Copier ---
 [tool.hatch.envs.develop.scripts]
 docsgen = [
-  # '''sphinx-build -E -b doctest -d .auxiliary/caches/sphinx \
-  #    documentation .auxiliary/artifacts/sphinx-doctest''',
   '''sphinx-build -E -b linkcheck -d .auxiliary/caches/sphinx \
      documentation .auxiliary/artifacts/sphinx-linkcheck''',
   '''sphinx-build -a -d .auxiliary/caches/sphinx \
