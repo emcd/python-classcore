@@ -53,28 +53,42 @@ and other custom behaviors.
 Key Features ⭐
 ===============================================================================
 
-* 🔧 **Class Customization**: Composable decorators and metaclasses providing
-  classes with customizable behaviors.
-* 🔒 **Attribute Immutability**: Standard collection of metaclasses and
-  decorators to provide immutability for class and instance attributes, with
-  support for selective mutability via names, regexes, or predicates.
-* 👁️ **Attribute Concealment**: Standard collection of metaclasses and
-  decorators to provide concealment for class and instance attributes, with
-  support for selective visibility via names, regexes, or predicates.
-* 📚 **Dataclass Integration**: Decorators like
-  ``dataclass_with_standard_behaviors`` make standard Python dataclasses with
-  immutability and concealment. (Unlike ``dataclass( frozen = True )``,
-  attributes can still be manipulated via ``__post_init__`` when one of these
-  decorators is applied.)
-* 🧩 **Protocol Support**: Immutable protocol classes for defining static type
-  interfaces, compatible with ``typing.Protocol``. Immutability and concealment
-  are inherited by subclassed implementations of these protocols.
-* 🗂️ **Module Reclassification**: Apply immutability and concealment to entire
-  modules.
+🔧 **Class Customization**: Composable decorators and metaclasses providing
+classes with customized behaviors.
+
+🔒 **Attribute Immutability**: Standard collection of metaclasses and
+decorators to provide immutability for class and instance attributes, with
+support for selective mutability via names, regexes, or predicates.
+
+👁️ **Attribute Concealment**: Standard collection of metaclasses and decorators
+to provide concealment for class and instance attributes, with support for
+selective visibility via names, regexes, or predicates.
+
+📚 **Dataclass Integration**: Decorators like
+``dataclass_with_standard_behaviors`` make standard Python dataclasses with
+immutability and concealment. (Unlike ``dataclass( frozen = True )``,
+attributes can still be manipulated via ``__post_init__`` when one of these
+decorators is applied.)
+
+🧩 **Protocol Support**: Immutable protocol classes for nominal and structural
+subtyping, compatible with ``typing.Protocol``. Immutability and concealment
+are inherited by subclassed implementations of these protocols.
+
+🗂️ **Module Reclassification**: Apply immutability and concealment to entire
+modules.
 
 
 Installation 📦
 ===============================================================================
+
+Via `uv <https://github.com/astral-sh/uv/blob/main/README.md>`_ ``pip``
+command:
+
+::
+
+    uv pip install classcore
+
+Or, via ``pip``:
 
 ::
 
@@ -95,60 +109,74 @@ Note on Immutability 📢
 Examples 💡
 ===============================================================================
 
+.. Please see the `examples directory
+.. <https://github.com/emcd/python-classcore/tree/master/examples>`_ for
+.. greater detail.
 
-Immutable Dataclasses 📊
+Standard Behaviors 🔒
 -------------------------------------------------------------------------------
 
-Seamlessly integrate with Python's dataclass system for immutable data classes.
+Produce classes which have immutable and concealed attributes and whose
+instances have immutable and concealed attributes. Can be normal classes,
+dataclasses, protocol classes, etc....
 
 .. code-block:: python
+
+    from dataclasses import field
+    from math import sqrt
 
     from classcore.standard import DataclassObject
 
-    class Point( DataclassObject ):
-        x: int
-        y: int
+    class Point2d( DataclassObject ):
+        x: float
+        y: float
+        hypotenuse: float = field( init = False )
+        def __post_init__( self ) -> None:
+            x, y = self.x, self.y
+            self.hypotenuse = sqrt( x*x + y*y )
 
-    point = Point( x = 10, y = 20 )
-    point.x = 15  # ❌ Error
+    Point2d.x = 3     # ❌ Error, immutable class attribute.
+    point = Point2d( x = 3, y = 4 )
+    point.x = 42      # ❌ Error, immutable instance attribute.
+    point.hypotenuse  # Result: 5
+    dir( point )      # Result: ['hypotenuse', 'x', 'y']
 
-
-Selectively Mutable Classes 🔓
--------------------------------------------------------------------------------
-
-Allow specific attributes to be modified while keeping others immutable.
+Decorate classes so that their instances will have immutable and concealed
+attributes.
 
 .. code-block:: python
 
-    import re
-    from classcore.standard import with_standard_behaviors
+    from dataclasses import field
+    from math import sqrt
 
-    @with_standard_behaviors(
-        mutables = ( 'counter', re.compile( r'temp_.*' ) )
-    )
-    class Analytics:
-        def __init__( self ):
-            self.data = { }  # Immutable
-            self.counter = 0  # Mutable (explicitly allowed)
-            self.temp_buffer = [ ]  # Mutable (matches regex pattern)
+    from classcore.standard import dataclass_with_standard_behaviors
 
-    analytics = Analytics( )
-    analytics.counter = 1             # ✅ Works
-    analytics.temp_buffer.append(42)  # ✅ Works
-    analytics.data = { }              # ❌ Error
+    @dataclass_with_standard_behaviors( )
+    class Point2d:
+        x: float
+        y: float
+        hypotenuse: float = field( init = False )
+        def __post_init__( self ) -> None:
+            x, y = self.x, self.y
+            self.hypotenuse = sqrt( x*x + y*y )
+
+    point = Point2d( x = 5, y = 12 )
+    point.x = 42      # ❌ Error, immutable instance attribute.
+    point.hypotenuse  # Result: 13
+    dir( point )      # Result: ['hypotenuse', 'x', 'y']
 
 
-Module Immutability 📦
+Module Reclassification 📦
 -------------------------------------------------------------------------------
 
-Make modules (or entire packages) immutable to prevent modification of their
-contents.
+Make modules (or entire packages) immutable to prevent direct modification of
+their attributes and to present only their public attributes via ``dir``.
 
 .. code-block:: python
 
     from classcore.standard import reclassify_modules
 
-    reclassify_modules( __name__ )
+    reclassify_modules( __name__, recursive = True )
 
 
 Use Cases 🎯
