@@ -178,6 +178,16 @@ Or with a predicate:
     ...
     classcore.exceptions.AttributeImmutability: Could not assign or delete attribute '__annotations__' on instance of class ...
 
+Invalid mutability verifiers will cause an error to be raised:
+
+.. doctest:: Standard.Mutability
+
+    >>> @ccstd.with_standard_behaviors( mutables = ( 13, ) )
+    ... class C: pass
+    ...
+    Traceback (most recent call last):
+    ...
+    classcore.exceptions.BehaviorExclusionInvalidity: Invalid behavior exclusion verifier: 42
 
 Inheritance
 -------------------------------------------------------------------------------
@@ -335,6 +345,17 @@ Or with a predicate:
     >>> dir( point )
     ['__dataclass_fields__', '__dataclass_params__', 'x', 'y']
 
+Invalid visibility verifiers will cause an error to be raised:
+
+.. doctest:: Standard.Visibility
+
+    >>> @ccstd.with_standard_behaviors( visibles = ( 13, ) )
+    ... class C: pass
+    ...
+    Traceback (most recent call last):
+    ...
+    classcore.exceptions.BehaviorExclusionInvalidity: Invalid behavior exclusion verifier: 42
+
 
 Inheritance
 -------------------------------------------------------------------------------
@@ -427,9 +448,3 @@ must be supplied metaclass argument, so that they can be applied inline.
     ...     async def acquire( self ) -> bytes: raise NotImplementedError
     ...     @abc.abstractmethod
     ...     async def update( self, content: bytes ) -> None: raise NotImplementedError
-
-
-Class Factory Decoration
-===============================================================================
-
-.. todo:: Demonstrate idempotence of applying on subclass of metaclass.

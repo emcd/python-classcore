@@ -59,7 +59,7 @@ is essentially equivalent to producing a new class with a standard metaclass:
 
 
 Concealment and Immutability
--------------------------------------------------------------------------------
+===============================================================================
 
 Both classes have immutable attributes. For example, we cannot delete the
 ``__init__`` method that we defined:
@@ -105,7 +105,7 @@ And concealed non-public attributes:
 
 
 Decoration versus Production
--------------------------------------------------------------------------------
+===============================================================================
 
 By contrast, if we decorate an existing class, then it retains the default
 Python behavior (full mutability and visibility) with respect to its
@@ -145,4 +145,17 @@ can choose to decorate classes rather than produce them.
 Mutable Instances
 ===============================================================================
 
-.. todo:: Contents
+To produce classes with immutable attributes but instances with mutable
+attributes, there is a convenience class, ``ObjectMutable``.
+
+.. doctest:: Standard.Classes
+
+    >>> class Point2d( ccstd.ObjectMutable ):
+    ...     def __init__( self, x: float, y: float ) -> None:
+    ...         self.x = x
+    ...         self.y = y
+    ...
+    >>> point = Point2d( 7, 24 )
+    >>> point.x, point.y = 20, 21
+    >>> point.x, point.y
+    (20, 21)

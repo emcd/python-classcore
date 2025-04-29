@@ -25,7 +25,6 @@ Standard Dataclasses
 Introduction
 ===============================================================================
 
-
 The ``standard`` subpackage provides base classes, decorators, and class
 factories (metaclasses) to imbue :py:mod:`dataclasses`, and the instances which
 they produce, with attributes concealment and immutability.
@@ -227,4 +226,16 @@ in an error during initialization:
 Mutable Instances
 ===============================================================================
 
-.. todo:: Contents
+To produce classes with immutable attributes but instances with mutable
+attributes, there is a convenience class, ``DataclassObjectMutable``.
+
+.. doctest:: Standard.Dataclasses
+
+    >>> class Point2d( ccstd.DataclassObjectMutable ):
+    ...     x: float
+    ...     y: float
+    ...
+    >>> point = Point2d( x = 7, y = 24 )
+    >>> point.x, point.y = 20, 21
+    >>> point.x, point.y
+    (20, 21)

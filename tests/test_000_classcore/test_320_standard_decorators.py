@@ -18,42 +18,21 @@
 #============================================================================#
 
 
-''' Exceptions from package. '''
+from . import PACKAGE_NAME, cache_import_module
 
 
-from __future__ import annotations
-
-from . import __
-from . import standard as _standard
+MODULE_QNAME = f"{PACKAGE_NAME}.standard.decorators"
 
 
-class Omniexception( # pyright: ignore[reportGeneralTypeIssues]
-    BaseException, _standard.Object,
-    instances_visibles = ( '__cause__', '__context__' ), # pyright: ignore[reportCallIssue]
-):
-    ''' Base exception for package. '''
-
-
-class Omnierror( Exception, Omniexception ):
-    ''' Base error for package. '''
-
-
-class AttributeImmutability( AttributeError, Omnierror ):
-
-    def __init__( self, name: str, target: str ):
-        super( ).__init__(
-            f"Could not assign or delete attribute {name!r} on {target}." )
-
-
-class BehaviorExclusionInvalidity( TypeError, ValueError, Omnierror ):
-
-    def __init__( self, verifier: __.typx.Any ):
-        super( ).__init__(
-            f"Invalid behavior exclusion verifier: {verifier!r}" )
-
-
-class ErrorProvideFailure( RuntimeError, Omnierror ):
-
-    def __init__( self, name: str, reason: str ):
-        super( ).__init__(
-            f"Could not provide error class {name!r}. Reason: {reason}" )
+def test_210_class_factory_decorator_idempotence( ):
+    ''' Class factory decorators are idempotent. '''
+    module = cache_import_module( MODULE_QNAME )
+    @module.decoration_by( *module.class_factory_decorators )
+    class Class: pass
+    @module.decoration_by( *module.class_factory_decorators )
+    class BetterClass( Class ): pass
+    assert Class.__new__ is BetterClass.__new__
+    assert Class.__init__ is BetterClass.__init__
+    assert Class.__setattr__ is BetterClass.__setattr__
+    assert Class.__delattr__ is BetterClass.__delattr__
+    assert Class.__dir__ is BetterClass.__dir__

@@ -111,7 +111,7 @@ Likewise, instances thereof are also concealed and immutable:
     ['acquire', 'location', 'update']
 
 
-Mutable Instances
+Protocol Dataclasses
 ===============================================================================
 
 .. todo:: Contents

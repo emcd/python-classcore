@@ -129,7 +129,7 @@ def survey_visible_attributes(
     names_name = attributes_namer( level, 'visibles_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
-    if names == '*': return names_base
+    if names == '*': return names_base # pragma: no branch
     regexes_name = attributes_namer( level, 'visibles_regexes' )
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( obj, regexes_name, ( ) ) )
@@ -171,6 +171,9 @@ def classify_behavior_exclusion_verifiers(
             regexes.append( verifier )
         elif callable( verifier ):
             predicates.append( verifier )
+        else:
+            from ..exceptions import BehaviorExclusionInvalidity
+            raise BehaviorExclusionInvalidity( verifier )
     return frozenset( names ), tuple( regexes ), tuple( predicates )
 
 
