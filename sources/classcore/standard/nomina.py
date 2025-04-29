@@ -55,11 +55,9 @@ class AssignerCore( __.typx.Protocol ):
     def __call__( # noqa: PLR0913 # pragma: no branch
         obj: object, /, *,
         ligation: AssignerLigation,
+        attributes_namer: AttributesNamer,
         error_class_provider: ErrorClassProvider,
-        behaviors_name: str,
-        names_name: str,
-        regexes_name: str,
-        predicates_name: str,
+        level: str,
         name: str,
         value: __.typx.Any,
     ) -> None: raise NotImplementedError
@@ -72,11 +70,9 @@ class DeleterCore( __.typx.Protocol ):
     def __call__( # noqa: PLR0913 # pragma: no branch
         obj: object, /, *,
         ligation: DeleterLigation,
+        attributes_namer: AttributesNamer,
         error_class_provider: ErrorClassProvider,
-        behaviors_name: str,
-        names_name: str,
-        regexes_name: str,
-        predicates_name: str,
+        level: str,
         name: str,
     ) -> None: raise NotImplementedError
 
@@ -85,13 +81,11 @@ class SurveyorCore( __.typx.Protocol ):
     ''' Core implementation of attributes surveyor. '''
 
     @staticmethod
-    def __call__( # noqa: PLR0913 # pragma: no branch
+    def __call__( # pragma: no branch
         obj: object, /, *,
         ligation: SurveyorLigation,
-        behaviors_name: str,
-        names_name: str,
-        regexes_name: str,
-        predicates_name: str,
+        attributes_namer: AttributesNamer,
+        level: str,
     ) -> __.cabc.Iterable[ str ]: raise NotImplementedError
 
 

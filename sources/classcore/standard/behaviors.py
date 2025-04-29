@@ -37,32 +37,35 @@ immutability_label = 'immutability'
 def assign_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
     ligation: _nomina.AssignerLigation,
+    attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    behaviors_name: str,
-    names_name: str,
-    regexes_name: str,
-    predicates_name: str,
+    level: str,
     name: str,
     value: __.typx.Any,
 ) -> None:
+    leveli = 'instance' if level == 'instances' else level
+    behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
     if immutability_label not in behaviors:
         ligation( name, value )
         return
+    names_name = attributes_namer( level, 'mutables_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( obj, predicates_name, ( ) ) )
     if names == '*' or name in names:
         ligation( name, value )
         return
+    predicates_name = attributes_namer( level, 'mutables_predicates' )
+    predicates: _nomina.BehaviorExclusionPredicates = (
+        getattr( obj, predicates_name, ( ) ) )
     for predicate in predicates:
         if predicate( name ):
             # TODO? Cache predicate hit.
             ligation( name, value )
             return
+    regexes_name = attributes_namer( level, 'mutables_regexes' )
+    regexes: _nomina.BehaviorExclusionRegexes = (
+        getattr( obj, regexes_name, ( ) ) )
     for regex in regexes:
         if regex.fullmatch( name ):
             # TODO? Cache regex hit.
@@ -75,31 +78,34 @@ def assign_attribute_if_mutable( # noqa: PLR0913
 def delete_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
     ligation: _nomina.DeleterLigation,
+    attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    behaviors_name: str,
-    names_name: str,
-    regexes_name: str,
-    predicates_name: str,
+    level: str,
     name: str,
 ) -> None:
+    leveli = 'instance' if level == 'instances' else level
+    behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
     if immutability_label not in behaviors:
         ligation( name )
         return
+    names_name = attributes_namer( level, 'mutables_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( obj, predicates_name, ( ) ) )
     if names == '*' or name in names:
         ligation( name )
         return
+    predicates_name = attributes_namer( level, 'mutables_predicates' )
+    predicates: _nomina.BehaviorExclusionPredicates = (
+        getattr( obj, predicates_name, ( ) ) )
     for predicate in predicates:
         if predicate( name ):
             # TODO? Cache predicate hit.
             ligation( name )
             return
+    regexes_name = attributes_namer( level, 'mutables_regexes' )
+    regexes: _nomina.BehaviorExclusionRegexes = (
+        getattr( obj, regexes_name, ( ) ) )
     for regex in regexes:
         if regex.fullmatch( name ):
             # TODO? Cache regex hit.
@@ -109,22 +115,25 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
 
-def survey_visible_attributes( # noqa: PLR0913
+def survey_visible_attributes(
     obj: object, /, *,
     ligation: _nomina.SurveyorLigation,
-    behaviors_name: str,
-    names_name: str,
-    regexes_name: str,
-    predicates_name: str,
+    attributes_namer: _nomina.AttributesNamer,
+    level: str,
 ) -> __.cabc.Iterable[ str ]:
     names_base = ligation( )
+    leveli = 'instance' if level == 'instances' else level
+    behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
     if concealment_label not in behaviors: return names_base
+    names_name = attributes_namer( level, 'visibles_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
     if names == '*': return names_base
+    regexes_name = attributes_namer( level, 'visibles_regexes' )
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( obj, regexes_name, ( ) ) )
+    predicates_name = attributes_namer( level, 'visibles_predicates' )
     predicates: _nomina.BehaviorExclusionPredicates = (
         getattr( obj, predicates_name, ( ) ) )
     names_: list[ str ] = [ ]

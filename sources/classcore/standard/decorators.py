@@ -175,24 +175,16 @@ def produce_attributes_assignment_decorator(
         extant = getattr( cls, assigner_name, None )
         original = getattr( cls, '__setattr__' )
         if extant is original: return cls
-        leveli = 'instance' if level == 'instances' else level
-        behaviors_name = attributes_namer( leveli, 'behaviors' )
-        names_name = attributes_namer( level, 'mutables_names' )
-        regexes_name = attributes_namer( level, 'mutables_regexes' )
-        predicates_name = attributes_namer( level, 'mutables_predicates' )
 
         @__.funct.wraps( original )
         def assign( self: object, name: str, value: __.typx.Any ) -> None:
             implementation_core(
                 self,
                 ligation = __.funct.partial( original, self ),
+                attributes_namer = attributes_namer,
                 error_class_provider = error_class_provider,
-                behaviors_name = behaviors_name,
-                names_name = names_name,
-                regexes_name = regexes_name,
-                predicates_name = predicates_name,
-                name = name,
-                value = value )
+                level = level,
+                name = name, value = value )
 
         setattr( cls, assigner_name, assign )
         cls.__setattr__ = assign
@@ -212,22 +204,15 @@ def produce_attributes_deletion_decorator(
         extant = getattr( cls, deleter_name, None )
         original = getattr( cls, '__delattr__' )
         if extant is original: return cls
-        leveli = 'instance' if level == 'instances' else level
-        behaviors_name = attributes_namer( leveli, 'behaviors' )
-        names_name = attributes_namer( level, 'mutables_names' )
-        regexes_name = attributes_namer( level, 'mutables_regexes' )
-        predicates_name = attributes_namer( level, 'mutables_predicates' )
 
         @__.funct.wraps( original )
         def delete( self: object, name: str ) -> None:
             implementation_core(
                 self,
                 ligation = __.funct.partial( original, self ),
+                attributes_namer = attributes_namer,
                 error_class_provider = error_class_provider,
-                behaviors_name = behaviors_name,
-                names_name = names_name,
-                regexes_name = regexes_name,
-                predicates_name = predicates_name,
+                level = level,
                 name = name )
 
         setattr( cls, deleter_name, delete )
@@ -247,21 +232,14 @@ def produce_attributes_surveillance_decorator(
         extant = getattr( cls, surveyor_name, None )
         original = getattr( cls, '__dir__' )
         if extant is original: return cls
-        leveli = 'instance' if level == 'instances' else level
-        behaviors_name = attributes_namer( leveli, 'behaviors' )
-        names_name = attributes_namer( level, 'visibles_names' )
-        regexes_name = attributes_namer( level, 'visibles_regexes' )
-        predicates_name = attributes_namer( level, 'visibles_predicates' )
 
         @__.funct.wraps( original )
         def survey( self: object ) -> __.cabc.Iterable[ str ]:
             return implementation_core(
                 self,
                 ligation = __.funct.partial( original, self ),
-                behaviors_name = behaviors_name,
-                names_name = names_name,
-                regexes_name = regexes_name,
-                predicates_name = predicates_name )
+                attributes_namer = attributes_namer,
+                level = level )
 
         setattr( cls, surveyor_name, survey )
         cls.__dir__ = survey
