@@ -322,26 +322,29 @@ class_factory_decorators = produce_class_factory_decorators( )
 
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 def dataclass_with_standard_behaviors(
+    decorators: _nomina.Decorators = ( ),
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator:
     # https://github.com/microsoft/pyright/discussions/10344
     ''' Dataclass decorator factory. '''
     decorators_factory = produce_decorators_factory( level = 'instances' )
-    decorators = decorators_factory( mutables, visibles )
+    decorators_ = decorators_factory( mutables, visibles )
     preparers_factory = produce_decoration_preparers_factory(
         class_preparer = prepare_dataclass_for_instances )
     preparers = preparers_factory( )
-    return decoration_by( _dataclass_core, *decorators, preparers = preparers )
+    return decoration_by(
+        *decorators, _dataclass_core, *decorators_, preparers = preparers )
 
 
 def with_standard_behaviors(
+    decorators: _nomina.Decorators = ( ),
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator:
     ''' Class decorator factory. '''
     decorators_factory = produce_decorators_factory( level = 'instances' )
-    decorators = decorators_factory( mutables, visibles )
+    decorators_ = decorators_factory( mutables, visibles )
     preparers_factory = produce_decoration_preparers_factory( )
     preparers = preparers_factory( )
-    return decoration_by( *decorators, preparers = preparers )
+    return decoration_by( *decorators, *decorators_, preparers = preparers )

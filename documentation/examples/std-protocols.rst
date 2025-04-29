@@ -58,7 +58,7 @@ For example, one can make a protocol class via inheritance:
     ...     @abc.abstractmethod
     ...     async def acquire( self ) -> bytes: raise NotImplementedError
     ...     @abc.abstractmethod
-    ...     async def update( self, bytes ) -> None: raise NotImplementedError
+    ...     async def update( self, content: bytes ) -> None: raise NotImplementedError
 
 This protocol cannot be instantiated or mutated:
 
@@ -88,7 +88,7 @@ and immutable:
     ...         else: location_ = location
     ...         self.location = urllib.parse.urlparse( location_ )
     ...     async def acquire( self ) -> bytes: return b'' # TODO: implement
-    ...     async def update( self, bytes ) -> None: pass # TODO: implement
+    ...     async def update( self, content: bytes ) -> None: pass # TODO: implement
     >>> AiofilesFileAccessor.location = urllib.parse.urlparse( '' )
     Traceback (most recent call last):
     ...
