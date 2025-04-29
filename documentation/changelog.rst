@@ -21,5 +21,32 @@
 Release Notes
 *******************************************************************************
 
-
 .. towncrier release notes start
+
+Classcore 1.0 (2025-04-29)
+==========================
+
+Enhancements
+------------
+
+- Add support for CPython 3.10 to 3.13.
+- Add support for PyPy 3.10.
+- Base classes and class factory classes which provide standard behaviors
+  (immutability of all attributes after initialization, concealment of all
+  non-public attributes from ``dir``) by default. Can apply additional decorators
+  and can tune for selective or total mutability or visibility. Enforce on class
+  attributes and instance attributes.
+- Class and dataclass decorators which apply a set of standard behaviors to
+  classes so that they produce instances which are immutable and which only
+  reveal public attributes by default. Decorators are tunable via arguments to
+  provide selective or total attributes mutability and visibility as desired.
+- Class decorator which accepts a sequence of other class decorators to apply.
+  Reduces height of decorator stacks and improves their reusability.
+- Decorators for modifying class factory classes (metaclasses) so that they can
+  handle inline application of decorators during production of classes. This
+  includes logic for the case where a decorator replaces a class rather than
+  modifies it.
+- Module class which enforces immutability and visibility limitation on module
+  attributes. (Visibility restriction is to reveal only public attributes to
+  ``dir``.) Also, conveience function which can reclassify a module or an entire
+  package, recursively, to use this class.
