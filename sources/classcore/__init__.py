@@ -32,7 +32,7 @@ from .decorators import *
 from .factories import *
 
 
-__version__ = '1.1a0'
+__version__ = '1.2a0'
 
 
 standard.reclassify_modules( __name__, recursive = True )
