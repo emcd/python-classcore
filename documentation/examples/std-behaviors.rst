@@ -187,7 +187,7 @@ Invalid mutability verifiers will cause an error to be raised:
     ...
     Traceback (most recent call last):
     ...
-    classcore.exceptions.BehaviorExclusionInvalidity: Invalid behavior exclusion verifier: 42
+    classcore.exceptions.BehaviorExclusionInvalidity: Invalid behavior exclusion verifier: 13
 
 Inheritance
 -------------------------------------------------------------------------------
@@ -354,7 +354,7 @@ Invalid visibility verifiers will cause an error to be raised:
     ...
     Traceback (most recent call last):
     ...
-    classcore.exceptions.BehaviorExclusionInvalidity: Invalid behavior exclusion verifier: 42
+    classcore.exceptions.BehaviorExclusionInvalidity: Invalid behavior exclusion verifier: 13
 
 
 Inheritance

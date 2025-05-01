@@ -34,14 +34,44 @@ def describe_object( obj: object ) -> str:
 
 
 def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
-    ''' Returns attribute from object without inheritance. '''
-    # Inspect object dictionary directly to suppress getattr inheritance.
-    attrsdict = getattr( obj, '__dict__', { } )
-    if name in attrsdict: return attrsdict[ name ]
-    slots = getattr( obj, '__slots__', ( ) )
-    # Name may be in slots but not yet assigned.
-    if name in slots: return getattr( obj, name, default )
-    return default
+    ''' Returns private attribute from object.
+
+        Uses mangled attribute which is unique to the class.
+    '''
+    name_m = mangle_name( obj, name )
+    return getattr( obj, name_m, default )
+
+
+def delattr0( obj: object, name: str ) -> None:
+    ''' Deletes private attribute on object.
+
+        Uses mangled attribute which is unique to the class.
+    '''
+    name_m = mangle_name( obj, name )
+    delattr( obj, name_m )
+
+
+def setattr0( obj: object, name: str, value: __.typx.Any ) -> None:
+    ''' Assigns private attribute to object.
+
+        Uses mangled attribute which is unique to the class.
+    '''
+    name_m = mangle_name( obj, name )
+    setattr( obj, name_m, value )
+
+
+def mangle_name( obj: object, name: str ) -> str:
+    ''' Mangles attribute name so that it is unique.
+
+        Effectively provides name of private member attribute,
+        which is unique across class inheritance.
+    '''
+    if not __.inspect.isclass( obj ):
+        return mangle_name( type( obj ), name )
+    namehash = __.hashlib.sha256( )
+    namehash.update( qualify_class_name( obj ).encode( ) )
+    namehash_hex = namehash.hexdigest( )
+    return f"{name}_{namehash_hex}"
 
 
 def qualify_class_name( cls: type ) -> str:

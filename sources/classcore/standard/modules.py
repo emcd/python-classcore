@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+from .. import utilities as _utilities
 from . import __
 from . import behaviors as _behaviors
 from . import classes as _classes
@@ -85,5 +86,5 @@ def _seal_module(
 ) -> None:
     behaviors = { _behaviors.concealment_label, _behaviors.immutability_label }
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    setattr( module, behaviors_name, behaviors )
+    _utilities.setattr0( module, behaviors_name, behaviors )
     module.__class__ = Module

@@ -32,24 +32,7 @@ pyimpl = python_implementation( )
 
 
 class Foo: x = 1
-class Bar( Foo ): pass
-
-
-class Baz:
-    def __init__( self, value ):
-        self.x = value
-
-
-class FooSlotsBase: __slots__ = ( 'x', )
-
-
-class FooSlots( FooSlotsBase ):
-    def __init__( self, value ):
-        self.x = value
-
-
 foo = Foo( )
-bar = Bar( )
 
 
 def test_100_qualify_class_name( ):
@@ -65,28 +48,20 @@ def test_110_describe_object( ):
     assert 'instance of class' in module.describe_object( foo )
 
 
-def test_200_getattr0_dict( ):
-    ''' Attribute from object dictionary without inheritance. '''
+def test_200_attr0( ):
+    ''' Can access and mutate special private attribute. '''
     module = cache_import_module( MODULE_QNAME )
-    function = module.getattr0
     sentinel = object( )
-    assert 1 == function( Foo, 'x', sentinel )
-    assert sentinel == function( Bar, 'x', sentinel )
-    assert sentinel == function( foo, 'x', sentinel )
-    assert sentinel == function( bar, 'x', sentinel )
-    baz = Baz( 42 )
-    assert 42 == function( baz, 'x', sentinel )
-
-
-def test_205_getattr0_slots( ):
-    ''' Attribute from object slots (empty and filled). '''
-    module = cache_import_module( MODULE_QNAME )
-    function = module.getattr0
-    sentinel = object( )
-    foono = FooSlotsBase( )
-    assert sentinel == function( foono, 'x', sentinel )
-    foo = FooSlots( 42 )
-    assert 42 == function( foo, 'x', sentinel )
+    class C: pass
+    module.setattr0( C, 'x', 1 )
+    assert 1 == module.getattr0( C, 'x', sentinel )
+    assert sentinel == module.getattr0( C, 'y', sentinel )
+    class D( C ): pass
+    module.setattr0( D, 'y', 2 )
+    assert sentinel == module.getattr0( D, 'x', sentinel )
+    assert 2 == module.getattr0( D, 'y', sentinel )
+    module.delattr0( C, 'x' )
+    assert sentinel == module.getattr0( C, 'x', sentinel )
 
 
 @pytest.mark.skipif(
