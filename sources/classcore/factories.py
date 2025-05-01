@@ -58,12 +58,13 @@ def produce_class_constructor(
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
         progress_name = attributes_namer( 'class', 'in_progress' )
-        in_progress = _utilities.getattr0( cls, progress_name, False )
+        progress_name_m = _utilities.mangle_name( cls, progress_name )
+        in_progress = getattr( cls, progress_name_m, False )
         if in_progress: return cls
-        setattr( cls, progress_name, True )
+        setattr( cls, progress_name_m, True )
         for postp in postprocessors: postp( cls, decorators_ )
         cls = _decorators.apply_decorators( cls, decorators_ )
-        setattr( cls, progress_name, False )
+        setattr( cls, progress_name_m, False )
         return cls
 
     return construct
@@ -84,9 +85,10 @@ def produce_class_initializer(
         ''' Initializes class, applying hooks. '''
         superf( *posargs, **nomargs )
         progress_name = attributes_namer( 'class', 'in_progress' )
-        in_progress = _utilities.getattr0( cls, progress_name, False )
+        progress_name_m = _utilities.mangle_name( cls, progress_name )
+        in_progress = getattr( cls, progress_name_m, False )
         if in_progress: return # If non-empty, then not top-level.
-        delattr( cls, progress_name )
+        delattr( cls, progress_name_m )
         for completer in completers: completer( cls )
 
     return initialize

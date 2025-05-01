@@ -77,9 +77,10 @@ def prepare_dataclass_for_instances(
     ''' Annotates dataclass in support of instantiation machinery. '''
     annotations = __.inspect.get_annotations( cls )
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    annotations[ behaviors_name ] = set[ str ]
+    behaviors_name_m = _utilities.mangle_name( cls, behaviors_name )
+    annotations[ behaviors_name_m ] = set[ str ]
     setattr( cls, '__annotations__', annotations ) # in case of absence
-    setattr( cls, behaviors_name, __.dcls.field( init = False ) )
+    setattr( cls, behaviors_name_m, __.dcls.field( init = False ) )
 
 
 def produce_class_factory_decorators(
@@ -137,6 +138,7 @@ def produce_instances_initialization_decorator(
         if extant is original: return cls
         behaviors: set[ str ] = set( )
         behaviors_name = attributes_namer( 'instance', 'behaviors' )
+        behaviors_name_m = _utilities.mangle_name( cls, behaviors_name )
         _behaviors.record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'instances', basename = 'mutables',
@@ -153,9 +155,9 @@ def produce_instances_initialization_decorator(
             self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
         ) -> None:
             original( self, *posargs, **nomargs )
-            behaviors_ = _utilities.getattr0( self, behaviors_name, set( ) )
-            if not behaviors_: setattr( self, behaviors_name, behaviors_ )
+            behaviors_: set[ str ] = getattr( self, behaviors_name_m, set( ) )
             behaviors_.update( behaviors )
+            setattr( self, behaviors_name_m, frozenset( behaviors_ ) )
 
         setattr( cls, initializer_name, initialize )
         cls.__init__ = initialize

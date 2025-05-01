@@ -251,7 +251,8 @@ def produce_class_initialization_completer(
             label = concealment_label, behaviors = behaviors,
             verifiers = visibles )
         # Set behaviors attribute last since it enables enforcement.
-        setattr( cls, attributes_namer( 'class', 'behaviors' ), behaviors )
+        behaviors_name = attributes_namer( 'class', 'behaviors' )
+        _utilities.setattr0( cls, behaviors_name, frozenset( behaviors ) )
 
     return complete
 

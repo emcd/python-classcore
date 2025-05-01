@@ -28,6 +28,7 @@ from __future__ import annotations
 import collections.abc as   cabc
 import dataclasses as       dcls
 import functools as         funct
+import                      hashlib
 import                      inspect
 import                      platform
 import                      re
