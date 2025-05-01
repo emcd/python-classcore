@@ -23,6 +23,19 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.1 (2025-05-01)
+==========================
+
+Repairs
+-------
+
+- Fix interaction with slotted dataclasses on Python 3.11+.
+- Properly report test coverage by considering doctests too. (Not a user-facing
+  fix; however important to note that coverage was 100% on initial release, but
+  Github Actions workflow was not properly setup to capture coverage from
+  doctests and so it only reported 95% coverage.)
+
+
 Classcore 1.0 (2025-04-29)
 ==========================
 
