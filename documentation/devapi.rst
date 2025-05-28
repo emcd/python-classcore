@@ -28,6 +28,8 @@ Internal Development Interface
 Package ``classcore.__``
 ===============================================================================
 
+.. automodule:: classcore.__
+
 
 Module ``classcore.__.imports``
 -------------------------------------------------------------------------------

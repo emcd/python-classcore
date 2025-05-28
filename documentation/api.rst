@@ -1,5 +1,5 @@
-.. vim: set fileencoding=utf-8:
-.. -*- coding: utf-8 -*-
+.. vim: set filetype=rst fileencoding=utf-8:
+.. -*- mode: rst ; coding: utf-8 -*-
 .. +--------------------------------------------------------------------------+
    |                                                                          |
    | Licensed under the Apache License, Version 2.0 (the "License");          |
@@ -16,7 +16,8 @@
    |                                                                          |
    +--------------------------------------------------------------------------+
 
-:tocdepth: 4
+
+:tocdepth: 3
 
 
 *******************************************************************************
@@ -27,32 +28,7 @@ API
 Package ``classcore``
 ===============================================================================
 
-Foundational class factories and decorators.
-
-Provides ability to create class decorators and metaclasses with customization
-hooks. The metaclasses can apply class decorators inline during the class
-construction and initialization process, properly handling cases where
-decorators replace classes (e.g., ``dataclasses.dataclass( slots = True )``).
-They also backport the repair mechanism from newer versions of CPython to
-ensure that the class closure cells are rectified on replaced classes, so that
-zero-argument ``super`` calls function correctly in them.
-
-The ``classcore.standard`` subpackage is an example of the decorators and
-customization hooks being used to provide a set of practical classes and class
-decorators. Furthermore, the exception classes in the
-:py:mod:`classcore.exceptions` module inherit from one of the standard classes,
-making both the exception classes, themselves, and their instances immutable
-and concealing their non-public attributes to reduce API noise. I.e., this
-package "eats its own dog food" and provides practical examples in so doing.
-
-This package is not as magical as it might seem. It does **not** rely on any
-``exec`` or ``eval`` calls and it does **not** do anything with ``ctypes`` or
-similar surgical instruments. It relies completely on the documented Python
-data model and the machinery that it provides. While it is true that
-metaclasses can be tricky, this package is developed with a deep,
-highly-evolved understanding of them. We seek simplicity over cleverness and
-maintain robust tests across multiple Python implementations and versions. The
-package is also very clean in terms of static type checking (via Pyright).
+.. automodule:: classcore
 
 
 Module ``classcore.decorators``
@@ -88,28 +64,7 @@ Module ``classcore.utilities``
 Subpackage ``classcore.standard``
 ===============================================================================
 
-Decorators and class factories which imbue concealment and immutability.
-
-Concealment restricts the visibility of attributes on classes and their
-instances. By default, only public attributes (ones which do not start with
-``_``) are revealed for :py:func:`dir` calls. This behavior can be overriden by
-supplying visibility verifiers as a decorator factory argument or metaclass
-argument. These can be a sequence of attribute names, regular expression
-:py:class:`re.Pattern` objects which match attribute names, or predicate
-functions which match attribute names. Or, total visibility (per the Python
-default) can be achieved by supplying ``visibles = '*'`` instead of a sequence
-of verifiers.
-
-Immutability prevents assignment (including reassignment) or deletion of
-attrubtes on classes and their instances after they have been completely
-initialized. In addition to any standard Python class, this can be applied to
-dataclasses, allowing them to use ``__post_init__`` to set attributes, which
-``dataclasses.dataclass( frozen = True )`` prevents. The immutability behavior
-can be overridden by supplying mutability verifiers as a decorator factory
-argument or metaclass argument. These behave similarly to the visibility
-verifiers described above.
-
-Hooks to modify the concealment and immutability behaviors are also available.
+.. automodule:: classcore.standard
 
 
 Module ``classcore.standard.classes``

@@ -18,14 +18,13 @@
 #============================================================================#
 
 
-''' Catalog of common type aliases. '''
+''' Common names and type aliases. '''
 
-
-from __future__ import annotations
 
 from . import imports as __
 
 
+ComparisonResult: __.typx.TypeAlias = bool | __.types.NotImplementedType
 NominativeArguments: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
 PositionalArguments: __.typx.TypeAlias = __.cabc.Sequence[ __.typx.Any ]
 

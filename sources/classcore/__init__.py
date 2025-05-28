@@ -18,7 +18,36 @@
 #============================================================================#
 
 
-''' Foundational class factories and decorators. '''
+''' Foundational class factories and decorators.
+
+    Provides ability to create class decorators and metaclasses
+    with customization hooks. The metaclasses can apply class decorators
+    inline during the class construction and initialization process, properly
+    handling cases where decorators replace classes (e.g.,
+    ``dataclasses.dataclass( slots = True )``). They also backport the repair
+    mechanism from newer versions of CPython to ensure that the class closure
+    cells are rectified on replaced classes, so that zero-argument ``super``
+    calls function correctly in them.
+
+    The ``classcore.standard`` subpackage is an example of the decorators and
+    customization hooks being used to provide a set of practical classes and
+    class decorators. Furthermore, the exception classes in the
+    :py:mod:`classcore.exceptions` module inherit from one of the standard
+    classes, making both the exception classes, themselves, and their
+    instances immutable and concealing their non-public attributes to reduce
+    API noise. I.e., this package "eats its own dog food" and provides
+    practical examples in so doing.
+
+    This package is not as magical as it might seem. It does **not** rely on
+    any ``exec`` or ``eval`` calls and it does **not** do anything with
+    ``ctypes`` or similar surgical instruments. It relies completely on the
+    documented Python data model and the machinery that it provides. While it
+    is true that metaclasses can be tricky, this package is developed with a
+    deep, highly-evolved understanding of them. We seek simplicity over
+    cleverness and maintain robust tests across multiple Python
+    implementations and versions. The package is also very clean in terms of
+    static type checking (via Pyright).
+'''
 
 
 from . import __
