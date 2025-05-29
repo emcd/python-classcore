@@ -19,12 +19,17 @@
 
 
 ''' Standard classes and class factories. '''
-# TODO? ClassMutable and ProtocolClassMutable
-#       Need inheritance of omnimutability and omnivisibility.
 
 
 from . import __
 from . import decorators as _decorators
+
+
+_dynadoc_introspection_limit_ = (
+    # Standard classes are immutable. Exclude from docstring updates.
+    __.dynadoc.IntrospectionLimit(
+        targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
+# TODO: Mix 'with_docstring' decorator into standard sequence.
 
 
 @_decorators.decoration_by( *_decorators.class_factory_decorators )

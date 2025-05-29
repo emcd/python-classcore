@@ -28,6 +28,13 @@ from . import classes as _classes
 from . import nomina as _nomina
 
 
+_dynadoc_introspection_limit_ = (
+    # Standard classes are immutable. Exclude from docstring updates.
+    __.dynadoc.IntrospectionLimit(
+        targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
+# TODO: Mix 'with_docstring' decorator into standard sequence.
+
+
 class Module( __.types.ModuleType, _classes.Object ):
     ''' Modules with attributes immutability and concealment. '''
 
@@ -35,16 +42,16 @@ class Module( __.types.ModuleType, _classes.Object ):
 def reclassify_modules(
     attributes: __.typx.Annotated[
         __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
-        __.typx.Doc(
+        __.dynadoc.Doc(
             'Module, module name, or dictionary of object attributes.' ),
     ], /, *,
     attributes_namer: __.typx.Annotated[
         _nomina.AttributesNamer,
-        __.typx.Doc(
+        __.dynadoc.Doc(
             ''' Attributes namer function with which to seal class. ''' ),
     ] = __.calculate_attrname,
     recursive: __.typx.Annotated[
-        bool, __.typx.Doc( 'Recursively reclassify package modules?' )
+        bool, __.dynadoc.Doc( 'Recursively reclassify package modules?' )
     ] = False,
 ) -> None:
     # TODO? Ensure correct operation with namespace packages.
