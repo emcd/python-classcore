@@ -21,8 +21,6 @@
 ''' Factories which produce metaclass implementations. '''
 
 
-from __future__ import annotations
-
 from . import __
 from . import decorators as _decorators
 from . import nomina as _nomina

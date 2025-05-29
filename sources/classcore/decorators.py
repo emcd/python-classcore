@@ -21,8 +21,6 @@
 ''' Utilities for the decoration of classes, including metaclasses. '''
 
 
-from __future__ import annotations
-
 from . import __
 from . import nomina as _nomina
 from . import utilities as _utilities

@@ -21,8 +21,6 @@
 ''' Exceptions from package. '''
 
 
-from __future__ import annotations
-
 from . import __
 from . import standard as _standard
 

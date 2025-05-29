@@ -24,8 +24,6 @@
 # ruff: noqa: F401
 
 
-from __future__ import annotations
-
 from .. import factories as _factories
 from .. import utilities as _utilities
 from ..decorators import (

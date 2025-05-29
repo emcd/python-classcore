@@ -23,8 +23,6 @@
 #       Need inheritance of omnimutability and omnivisibility.
 
 
-from __future__ import annotations
-
 from . import __
 from . import decorators as _decorators
 

@@ -21,8 +21,6 @@
 ''' Standard module classes and reclassifers. '''
 
 
-from __future__ import annotations
-
 from .. import utilities as _utilities
 from . import __
 from . import behaviors as _behaviors

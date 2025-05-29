@@ -21,8 +21,6 @@
 ''' Various utilities for class manipulation. '''
 
 
-from __future__ import annotations
-
 from . import __
 
 

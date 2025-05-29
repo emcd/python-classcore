@@ -23,8 +23,6 @@
 #       Maybe enum for mutability and visibility.
 
 
-from __future__ import annotations
-
 from .. import utilities as _utilities
 from . import __
 from . import nomina as _nomina

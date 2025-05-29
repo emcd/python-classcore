@@ -22,8 +22,6 @@
 # ruff: noqa: F403,F405
 
 
-from __future__ import annotations
-
 from . import __
 from ..nomina import *
 
