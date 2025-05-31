@@ -26,6 +26,9 @@ from .imports import *
 from .nomina import *
 
 
+dictproxy_empty: cabc.Mapping[ str, str ] = types.MappingProxyType( { } )
+
+
 _context = dynadoc.produce_context( )
 _introspection_cc = dynadoc.ClassIntrospectionControl(
     inheritance = True,

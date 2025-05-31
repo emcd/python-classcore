@@ -202,9 +202,15 @@ def produce_class_construction_postprocessor(
         cls: type, decorators: _nomina.DecoratorsMutable
     ) -> None:
         arguments = getattr( cls, arguments_name, { } )
+        clscls = type( cls )
+        dynadoc_cfg = arguments.get( 'dynadoc_configuration', { } )
+        if not dynadoc_cfg: # either metaclass argument or attribute
+            dynadoc_cfg_name = (
+                attributes_namer( 'classes', 'dynadoc_configuration' ) )
+            dynadoc_cfg = _utilities.getattr0( clscls, dynadoc_cfg_name, { } )
+        decorators.append( __.dynadoc.with_docstring( **dynadoc_cfg ) )
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
         if not dcls_spec: # either base class or metaclass may be marked
-            clscls = type( cls )
             dcls_spec = getattr( clscls, '__dataclass_transform__', None )
         instances_mutables = arguments.get(
             'instances_mutables', __.mutables_default )
@@ -306,6 +312,7 @@ def record_class_construction_arguments(
     for name in (
         'class_mutables', 'class_visibles',
         'instances_mutables', 'instances_visibles',
+        'dynadoc_configuration',
     ):
         if name not in arguments: continue
         arguments_[ name ] = arguments.pop( name )

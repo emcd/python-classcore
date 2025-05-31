@@ -59,13 +59,13 @@ def reclassify_modules(
 
         Can operate on individual modules or entire package hierarchies.
 
-        Notes
-        -----
-        * Only converts modules within the same package to prevent unintended
-          modifications to external modules.
-        * When used with a dictionary, converts any module objects found as
-          values if they belong to the same package.
-        * Has no effect on already-reclassified modules.
+        Only converts modules within the same package to prevent unintended
+        modifications to external modules.
+
+        When used with a dictionary, converts any module objects found as
+        values if they belong to the same package.
+
+        Has no effect on already-reclassified modules.
     '''
     if isinstance( attributes, str ):
         attributes = __.sys.modules[ attributes ]

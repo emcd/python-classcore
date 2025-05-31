@@ -40,6 +40,20 @@ _U = __.typx.TypeVar( '_U' )
 
 
 _dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
+_dynadoc_context = __.dynadoc.produce_context( )
+_dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
+    inheritance = True,
+    introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
+_dynadoc_introspection = __.dynadoc.IntrospectionControl(
+    class_control = _dynadoc_introspection_cc,
+    targets = (
+            __.dynadoc.IntrospectionTargets.Descriptor
+        |   __.dynadoc.IntrospectionTargets.Function ) )
+_dynadoc_configuration = __.types.MappingProxyType( dict(
+    context = _dynadoc_context,
+    introspection = _dynadoc_introspection,
+    preserve = True,
+    table = __.dictproxy_empty ) )
 
 
 def _produce_class_factory_core(
@@ -81,7 +95,7 @@ def prepare_dataclass_for_instances(
     setattr( cls, behaviors_name_m, __.dcls.field( init = False ) )
 
 
-def produce_class_factory_decorators(
+def produce_class_factory_decorators( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     assigner_core: _nomina.AssignerCore = (
@@ -90,12 +104,18 @@ def produce_class_factory_decorators(
         _behaviors.delete_attribute_if_mutable ),
     surveyor_core: _nomina.SurveyorCore = (
         _behaviors.survey_visible_attributes ),
+    dynadoc_configuration: __.cabc.Mapping[ str, __.typx.Any ] = (
+        _dynadoc_configuration ),
 ) -> _nomina.Decorators:
     decorators: list[ _nomina.Decorator ] = [ ]
     constructor, initializer = (
         _produce_class_factory_core(
             attributes_namer = attributes_namer,
             error_class_provider = error_class_provider ) )
+    decorators.append(
+        produce_cfc_dynadoc_configuration_decorator(
+            attributes_namer = attributes_namer,
+            configuration = dynadoc_configuration ) )
     decorators.append(
         produce_class_construction_decorator(
             attributes_namer = attributes_namer,
@@ -243,6 +263,19 @@ def produce_attributes_surveillance_decorator(
 
         setattr( cls, surveyor_name, survey )
         cls.__dir__ = survey
+        return cls
+
+    return decorate
+
+
+def produce_cfc_dynadoc_configuration_decorator(
+    attributes_namer: _nomina.AttributesNamer,
+    configuration: __.cabc.Mapping[ str, __.typx.Any ]
+) -> __.cabc.Callable[ [ type ], type ]:
+    configuration_name = attributes_namer( 'classes', 'dynadoc_configuration' )
+
+    def decorate( cls: type ) -> type:
+        _utilities.setattr0( cls, configuration_name, configuration )
         return cls
 
     return decorate

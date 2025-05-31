@@ -50,8 +50,9 @@ def produce_class_constructor(
         bases_ = list( bases )
         arguments_ = dict( arguments )
         decorators_ = list( decorators )
-        for prep in preprocessors:
-            prep( clscls, name, bases_, namespace, arguments_, decorators_ )
+        for preprocessor in preprocessors:
+            preprocessor(
+                clscls, name, bases_, namespace, arguments_, decorators_ )
         cls = superf( clscls, name, tuple( bases_ ), namespace, **arguments_ )
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
@@ -60,7 +61,7 @@ def produce_class_constructor(
         in_progress = getattr( cls, progress_name_m, False )
         if in_progress: return cls
         setattr( cls, progress_name_m, True )
-        for postp in postprocessors: postp( cls, decorators_ )
+        for postprocessor in postprocessors: postprocessor( cls, decorators_ )
         cls = _decorators.apply_decorators( cls, decorators_ )
         setattr( cls, progress_name_m, False )
         return cls
