@@ -275,7 +275,7 @@ def produce_cfc_dynadoc_configuration_decorator(
     configuration_name = attributes_namer( 'classes', 'dynadoc_configuration' )
 
     def decorate( cls: type ) -> type:
-        _utilities.setattr0( cls, configuration_name, configuration )
+        setattr( cls, configuration_name, configuration )
         return cls
 
     return decorate
