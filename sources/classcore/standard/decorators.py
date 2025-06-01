@@ -40,20 +40,7 @@ _U = __.typx.TypeVar( '_U' )
 
 
 _dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
-_dynadoc_context = __.dynadoc.produce_context( )
-_dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
-    inheritance = True,
-    introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
-_dynadoc_introspection = __.dynadoc.IntrospectionControl(
-    class_control = _dynadoc_introspection_cc,
-    targets = (
-            __.dynadoc.IntrospectionTargets.Descriptor
-        |   __.dynadoc.IntrospectionTargets.Function ) )
-_dynadoc_configuration = __.types.MappingProxyType( dict(
-    context = _dynadoc_context,
-    introspection = _dynadoc_introspection,
-    preserve = True,
-    table = __.dictproxy_empty ) )
+_dynadoc_configuration = _behaviors.produce_dynadoc_configuration( )
 
 
 def _produce_class_factory_core(

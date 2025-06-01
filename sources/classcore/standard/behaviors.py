@@ -28,6 +28,17 @@ from . import __
 from . import nomina as _nomina
 
 
+_dynadoc_context = __.dynadoc.produce_context( )
+_dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
+    inheritance = True,
+    introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
+_dynadoc_introspection = __.dynadoc.IntrospectionControl(
+    class_control = _dynadoc_introspection_cc,
+    targets = (
+            __.dynadoc.IntrospectionTargets.Descriptor
+        |   __.dynadoc.IntrospectionTargets.Function ) )
+
+
 concealment_label = 'concealment'
 immutability_label = 'immutability'
 
@@ -259,6 +270,21 @@ def produce_class_initialization_completer(
         _utilities.setattr0( cls, behaviors_name, frozenset( behaviors ) )
 
     return complete
+
+
+def produce_dynadoc_configuration(
+    context: _nomina.DynadocContextArgument = _dynadoc_context,
+    introspection: _nomina.DynadocIntrospectionArgument = (
+        _dynadoc_introspection ),
+    preserve: _nomina.DynadocPreserveArgument = True,
+    table: _nomina.DynadocTableArgument = __.dictproxy_empty,
+) -> _nomina.ProduceDynadocConfigurationReturn:
+    # TODO: Move to Dynadoc package.
+    return __.types.MappingProxyType( dict(
+        context = _dynadoc_context,
+        introspection = _dynadoc_introspection,
+        preserve = True,
+        table = __.dictproxy_empty ) )
 
 
 def record_behavior( # noqa: PLR0913

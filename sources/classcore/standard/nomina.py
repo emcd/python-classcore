@@ -96,3 +96,43 @@ class ClassPreparer( __.typx.Protocol ):
         decorators: DecoratorsMutable, /, *,
         attributes_namer: AttributesNamer,
     ) -> None: raise NotImplementedError
+
+
+# TODO: Remove Dynadoc-related argument aliases after
+#       'produce_dynadoc_configuration' is moved to Dynadoc package.
+DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.dynadoc.Context,
+    __.dynadoc.Doc(
+        ''' Dynadoc context.
+
+            Renderer, dictionaries for resolution of stringified annotations,
+            etc....
+        ''' ),
+]
+DynadocIntrospectionArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.dynadoc.IntrospectionControl,
+    __.dynadoc.Doc(
+        ''' Dynadoc introspection control.
+
+            Which kinds of object to recursively introspect?
+            Scan unnannotated attributes?
+            Consider base classes?
+            Etc...
+        ''' ),
+]
+DynadocPreserveArgument: __.typx.TypeAlias = __.typx.Annotated[
+    bool, __.dynadoc.Doc( ''' Preserve existing docstring? ''' )
+]
+DynadocTableArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Mapping[ str, str ],
+    __.dynadoc.Doc( ''' Table of documentation fragments. ''' ),
+]
+ProduceDynadocConfigurationReturn: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Mapping[ str, __.typx.Any ],
+    __.dynadoc.Doc(
+        ''' Dynadoc configuration dictionary.
+
+            Suitable as a keyword expansion (``**``) argument to
+            ``assign_module_docstring`` or ``with_docstring``.
+        ''' ),
+]
