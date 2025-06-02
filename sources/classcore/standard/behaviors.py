@@ -28,6 +28,22 @@ from . import __
 from . import nomina as _nomina
 
 
+# def _dynadoc_avoid_immutables(
+#     objct: object,
+#     introspection: __.dynadoc.IntrospectionControl,
+#     attributes_namer: _nomina.AttributesNamer,
+# ) -> __.dynadoc.IntrospectionControl:
+#     ''' Disable introspection of immutable objects. '''
+#     if __.inspect.isclass( objct ):
+#         behaviors_name = attributes_namer( 'class', 'behaviors' )
+#         behaviors = _utilities.getattr0(
+#               objct, behaviors_name, frozenset( ) )
+#         if immutability_label in behaviors:
+#             return introspection.with_limit(
+#                 __.dynadoc.IntrospectionLimit( disable = True ) )
+#     return introspection
+
+
 _dynadoc_context = __.dynadoc.produce_context( )
 _dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
     inheritance = True,

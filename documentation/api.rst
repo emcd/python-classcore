@@ -34,7 +34,7 @@ Package ``classcore``
 Module ``classcore.decorators``
 -------------------------------------------------------------------------------
 
-.. automodule:: classcore.factories
+.. automodule:: classcore.decorators
 
 
 Module ``classcore.factories``
