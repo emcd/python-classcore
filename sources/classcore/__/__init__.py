@@ -26,6 +26,9 @@ from .imports import *
 from .nomina import *
 
 
+T = typx.TypeVar( 'T', bound = type )
+
+
 dictproxy_empty: cabc.Mapping[ str, str ] = types.MappingProxyType( { } )
 
 

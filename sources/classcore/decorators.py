@@ -26,9 +26,6 @@ from . import nomina as _nomina
 from . import utilities as _utilities
 
 
-_T = __.typx.TypeVar( '_T', bound = type )
-
-
 def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
     ''' Applies sequence of decorators to class.
 
@@ -75,14 +72,14 @@ def produce_class_construction_decorator(
 
         Decorator overrides ``__new__`` on metaclass.
     '''
-    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+    def decorate( clscls: type[ __.T ] ) -> type[ __.T ]:
         constructor_name = attributes_namer( 'classes', 'constructor' )
         extant = getattr( clscls, constructor_name, None )
         original = getattr( clscls, '__new__' )
         if extant is original: return clscls
 
         def construct(
-            clscls_: type[ _T ],
+            clscls_: type[ __.T ],
             name: str,
             bases: tuple[ type, ... ],
             namespace: dict[ str, __.typx.Any ], *,
@@ -108,7 +105,7 @@ def produce_class_initialization_decorator(
 
         Decorator overrides ``__init__`` on metaclass.
     '''
-    def decorate( clscls: type[ _T ] ) -> type[ _T ]:
+    def decorate( clscls: type[ __.T ] ) -> type[ __.T ]:
         initializer_name = attributes_namer( 'classes', 'initializer' )
         extant = getattr( clscls, initializer_name, None )
         original = getattr( clscls, '__init__' )

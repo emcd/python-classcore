@@ -98,8 +98,7 @@ class ClassPreparer( __.typx.Protocol ):
     ) -> None: raise NotImplementedError
 
 
-# TODO: Remove Dynadoc-related argument aliases after
-#       'produce_dynadoc_configuration' is moved to Dynadoc package.
+DynadocConfiguration: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
 DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.dynadoc.Context,
     __.dynadoc.Doc(
@@ -128,7 +127,7 @@ DynadocTableArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.dynadoc.Doc( ''' Table of documentation fragments. ''' ),
 ]
 ProduceDynadocConfigurationReturn: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Mapping[ str, __.typx.Any ],
+    DynadocConfiguration,
     __.dynadoc.Doc(
         ''' Dynadoc configuration dictionary.
 

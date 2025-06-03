@@ -32,7 +32,6 @@ _dynadoc_introspection_limit_ = (
     # Standard classes are immutable. Exclude from docstring updates.
     __.dynadoc.IntrospectionLimit(
         targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
-# TODO: Mix 'with_docstring' decorator into standard sequence.
 
 
 class Module( __.types.ModuleType, _classes.Object ):

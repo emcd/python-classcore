@@ -19,21 +19,46 @@
 
 
 ''' Standard classes and class factories. '''
+# TODO: Mitigate issue with decoration obscuring signature of '__new__'
+#       to typecheckers:
+#       https://github.com/microsoft/pyright/discussions/10537.
+#       Get rid of '__init_subclass__' hack which only addresses problem
+#       for subclasses but not base classes.
 
 
 from . import __
 from . import decorators as _decorators
+# from . import nomina as _nomina
 
 
 _dynadoc_introspection_limit_ = (
     # Standard classes are immutable. Exclude from docstring updates.
     __.dynadoc.IntrospectionLimit(
         targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
-# TODO: Mix 'with_docstring' decorator into standard sequence.
+
+
+# class _CfcExtraArguments( __.typx.TypedDict, total = False ):
+#
+#     class_mutables: _nomina.BehaviorExclusionVerifiersOmni
+#     class_visibles: _nomina.BehaviorExclusionVerifiersOmni
+#     decorators: _nomina.Decorators
+#     dynadoc_configuration: _nomina.DynadocConfiguration
+#     instances_mutables: _nomina.BehaviorExclusionVerifiersOmni
+#     instances_visibles: _nomina.BehaviorExclusionVerifiersOmni
 
 
 @_decorators.decoration_by( *_decorators.class_factory_decorators )
 class Class( type ): pass
+
+    # def __new__(
+    #     clscls: type[ __.T ],
+    #     name: str,
+    #     bases: tuple[ type, ... ],
+    #     namespace: dict[ str, __.typx.Any ],
+    #     *,
+    #     instances_mutables: _nomina.BehaviorExclusionVerifiersOmni = ( ),
+    # ) -> __.T:
+    #     return super( ).__new__( clscls, name, bases, namespace )
 
 
 @_decorators.decoration_by( *_decorators.class_factory_decorators )
@@ -60,36 +85,68 @@ class ProtocolDataclass( type( __.typx.Protocol ) ): pass
 class ProtocolDataclassMutable( type( __.typx.Protocol ) ): pass
 
 
-class Object( metaclass = Class ): pass
+class Object( metaclass = Class ):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
 class ObjectMutable( # pyright: ignore[reportGeneralTypeIssues]
     metaclass = Class,
     instances_mutables = '*', # pyright: ignore[reportCallIssue]
-): pass
+):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
-class DataclassObject( metaclass = Dataclass ): pass
+class DataclassObject( metaclass = Dataclass ):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
-class DataclassObjectMutable( metaclass = DataclassMutable ): pass
+class DataclassObjectMutable( metaclass = DataclassMutable ):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
-class Protocol( __.typx.Protocol, metaclass = ProtocolClass ): pass
+class Protocol( __.typx.Protocol, metaclass = ProtocolClass ):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
 class ProtocolMutable( # pyright: ignore[reportGeneralTypeIssues]
     __.typx.Protocol,
     metaclass = ProtocolClass,
     instances_mutables = '*', # pyright: ignore[reportCallIssue]
-): pass
+):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
 class DataclassProtocol(
     __.typx.Protocol, metaclass = ProtocolDataclass,
-): pass
+):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )
 
 
 class DataclassProtocolMutable(
     __.typx.Protocol, metaclass = ProtocolDataclassMutable,
-): pass
+):
+
+    def __init_subclass__( # Typechecker appeasement.
+        cls: type, /, **arguments: __.typx.Any
+    ) -> None: super( ).__init_subclass__( **arguments )

@@ -27,9 +27,6 @@ from . import nomina as _nomina
 from . import utilities as _utilities
 
 
-_T = __.typx.TypeVar( '_T', bound = type )
-
-
 def produce_class_constructor(
     attributes_namer: _nomina.AttributesNamer,
     preprocessors: _nomina.ProduceConstructorPreprocsArgument = ( ),
@@ -38,7 +35,7 @@ def produce_class_constructor(
     ''' Produces constructors for classes. '''
 
     def construct( # noqa: PLR0913
-        clscls: type[ _T ],
+        clscls: type[ __.T ],
         superf: _nomina.ClassConstructorLigation,
         name: str,
         bases: tuple[ type, ... ],

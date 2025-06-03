@@ -295,7 +295,6 @@ def produce_dynadoc_configuration(
     preserve: _nomina.DynadocPreserveArgument = True,
     table: _nomina.DynadocTableArgument = __.dictproxy_empty,
 ) -> _nomina.ProduceDynadocConfigurationReturn:
-    # TODO: Move to Dynadoc package.
     return __.types.MappingProxyType( dict(
         context = _dynadoc_context,
         introspection = _dynadoc_introspection,

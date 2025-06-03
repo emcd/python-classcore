@@ -29,12 +29,11 @@ _dynadoc_introspection_limit_ = (
     # Exception classes are immutable. Exclude from docstring updates.
     __.dynadoc.IntrospectionLimit(
         targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
-# TODO: Mix 'with_docstring' decorator into standard sequence.
 
 
-class Omniexception( # pyright: ignore[reportGeneralTypeIssues]
+class Omniexception(
     BaseException, _standard.Object,
-    instances_visibles = ( '__cause__', '__context__' ), # pyright: ignore[reportCallIssue]
+    instances_visibles = ( '__cause__', '__context__' ),
 ):
     ''' Base exception for package. '''
 
