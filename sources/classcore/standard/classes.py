@@ -102,18 +102,10 @@ class ObjectMutable( # pyright: ignore[reportGeneralTypeIssues]
     ) -> None: super( ).__init_subclass__( **arguments )
 
 
-class DataclassObject( metaclass = Dataclass ):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+class DataclassObject( metaclass = Dataclass ): pass
 
 
-class DataclassObjectMutable( metaclass = DataclassMutable ):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+class DataclassObjectMutable( metaclass = DataclassMutable ): pass
 
 
 class Protocol( __.typx.Protocol, metaclass = ProtocolClass ):
@@ -136,17 +128,9 @@ class ProtocolMutable( # pyright: ignore[reportGeneralTypeIssues]
 
 class DataclassProtocol(
     __.typx.Protocol, metaclass = ProtocolDataclass,
-):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+): pass
 
 
 class DataclassProtocolMutable(
     __.typx.Protocol, metaclass = ProtocolDataclassMutable,
-):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+): pass
