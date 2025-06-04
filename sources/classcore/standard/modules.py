@@ -28,10 +28,23 @@ from . import classes as _classes
 from . import nomina as _nomina
 
 
-_dynadoc_introspection_limit_ = (
-    # Standard classes are immutable. Exclude from docstring updates.
-    __.dynadoc.IntrospectionLimit(
-        targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
+_dynadoc_context = __.dynadoc.produce_context( )
+_dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
+    inheritance = True,
+    introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
+_dynadoc_introspection = __.dynadoc.IntrospectionControl(
+    class_control = _dynadoc_introspection_cc,
+    limiters = (
+        __.funct.partial(
+            _behaviors.dynadoc_avoid_immutables,
+            attributes_namer = __.calculate_attrname ), ),
+    targets = __.dynadoc.IntrospectionTargetsOmni )
+# TODO: Convert into proper function with attributes namer argument.
+assign_module_docstring = __.funct.partial(
+    __.dynadoc.assign_module_docstring,
+    context = _dynadoc_context,
+    introspection = _dynadoc_introspection,
+    table = __.fragments )
 
 
 class Module( __.types.ModuleType, _classes.Object ):

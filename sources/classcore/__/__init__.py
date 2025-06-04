@@ -31,17 +31,3 @@ U = typx.TypeVar( 'U' )
 
 
 dictproxy_empty: cabc.Mapping[ str, str ] = types.MappingProxyType( { } )
-
-
-_context = dynadoc.produce_context( )
-_introspection_cc = dynadoc.ClassIntrospectionControl(
-    inheritance = True,
-    introspectors = ( dynadoc.introspection.introspect_special_classes, ) )
-_introspection = dynadoc.IntrospectionControl(
-    class_control = _introspection_cc,
-    targets = dynadoc.IntrospectionTargetsOmni )
-assign_module_docstring = funct.partial(
-    dynadoc.assign_module_docstring,
-    context = _context,
-    introspection = _introspection,
-    table = fragments )

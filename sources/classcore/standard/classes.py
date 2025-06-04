@@ -26,12 +26,6 @@ from . import decorators as _decorators
 from . import nomina as _nomina
 
 
-_dynadoc_introspection_limit_ = (
-    # Standard classes are immutable. Exclude from docstring updates.
-    __.dynadoc.IntrospectionLimit(
-        targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
-
-
 class _CfcExtraArguments( __.typx.TypedDict, total = False ):
 
     class_mutables: _nomina.BehaviorExclusionVerifiersOmni

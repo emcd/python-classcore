@@ -25,12 +25,6 @@ from . import __
 from . import standard as _standard
 
 
-_dynadoc_introspection_limit_ = (
-    # Exception classes are immutable. Exclude from docstring updates.
-    __.dynadoc.IntrospectionLimit(
-        targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
-
-
 class Omniexception(
     BaseException, _standard.Object,
     instances_visibles = ( '__cause__', '__context__' ),

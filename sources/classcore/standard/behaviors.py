@@ -28,20 +28,20 @@ from . import __
 from . import nomina as _nomina
 
 
-# def _dynadoc_avoid_immutables(
-#     objct: object,
-#     introspection: __.dynadoc.IntrospectionControl,
-#     attributes_namer: _nomina.AttributesNamer,
-# ) -> __.dynadoc.IntrospectionControl:
-#     ''' Disable introspection of immutable objects. '''
-#     if __.inspect.isclass( objct ):
-#         behaviors_name = attributes_namer( 'class', 'behaviors' )
-#         behaviors = _utilities.getattr0(
-#               objct, behaviors_name, frozenset( ) )
-#         if immutability_label in behaviors:
-#             return introspection.with_limit(
-#                 __.dynadoc.IntrospectionLimit( disable = True ) )
-#     return introspection
+def dynadoc_avoid_immutables(
+    objct: object,
+    introspection: __.dynadoc.IntrospectionControl,
+    attributes_namer: _nomina.AttributesNamer,
+) -> __.dynadoc.IntrospectionControl:
+    ''' Disable introspection of immutable objects. '''
+    if __.inspect.isclass( objct ):
+        behaviors_name = attributes_namer( 'class', 'behaviors' )
+        behaviors = _utilities.getattr0(
+              objct, behaviors_name, frozenset( ) )
+        if immutability_label in behaviors:
+            return introspection.with_limit(
+                __.dynadoc.IntrospectionLimit( disable = True ) )
+    return introspection
 
 
 _dynadoc_context = __.dynadoc.produce_context( )
@@ -50,6 +50,10 @@ _dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
     introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
 _dynadoc_introspection = __.dynadoc.IntrospectionControl(
     class_control = _dynadoc_introspection_cc,
+    limiters = (
+        __.funct.partial(
+            dynadoc_avoid_immutables,
+            attributes_namer = __.calculate_attrname ), ),
     targets = (
             __.dynadoc.IntrospectionTargets.Descriptor
         |   __.dynadoc.IntrospectionTargets.Function ) )
