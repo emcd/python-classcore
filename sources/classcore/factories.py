@@ -29,9 +29,9 @@ from . import utilities as _utilities
 
 def produce_class_constructor(
     attributes_namer: _nomina.AttributesNamer,
-    preprocessors: _nomina.ProduceConstructorPreprocsArgument = ( ),
-    postprocessors: _nomina.ProduceConstructorPostprocsArgument = ( ),
-) -> _nomina.ClassConstructor:
+    preprocessors: _nomina.ProduceConstructorPreprocsArgument[ __.T ] = ( ),
+    postprocessors: _nomina.ProduceConstructorPostprocsArgument[ __.T ] = ( ),
+) -> _nomina.ClassConstructor[ __.T ]:
     ''' Produces constructors for classes. '''
 
     def construct( # noqa: PLR0913
@@ -41,7 +41,7 @@ def produce_class_constructor(
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ],
         arguments: __.NominativeArguments,
-        decorators: _nomina.Decorators,
+        decorators: _nomina.Decorators[ __.T ],
     ) -> type:
         ''' Constructs class, applying decorators and hooks. '''
         bases_ = list( bases )

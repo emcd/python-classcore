@@ -27,9 +27,9 @@ MODULE_QNAME = f"{PACKAGE_NAME}.standard.decorators"
 def test_210_class_factory_decorator_idempotence( ):
     ''' Class factory decorators are idempotent. '''
     module = cache_import_module( MODULE_QNAME )
-    @module.decoration_by( *module.class_factory_decorators )
+    @module.class_factory( )
     class Class: pass
-    @module.decoration_by( *module.class_factory_decorators )
+    @module.class_factory( )
     class BetterClass( Class ): pass
     assert Class.__new__ is BetterClass.__new__
     assert Class.__init__ is BetterClass.__init__

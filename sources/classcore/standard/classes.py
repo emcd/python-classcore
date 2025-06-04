@@ -19,16 +19,11 @@
 
 
 ''' Standard classes and class factories. '''
-# TODO: Mitigate issue with decoration obscuring signature of '__new__'
-#       to typecheckers:
-#       https://github.com/microsoft/pyright/discussions/10537.
-#       Get rid of '__init_subclass__' hack which only addresses problem
-#       for subclasses but not base classes.
 
 
 from . import __
 from . import decorators as _decorators
-# from . import nomina as _nomina
+from . import nomina as _nomina
 
 
 _dynadoc_introspection_limit_ = (
@@ -37,69 +32,107 @@ _dynadoc_introspection_limit_ = (
         targets_exclusions = __.dynadoc.IntrospectionTargets.Class ) )
 
 
-# class _CfcExtraArguments( __.typx.TypedDict, total = False ):
-#
-#     class_mutables: _nomina.BehaviorExclusionVerifiersOmni
-#     class_visibles: _nomina.BehaviorExclusionVerifiersOmni
-#     decorators: _nomina.Decorators
-#     dynadoc_configuration: _nomina.DynadocConfiguration
-#     instances_mutables: _nomina.BehaviorExclusionVerifiersOmni
-#     instances_visibles: _nomina.BehaviorExclusionVerifiersOmni
+class _CfcExtraArguments( __.typx.TypedDict, total = False ):
+
+    class_mutables: _nomina.BehaviorExclusionVerifiersOmni
+    class_visibles: _nomina.BehaviorExclusionVerifiersOmni
+    dynadoc_configuration: _nomina.DynadocConfiguration
+    instances_mutables: _nomina.BehaviorExclusionVerifiersOmni
+    instances_visibles: _nomina.BehaviorExclusionVerifiersOmni
 
 
-@_decorators.decoration_by( *_decorators.class_factory_decorators )
-class Class( type ): pass
+@_decorators.class_factory( )
+class Class( type ):
 
-    # def __new__(
-    #     clscls: type[ __.T ],
-    #     name: str,
-    #     bases: tuple[ type, ... ],
-    #     namespace: dict[ str, __.typx.Any ],
-    #     *,
-    #     instances_mutables: _nomina.BehaviorExclusionVerifiersOmni = ( ),
-    # ) -> __.T:
-    #     return super( ).__new__( clscls, name, bases, namespace )
+    def __new__(
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.decoration_by( *_decorators.class_factory_decorators )
+@_decorators.class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-class Dataclass( type ): pass
+class Dataclass( type ):
+
+    def __new__(
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.decoration_by( *_decorators.class_factory_decorators )
+@_decorators.class_factory( )
 @__.typx.dataclass_transform( kw_only_default = True )
-class DataclassMutable( type ): pass
+class DataclassMutable( type ):
+
+    def __new__(
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.decoration_by( *_decorators.class_factory_decorators )
-class ProtocolClass( type( __.typx.Protocol ) ): pass
+@_decorators.class_factory( )
+class ProtocolClass( type( __.typx.Protocol ) ):
+
+    def __new__(
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.decoration_by( *_decorators.class_factory_decorators )
+@_decorators.class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-class ProtocolDataclass( type( __.typx.Protocol ) ): pass
+class ProtocolDataclass( type( __.typx.Protocol ) ):
+
+    def __new__(
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.decoration_by( *_decorators.class_factory_decorators )
+@_decorators.class_factory( )
 @__.typx.dataclass_transform( kw_only_default = True )
-class ProtocolDataclassMutable( type( __.typx.Protocol ) ): pass
+class ProtocolDataclassMutable( type( __.typx.Protocol ) ):
+
+    def __new__(
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
 
 
-class Object( metaclass = Class ):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+class Object( metaclass = Class ): pass
 
 
-class ObjectMutable( # pyright: ignore[reportGeneralTypeIssues]
-    metaclass = Class,
-    instances_mutables = '*', # pyright: ignore[reportCallIssue]
-):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+class ObjectMutable( metaclass = Class, instances_mutables = '*' ): pass
 
 
 class DataclassObject( metaclass = Dataclass ): pass
@@ -108,22 +141,12 @@ class DataclassObject( metaclass = Dataclass ): pass
 class DataclassObjectMutable( metaclass = DataclassMutable ): pass
 
 
-class Protocol( __.typx.Protocol, metaclass = ProtocolClass ):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+class Protocol( __.typx.Protocol, metaclass = ProtocolClass ): pass
 
 
-class ProtocolMutable( # pyright: ignore[reportGeneralTypeIssues]
-    __.typx.Protocol,
-    metaclass = ProtocolClass,
-    instances_mutables = '*', # pyright: ignore[reportCallIssue]
-):
-
-    def __init_subclass__( # Typechecker appeasement.
-        cls: type, /, **arguments: __.typx.Any
-    ) -> None: super( ).__init_subclass__( **arguments )
+class ProtocolMutable(
+    __.typx.Protocol, metaclass = ProtocolClass, instances_mutables = '*'
+): pass
 
 
 class DataclassProtocol(

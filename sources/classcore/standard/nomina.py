@@ -93,7 +93,7 @@ class ClassPreparer( __.typx.Protocol ):
     @staticmethod
     def __call__( # pragma: no branch
         class_: type,
-        decorators: DecoratorsMutable, /, *,
+        decorators: DecoratorsMutable[ __.U ], /, *,
         attributes_namer: AttributesNamer,
     ) -> None: raise NotImplementedError
 

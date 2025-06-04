@@ -27,7 +27,7 @@ from . import __
 AttributesNamer: __.typx.TypeAlias = __.cabc.Callable[ [ str, str ], str ]
 
 Decorator: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type ], type ],
+    __.cabc.Callable[ [ type[ __.U ] ], type[ __.U ] ],
     __.dynadoc.Doc(
         ''' Class decorator.
 
@@ -35,19 +35,21 @@ Decorator: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 Decorators: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ Decorator ], __.dynadoc.Fname( 'decorators' )
+    __.cabc.Sequence[ Decorator[ __.U ] ], __.dynadoc.Fname( 'decorators' )
 ]
 DecoratorsMutable: __.typx.TypeAlias = __.typx.Annotated[
-   __.cabc.MutableSequence[ Decorator ],
+   __.cabc.MutableSequence[ Decorator[ __.U ] ],
    __.dynadoc.Fname( 'decorators' ),
    __.dynadoc.Doc(
        ''' Decorators may be inserted or removed from sequence. ''' ),
 ]
 
 DecorationPreparer: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ type, DecoratorsMutable ], None ] )
+    __.cabc.Callable[ [ type[ __.U ], DecoratorsMutable[ __.U ] ], None ] )
 DecorationPreparers: __.typx.TypeAlias = (
-    __.cabc.Sequence[ DecorationPreparer ] )
+    __.cabc.Sequence[ DecorationPreparer[ __.U ] ] )
+DecorationPreparersFactory: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ ], DecorationPreparers[ __.U ] ] )
 
 ClassConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., type ],
@@ -99,7 +101,7 @@ ClassConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
             list[ type ],               # bases (mutable)
             dict[ str, __.typx.Any ],   # namespace (mutable)
             dict[ str, __.typx.Any ],   # arguments (mutable)
-            DecoratorsMutable,          # decorators (mutable)
+            DecoratorsMutable[ __.U ],  # decorators (mutable)
         ],
         None
     ],
@@ -110,7 +112,7 @@ ClassConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 ClassConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, DecoratorsMutable ], None ],
+    __.cabc.Callable[ [ type, DecoratorsMutable[ __.U ] ], None ],
     __.dynadoc.Doc(
         ''' Processes class before decoration.
 
@@ -138,7 +140,7 @@ ClassConstructor: __.typx.TypeAlias = __.typx.Annotated[
             tuple[ type, ... ],
             dict[ str, __.typx.Any ],
             __.NominativeArguments,
-            Decorators,
+            Decorators[ __.U ],
         ],
         type
     ],
@@ -159,12 +161,12 @@ ClassInitializer: __.typx.TypeAlias = __.typx.Annotated[
 
 
 ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ ClassConstructionPreprocessor ],
+    __.cabc.Sequence[ ClassConstructionPreprocessor[ __.U ] ],
     __.dynadoc.Doc(
         ''' Processors to apply before construction of class. ''' ),
 ]
 ProduceConstructorPostprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ ClassConstructionPostprocessor ],
+    __.cabc.Sequence[ ClassConstructionPostprocessor[ __.U ] ],
     __.dynadoc.Doc(
         ''' Processors to apply before decoration of class. ''' ),
 ]

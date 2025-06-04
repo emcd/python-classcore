@@ -26,7 +26,9 @@ from . import nomina as _nomina
 from . import utilities as _utilities
 
 
-def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
+def apply_decorators(
+    cls: type[ __.U ], decorators: _nomina.Decorators[ __.U ]
+) -> type:
     ''' Applies sequence of decorators to class.
 
         If decorators replace classes (e.g., ``dataclass( slots = True )``),
@@ -44,9 +46,9 @@ def apply_decorators( cls: type, decorators: _nomina.Decorators ) -> type:
 
 
 def decoration_by(
-    *decorators: _nomina.Decorator,
-    preparers: _nomina.DecorationPreparers = ( ),
-) -> _nomina.Decorator:
+    *decorators: _nomina.Decorator[ __.U ],
+    preparers: _nomina.DecorationPreparers[ __.U ] = ( ),
+) -> _nomina.Decorator[ __.U ]:
     ''' Class decorator which applies other class decorators.
 
         Useful to apply a stack of decorators as a sequence.
@@ -56,7 +58,7 @@ def decoration_by(
         decorators list itself, such as to inject decorators based on
         introspection of the class.
     '''
-    def decorate( cls: type ) -> type:
+    def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         decorators_ = list( decorators )
         for preparer in preparers: preparer( cls, decorators_ )
         return apply_decorators( cls, decorators_ )
@@ -66,8 +68,8 @@ def decoration_by(
 
 def produce_class_construction_decorator(
     attributes_namer: _nomina.AttributesNamer,
-    constructor: _nomina.ClassConstructor,
-) -> _nomina.Decorator:
+    constructor: _nomina.ClassConstructor[ __.T ],
+) -> _nomina.Decorator[ __.T ]:
     ''' Produces metaclass decorator to control class construction.
 
         Decorator overrides ``__new__`` on metaclass.
@@ -83,7 +85,7 @@ def produce_class_construction_decorator(
             name: str,
             bases: tuple[ type, ... ],
             namespace: dict[ str, __.typx.Any ], *,
-            decorators: _nomina.Decorators = ( ),
+            decorators: _nomina.Decorators[ __.T ] = ( ),
             **arguments: __.typx.Any,
         ) -> type[ object ]:
             return constructor(
@@ -100,7 +102,7 @@ def produce_class_construction_decorator(
 def produce_class_initialization_decorator(
     attributes_namer: _nomina.AttributesNamer,
     initializer: _nomina.ClassInitializer,
-) -> _nomina.Decorator:
+) -> _nomina.Decorator[ __.T ]:
     ''' Produces metaclass decorator to control class initialization.
 
         Decorator overrides ``__init__`` on metaclass.

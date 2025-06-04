@@ -204,7 +204,7 @@ def classify_behavior_exclusion_verifiers(
 
 def produce_class_construction_preprocessor(
     attributes_namer: _nomina.AttributesNamer
-) -> _nomina.ClassConstructionPreprocessor:
+) -> _nomina.ClassConstructionPreprocessor[ __.U ]:
 
     def preprocess( # noqa: PLR0913
         clscls: type,
@@ -212,7 +212,7 @@ def produce_class_construction_preprocessor(
         bases: list[ type ],
         namespace: dict[ str, __.typx.Any ],
         arguments: dict[ str, __.typx.Any ],
-        decorators: _nomina.DecoratorsMutable,
+        decorators: _nomina.DecoratorsMutable[ __.U ],
     ) -> None:
         record_class_construction_arguments(
             attributes_namer, namespace, arguments )
@@ -222,11 +222,11 @@ def produce_class_construction_preprocessor(
 
 def produce_class_construction_postprocessor(
     attributes_namer: _nomina.AttributesNamer
-) -> _nomina.ClassConstructionPostprocessor:
+) -> _nomina.ClassConstructionPostprocessor[ __.U ]:
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def postprocess(
-        cls: type, decorators: _nomina.DecoratorsMutable
+        cls: type, decorators: _nomina.DecoratorsMutable[ __.U ]
     ) -> None:
         arguments = getattr( cls, arguments_name, { } )
         clscls = type( cls )
@@ -251,7 +251,7 @@ def produce_class_construction_postprocessor(
         else:
             from .decorators import with_standard_behaviors
             decorator_factory = with_standard_behaviors
-        decorator = decorator_factory(
+        decorator: _nomina.Decorator[ __.U ] = decorator_factory(
             mutables = instances_mutables, visibles = instances_visibles )
         decorators.append( decorator )
 
