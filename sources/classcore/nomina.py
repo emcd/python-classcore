@@ -21,26 +21,39 @@
 ''' Catalog of common type aliases. '''
 
 
-from __future__ import annotations
-
 from . import __
 
 
-AttributesNamer: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str, str ], str ] )
+AttributesNamer: __.typx.TypeAlias = __.cabc.Callable[ [ str, str ], str ]
 
-Decorator: __.typx.TypeAlias = __.cabc.Callable[ [ type ], type ]
-Decorators: __.typx.TypeAlias = __.cabc.Sequence[ Decorator ]
-DecoratorsMutable: __.typx.TypeAlias = __.cabc.MutableSequence[ Decorator ]
+Decorator: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type[ __.U ] ], type[ __.U ] ],
+    __.dynadoc.Doc(
+        ''' Class decorator.
+
+            Takes class argument and returns class.
+        ''' ),
+]
+Decorators: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Sequence[ Decorator[ __.U ] ], __.dynadoc.Fname( 'decorators' )
+]
+DecoratorsMutable: __.typx.TypeAlias = __.typx.Annotated[
+   __.cabc.MutableSequence[ Decorator[ __.U ] ],
+   __.dynadoc.Fname( 'decorators' ),
+   __.dynadoc.Doc(
+       ''' Decorators may be inserted or removed from sequence. ''' ),
+]
 
 DecorationPreparer: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ type, DecoratorsMutable ], None ] )
+    __.cabc.Callable[ [ type[ __.U ], DecoratorsMutable[ __.U ] ], None ] )
 DecorationPreparers: __.typx.TypeAlias = (
-    __.cabc.Sequence[ DecorationPreparer ] )
+    __.cabc.Sequence[ DecorationPreparer[ __.U ] ] )
+DecorationPreparersFactory: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ ], DecorationPreparers[ __.U ] ] )
 
 ClassConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., type ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Bound class constructor function.
 
             Usually from ``super( ).__new__`` or a partial function.
@@ -48,7 +61,7 @@ ClassConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
 ]
 InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ ..., None ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Bound initializer function.
 
             Usually from ``super( ).__init__`` or a partial function.
@@ -56,7 +69,7 @@ InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
 ]
 AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ str, __.typx.Any ], None ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Bound attributes assigner function.
 
             Usually from ``super( ).__setattr__`` or a partial function.
@@ -64,7 +77,7 @@ AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
 ]
 DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ str ], None ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Bound attributes deleter function.
 
             Usually from ``super( ).__delattr__`` or a partial function.
@@ -72,7 +85,7 @@ DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
 ]
 SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Bound attributes surveyor function.
 
             Usually from ``super( ).__dir__`` or a partial function.
@@ -88,19 +101,19 @@ ClassConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
             list[ type ],               # bases (mutable)
             dict[ str, __.typx.Any ],   # namespace (mutable)
             dict[ str, __.typx.Any ],   # arguments (mutable)
-            DecoratorsMutable,          # decorators (mutable)
+            DecoratorsMutable[ __.U ],  # decorators (mutable)
         ],
         None
     ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Processes class data before construction.
 
             For use cases, such as argument conversion.
         ''' ),
 ]
 ClassConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ type, DecoratorsMutable ], None ],
-    __.typx.Doc(
+    __.cabc.Callable[ [ type, DecoratorsMutable[ __.U ] ], None ],
+    __.dynadoc.Doc(
         ''' Processes class before decoration.
 
             For use cases, such as decorator list manipulation.
@@ -109,7 +122,7 @@ ClassConstructionPostprocessor: __.typx.TypeAlias = __.typx.Annotated[
 # TODO: ClassInitializationPreparer (arguments mutation)
 ClassInitializationCompleter: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ type ], None ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Completes initialization of class.
 
             For use cases, such as enabling immutability once all other
@@ -127,11 +140,11 @@ ClassConstructor: __.typx.TypeAlias = __.typx.Annotated[
             tuple[ type, ... ],
             dict[ str, __.typx.Any ],
             __.NominativeArguments,
-            Decorators,
+            Decorators[ __.U ],
         ],
         type
     ],
-    __.typx.Doc( ''' Constructor to use with metaclass. ''' ),
+    __.dynadoc.Doc( ''' Constructor to use with metaclass. ''' ),
 ]
 ClassInitializer: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
@@ -143,20 +156,22 @@ ClassInitializer: __.typx.TypeAlias = __.typx.Annotated[
         ],
         None
     ],
-    __.typx.Doc( ''' Initializer to use with metaclass. ''' ),
+    __.dynadoc.Doc( ''' Initializer to use with metaclass. ''' ),
 ]
 
 
 ProduceConstructorPreprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ ClassConstructionPreprocessor ],
-    __.typx.Doc( ''' Processors to apply before construction of class. ''' ),
+    __.cabc.Sequence[ ClassConstructionPreprocessor[ __.U ] ],
+    __.dynadoc.Doc(
+        ''' Processors to apply before construction of class. ''' ),
 ]
 ProduceConstructorPostprocsArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Sequence[ ClassConstructionPostprocessor ],
-    __.typx.Doc( ''' Processors to apply before decoration of class. ''' ),
+    __.cabc.Sequence[ ClassConstructionPostprocessor[ __.U ] ],
+    __.dynadoc.Doc(
+        ''' Processors to apply before decoration of class. ''' ),
 ]
 ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Sequence[ ClassInitializationCompleter ],
-    __.typx.Doc(
+    __.dynadoc.Doc(
         ''' Processors to apply at final stage of class initialization. ''' ),
 ]

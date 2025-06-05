@@ -21,5 +21,13 @@
 ''' Common constants, imports, and utilities. '''
 
 
+from .doctab import *
 from .imports import *
 from .nomina import *
+
+
+T = typx.TypeVar( 'T', bound = type )
+U = typx.TypeVar( 'U' )
+
+
+dictproxy_empty: cabc.Mapping[ str, str ] = types.MappingProxyType( { } )

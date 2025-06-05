@@ -21,8 +21,6 @@
 ''' Common constants, imports, and utilities. '''
 
 
-from __future__ import annotations
-
 from ..__ import * # noqa: F403
 
 

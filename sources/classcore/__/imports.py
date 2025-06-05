@@ -23,8 +23,6 @@
 # ruff: noqa: F401
 
 
-from __future__ import annotations
-
 import collections.abc as   cabc
 import dataclasses as       dcls
 import functools as         funct
@@ -35,9 +33,7 @@ import                      re
 import                      sys
 import                      types
 
+import                      dynadoc
 import typing_extensions as typx
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---
-
-
-ComparisonResult: typx.TypeAlias = bool | types.NotImplementedType

@@ -21,11 +21,8 @@
 ''' Standard module classes and reclassifers. '''
 
 
-from __future__ import annotations
-
 from .. import utilities as _utilities
 from . import __
-from . import behaviors as _behaviors
 from . import classes as _classes
 from . import nomina as _nomina
 
@@ -37,16 +34,16 @@ class Module( __.types.ModuleType, _classes.Object ):
 def reclassify_modules(
     attributes: __.typx.Annotated[
         __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
-        __.typx.Doc(
+        __.dynadoc.Doc(
             'Module, module name, or dictionary of object attributes.' ),
     ], /, *,
     attributes_namer: __.typx.Annotated[
         _nomina.AttributesNamer,
-        __.typx.Doc(
+        __.dynadoc.Doc(
             ''' Attributes namer function with which to seal class. ''' ),
     ] = __.calculate_attrname,
     recursive: __.typx.Annotated[
-        bool, __.typx.Doc( 'Recursively reclassify package modules?' )
+        bool, __.dynadoc.Doc( 'Recursively reclassify package modules?' )
     ] = False,
 ) -> None:
     # TODO? Ensure correct operation with namespace packages.
@@ -54,13 +51,13 @@ def reclassify_modules(
 
         Can operate on individual modules or entire package hierarchies.
 
-        Notes
-        -----
-        * Only converts modules within the same package to prevent unintended
-          modifications to external modules.
-        * When used with a dictionary, converts any module objects found as
-          values if they belong to the same package.
-        * Has no effect on already-reclassified modules.
+        Only converts modules within the same package to prevent unintended
+        modifications to external modules.
+
+        When used with a dictionary, converts any module objects found as
+        values if they belong to the same package.
+
+        Has no effect on already-reclassified modules.
     '''
     if isinstance( attributes, str ):
         attributes = __.sys.modules[ attributes ]
@@ -84,7 +81,7 @@ def reclassify_modules(
 def _seal_module(
      module: __.types.ModuleType, attributes_namer: _nomina.AttributesNamer
 ) -> None:
-    behaviors = { _behaviors.concealment_label, _behaviors.immutability_label }
+    behaviors = { _nomina.concealment_label, _nomina.immutability_label }
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
     _utilities.setattr0( module, behaviors_name, behaviors )
     module.__class__ = Module

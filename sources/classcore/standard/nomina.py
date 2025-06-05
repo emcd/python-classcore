@@ -18,14 +18,16 @@
 #============================================================================#
 
 
-''' Catalog of common type aliases. '''
+''' Catalog of common names and type aliases. '''
 # ruff: noqa: F403,F405
 
 
-from __future__ import annotations
-
 from . import __
 from ..nomina import *
+
+
+concealment_label = 'concealment'
+immutability_label = 'immutability'
 
 
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]
@@ -95,6 +97,45 @@ class ClassPreparer( __.typx.Protocol ):
     @staticmethod
     def __call__( # pragma: no branch
         class_: type,
-        decorators: DecoratorsMutable, /, *,
+        decorators: DecoratorsMutable[ __.U ], /, *,
         attributes_namer: AttributesNamer,
     ) -> None: raise NotImplementedError
+
+
+DynadocConfiguration: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
+DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.dynadoc.Context,
+    __.dynadoc.Doc(
+        ''' Dynadoc context.
+
+            Renderer, dictionaries for resolution of stringified annotations,
+            etc....
+        ''' ),
+]
+DynadocIntrospectionArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.dynadoc.IntrospectionControl,
+    __.dynadoc.Doc(
+        ''' Dynadoc introspection control.
+
+            Which kinds of object to recursively introspect?
+            Scan unnannotated attributes?
+            Consider base classes?
+            Etc...
+        ''' ),
+]
+DynadocPreserveArgument: __.typx.TypeAlias = __.typx.Annotated[
+    bool, __.dynadoc.Doc( ''' Preserve existing docstring? ''' )
+]
+DynadocTableArgument: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Mapping[ str, str ],
+    __.dynadoc.Doc( ''' Table of documentation fragments. ''' ),
+]
+ProduceDynadocConfigurationReturn: __.typx.TypeAlias = __.typx.Annotated[
+    DynadocConfiguration,
+    __.dynadoc.Doc(
+        ''' Dynadoc configuration dictionary.
+
+            Suitable as a keyword expansion (``**``) argument to
+            ``assign_module_docstring`` or ``with_docstring``.
+        ''' ),
+]

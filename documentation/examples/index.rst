@@ -29,3 +29,4 @@ Examples
    std-protocols
    std-behaviors
    std-modules
+   std-dynadoc

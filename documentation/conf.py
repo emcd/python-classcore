@@ -1,3 +1,6 @@
+# vim: set filetype=python fileencoding=utf-8:
+# -*- mode: python ; coding: utf-8 -*-
+
 ''' Configuration file for the Sphinx documentation builder.
 
     This file only contains a selection of the most common options.
@@ -77,7 +80,13 @@ nitpick_ignore = [
       "v, remove specified key and return the corresponding value." ),
     # Type annotation weirdnesses.
     ( 'py:class', "Doc" ),
+    ( 'py:class', "builtins.NotImplementedType" ),
+    ( 'py:class', "classcore.__.T" ),
+    ( 'py:class', "classcore.__.U" ),
+    ( 'py:class', "classcore.standard.classes.Object" ),
     ( 'py:class', "collections.abc.Annotated" ),
+    ( 'py:class', "dynadoc.context.Context" ),
+    ( 'py:class', "dynadoc.context.IntrospectionControl" ),
     ( 'py:class', "types.Annotated" ),
     ( 'py:class', "typing_extensions._ProtocolMeta" ),
     ( 'py:class', "typing_extensions.Any" ),
@@ -95,6 +104,8 @@ linkcheck_ignore = [
     r'https://github\.com/emcd/python-classcore/.*',
     # Package does not exist during initial development.
     r'https://pypi.org/project/classcore/',
+    # Github aggressively rate-limits access to certain blobs.
+    r'https://github\.com/.*/.*/blob/.*',
 ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -114,13 +125,13 @@ html_static_path = [ '_static' ]
 
 autodoc_default_options = {
     'member-order': 'groupwise',
-    'imported-members': False,
-    'inherited-members': True,
+    'members': True,
     'show-inheritance': True,
-    'undoc-members': True,
+    # 'special-members': '__call__',
 }
 
-#autodoc_typehints = 'description'
+autodoc_typehints = 'none'
+autodoc_use_type_comments = False
 
 # -- Options for intersphinx extension ---------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration

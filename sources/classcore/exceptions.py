@@ -21,15 +21,13 @@
 ''' Exceptions from package. '''
 
 
-from __future__ import annotations
-
 from . import __
 from . import standard as _standard
 
 
-class Omniexception( # pyright: ignore[reportGeneralTypeIssues]
+class Omniexception(
     BaseException, _standard.Object,
-    instances_visibles = ( '__cause__', '__context__' ), # pyright: ignore[reportCallIssue]
+    instances_visibles = ( '__cause__', '__context__' ),
 ):
     ''' Base exception for package. '''
 

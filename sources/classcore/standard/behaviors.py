@@ -23,15 +23,9 @@
 #       Maybe enum for mutability and visibility.
 
 
-from __future__ import annotations
-
 from .. import utilities as _utilities
 from . import __
 from . import nomina as _nomina
-
-
-concealment_label = 'concealment'
-immutability_label = 'immutability'
 
 
 def assign_attribute_if_mutable( # noqa: PLR0913
@@ -43,10 +37,11 @@ def assign_attribute_if_mutable( # noqa: PLR0913
     name: str,
     value: __.typx.Any,
 ) -> None:
+    ''' Assigns attribute if it is mutable, else raises error. '''
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if immutability_label not in behaviors:
+    if _nomina.immutability_label not in behaviors:
         ligation( name, value )
         return
     names_name = attributes_namer( level, 'mutables_names' )
@@ -83,10 +78,11 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     level: str,
     name: str,
 ) -> None:
+    ''' Deletes attribute if it is mutable, else raises error. '''
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if immutability_label not in behaviors:
+    if _nomina.immutability_label not in behaviors:
         ligation( name )
         return
     names_name = attributes_namer( level, 'mutables_names' )
@@ -121,11 +117,12 @@ def survey_visible_attributes(
     attributes_namer: _nomina.AttributesNamer,
     level: str,
 ) -> __.cabc.Iterable[ str ]:
+    ''' Returns sequence of visible attributes. '''
     names_base = ligation( )
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if concealment_label not in behaviors: return names_base
+    if _nomina.concealment_label not in behaviors: return names_base
     names_name = attributes_namer( level, 'visibles_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
@@ -161,6 +158,7 @@ def classify_behavior_exclusion_verifiers(
     _nomina.BehaviorExclusionRegexes,
     _nomina.BehaviorExclusionPredicates,
 ]:
+    ''' Threshes sequence of behavior exclusion verifiers into bins. '''
     names: set[ str ] = set( )
     regexes: list[ __.re.Pattern[ str ] ] = [ ]
     predicates: list[ __.cabc.Callable[ ..., bool ] ] = [ ]
@@ -179,7 +177,8 @@ def classify_behavior_exclusion_verifiers(
 
 def produce_class_construction_preprocessor(
     attributes_namer: _nomina.AttributesNamer
-) -> _nomina.ClassConstructionPreprocessor:
+) -> _nomina.ClassConstructionPreprocessor[ __.U ]:
+    ''' Produces construction processor which handles metaclass arguments. '''
 
     def preprocess( # noqa: PLR0913
         clscls: type,
@@ -187,7 +186,7 @@ def produce_class_construction_preprocessor(
         bases: list[ type ],
         namespace: dict[ str, __.typx.Any ],
         arguments: dict[ str, __.typx.Any ],
-        decorators: _nomina.DecoratorsMutable,
+        decorators: _nomina.DecoratorsMutable[ __.U ],
     ) -> None:
         record_class_construction_arguments(
             attributes_namer, namespace, arguments )
@@ -197,16 +196,23 @@ def produce_class_construction_preprocessor(
 
 def produce_class_construction_postprocessor(
     attributes_namer: _nomina.AttributesNamer
-) -> _nomina.ClassConstructionPostprocessor:
+) -> _nomina.ClassConstructionPostprocessor[ __.U ]:
+    ''' Produces construction processor which determines class decorators. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def postprocess(
-        cls: type, decorators: _nomina.DecoratorsMutable
+        cls: type, decorators: _nomina.DecoratorsMutable[ __.U ]
     ) -> None:
         arguments = getattr( cls, arguments_name, { } )
+        clscls = type( cls )
+        dynadoc_cfg = arguments.get( 'dynadoc_configuration', { } )
+        if not dynadoc_cfg: # either metaclass argument or attribute
+            dynadoc_cfg_name = (
+                attributes_namer( 'classes', 'dynadoc_configuration' ) )
+            dynadoc_cfg = getattr( clscls, dynadoc_cfg_name, { } )
+        decorators.append( __.dynadoc.with_docstring( **dynadoc_cfg ) )
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
         if not dcls_spec: # either base class or metaclass may be marked
-            clscls = type( cls )
             dcls_spec = getattr( clscls, '__dataclass_transform__', None )
         instances_mutables = arguments.get(
             'instances_mutables', __.mutables_default )
@@ -220,7 +226,7 @@ def produce_class_construction_postprocessor(
         else:
             from .decorators import with_standard_behaviors
             decorator_factory = with_standard_behaviors
-        decorator = decorator_factory(
+        decorator: _nomina.Decorator[ __.U ] = decorator_factory(
             mutables = instances_mutables, visibles = instances_visibles )
         decorators.append( decorator )
 
@@ -230,6 +236,7 @@ def produce_class_construction_postprocessor(
 def produce_class_initialization_completer(
     attributes_namer: _nomina.AttributesNamer
 ) -> _nomina.ClassInitializationCompleter:
+    ''' Produces initialization completer which finalizes class behaviors. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def complete( cls: type ) -> None:
@@ -243,12 +250,12 @@ def produce_class_initialization_completer(
         record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'class', basename = 'mutables',
-            label = immutability_label, behaviors = behaviors,
+            label = _nomina.immutability_label, behaviors = behaviors,
             verifiers = mutables )
         record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'class', basename = 'visibles',
-            label = concealment_label, behaviors = behaviors,
+            label = _nomina.concealment_label, behaviors = behaviors,
             verifiers = visibles )
         # Set behaviors attribute last since it enables enforcement.
         behaviors_name = attributes_namer( 'class', 'behaviors' )
@@ -266,6 +273,7 @@ def record_behavior( # noqa: PLR0913
     behaviors: set[ str ],
     verifiers: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> None:
+    ''' Records details of particular class behavior, such as immutability. '''
     names_name = attributes_namer( level, f"{basename}_names" )
     if verifiers == '*':
         setattr( cls, names_name, '*' )
@@ -298,6 +306,7 @@ def record_class_construction_arguments(
     namespace: dict[ str, __.typx.Any ],
     arguments: dict[ str, __.typx.Any ],
 ) -> None:
+    ''' Captures metaclass arguments as class attribute for later use. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
     arguments_ = namespace.get( arguments_name, { } )
     # Decorators, which replace classes, will cause construction of the
@@ -308,6 +317,7 @@ def record_class_construction_arguments(
     for name in (
         'class_mutables', 'class_visibles',
         'instances_mutables', 'instances_visibles',
+        'dynadoc_configuration',
     ):
         if name not in arguments: continue
         arguments_[ name ] = arguments.pop( name )
