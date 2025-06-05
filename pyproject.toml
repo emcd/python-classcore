@@ -167,6 +167,8 @@ python = [
     '3.13',
     'pypy3.10',
 ]
+# [tool.hatch.metadata]
+# allow-direct-references = true
 [tool.hatch.version]
 path = 'sources/classcore/__init__.py'
 

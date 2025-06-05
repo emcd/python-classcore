@@ -49,7 +49,6 @@ including which objects to introspect and how to render the results.
 
     >>> class Person( ccstd.DataclassObject ):
     ...     ''' A person with basic information. '''
-    ...     _dynadoc_fragments_ = ( )
     ...     name: Annotated[ str, dynadoc.Doc( "Full name of the person" ) ]
     ...     age: Annotated[ int, dynadoc.Doc( "Age in years" ) ]
     ...     email: Annotated[ str | None, dynadoc.Doc( "Email address if available" ) ] = None
@@ -82,12 +81,10 @@ metaclass by setting configuration attributes directly on the metaclass:
     ...         preserve = False  # Don't preserve existing docstrings
     ...     )
     ... )
-    ... class CustomClass( type ):
-    ...     pass
+    ... class CustomClass( type ): pass
     ...
     >>> class Calculator( metaclass = CustomClass ):
     ...     ''' Original calculator docstring. '''
-    ...     @dynadoc.with_docstring( )
     ...     def add(
     ...         self,
     ...         x: Annotated[ float, dynadoc.Doc( "First number" ) ],
@@ -95,7 +92,6 @@ metaclass by setting configuration attributes directly on the metaclass:
     ...     ) -> Annotated[ float, dynadoc.Doc( "Sum of x and y" ) ]:
     ...         ''' Add two numbers. '''
     ...         return x + y
-    ...     @dynadoc.with_docstring( )
     ...     def multiply(
     ...         self,
     ...         x: Annotated[ float, dynadoc.Doc( "First number" ) ],
@@ -106,9 +102,12 @@ metaclass by setting configuration attributes directly on the metaclass:
     ...
     >>> print( Calculator.__doc__ )
     None
+
+.. code-block:: text
+
     >>> print( Calculator.add.__doc__ )
     Add two numbers.
-    <BLANKLINE>
+
     :argument self:
     :argument x: First number
     :type x: float
@@ -116,9 +115,12 @@ metaclass by setting configuration attributes directly on the metaclass:
     :type y: float
     :returns: Sum of x and y
     :rtype: float
+
+.. code-block:: text
+
     >>> print( Calculator.multiply.__doc__ )
     Multiply two numbers.
-    <BLANKLINE>
+
     :argument self:
     :argument x: First number
     :type x: float
