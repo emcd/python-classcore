@@ -44,6 +44,9 @@
 '''
 
 
+from . import dynadoc
+from . import nomina
+
 from .classes import *
 from .decorators import *
 from .modules import *

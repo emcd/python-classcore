@@ -33,11 +33,12 @@ from ..decorators import (
 )
 from . import __
 from . import behaviors as _behaviors
+from . import dynadoc as _dynadoc
 from . import nomina as _nomina
 
 
 _dataclass_core = __.dcls.dataclass( kw_only = True, slots = True )
-_dynadoc_configuration = _behaviors.produce_dynadoc_configuration( )
+_dynadoc_configuration = _dynadoc.produce_dynadoc_configuration( )
 
 
 def prepare_dataclass_for_instances(
@@ -191,12 +192,12 @@ def produce_instances_initialization_decorator(
         _behaviors.record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'instances', basename = 'mutables',
-            label = _behaviors.immutability_label, behaviors = behaviors,
+            label = _nomina.immutability_label, behaviors = behaviors,
             verifiers = mutables )
         _behaviors.record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'instances', basename = 'visibles',
-            label = _behaviors.concealment_label, behaviors = behaviors,
+            label = _nomina.concealment_label, behaviors = behaviors,
             verifiers = visibles )
 
         @__.funct.wraps( original )

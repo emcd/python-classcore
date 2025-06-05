@@ -23,28 +23,8 @@
 
 from .. import utilities as _utilities
 from . import __
-from . import behaviors as _behaviors
 from . import classes as _classes
 from . import nomina as _nomina
-
-
-_dynadoc_context = __.dynadoc.produce_context( )
-_dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
-    inheritance = True,
-    introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
-_dynadoc_introspection = __.dynadoc.IntrospectionControl(
-    class_control = _dynadoc_introspection_cc,
-    limiters = (
-        __.funct.partial(
-            _behaviors.dynadoc_avoid_immutables,
-            attributes_namer = __.calculate_attrname ), ),
-    targets = __.dynadoc.IntrospectionTargetsOmni )
-# TODO: Convert into proper function with attributes namer argument.
-assign_module_docstring = __.funct.partial(
-    __.dynadoc.assign_module_docstring,
-    context = _dynadoc_context,
-    introspection = _dynadoc_introspection,
-    table = __.fragments )
 
 
 class Module( __.types.ModuleType, _classes.Object ):
@@ -101,7 +81,7 @@ def reclassify_modules(
 def _seal_module(
      module: __.types.ModuleType, attributes_namer: _nomina.AttributesNamer
 ) -> None:
-    behaviors = { _behaviors.concealment_label, _behaviors.immutability_label }
+    behaviors = { _nomina.concealment_label, _nomina.immutability_label }
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
     _utilities.setattr0( module, behaviors_name, behaviors )
     module.__class__ = Module

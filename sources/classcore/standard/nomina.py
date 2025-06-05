@@ -18,12 +18,16 @@
 #============================================================================#
 
 
-''' Catalog of common type aliases. '''
+''' Catalog of common names and type aliases. '''
 # ruff: noqa: F403,F405
 
 
 from . import __
 from ..nomina import *
+
+
+concealment_label = 'concealment'
+immutability_label = 'immutability'
 
 
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]

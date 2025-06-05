@@ -28,41 +28,6 @@ from . import __
 from . import nomina as _nomina
 
 
-def dynadoc_avoid_immutables(
-    objct: object,
-    introspection: __.dynadoc.IntrospectionControl,
-    attributes_namer: _nomina.AttributesNamer,
-) -> __.dynadoc.IntrospectionControl:
-    ''' Disable introspection of immutable objects. '''
-    if __.inspect.isclass( objct ):
-        behaviors_name = attributes_namer( 'class', 'behaviors' )
-        behaviors = _utilities.getattr0(
-              objct, behaviors_name, frozenset( ) )
-        if immutability_label in behaviors:
-            return introspection.with_limit(
-                __.dynadoc.IntrospectionLimit( disable = True ) )
-    return introspection
-
-
-_dynadoc_context = __.dynadoc.produce_context( )
-_dynadoc_introspection_cc = __.dynadoc.ClassIntrospectionControl(
-    inheritance = True,
-    introspectors = ( __.dynadoc.introspection.introspect_special_classes, ) )
-_dynadoc_introspection = __.dynadoc.IntrospectionControl(
-    class_control = _dynadoc_introspection_cc,
-    limiters = (
-        __.funct.partial(
-            dynadoc_avoid_immutables,
-            attributes_namer = __.calculate_attrname ), ),
-    targets = (
-            __.dynadoc.IntrospectionTargets.Descriptor
-        |   __.dynadoc.IntrospectionTargets.Function ) )
-
-
-concealment_label = 'concealment'
-immutability_label = 'immutability'
-
-
 def assign_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
     ligation: _nomina.AssignerLigation,
@@ -75,7 +40,7 @@ def assign_attribute_if_mutable( # noqa: PLR0913
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if immutability_label not in behaviors:
+    if _nomina.immutability_label not in behaviors:
         ligation( name, value )
         return
     names_name = attributes_namer( level, 'mutables_names' )
@@ -115,7 +80,7 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if immutability_label not in behaviors:
+    if _nomina.immutability_label not in behaviors:
         ligation( name )
         return
     names_name = attributes_namer( level, 'mutables_names' )
@@ -154,7 +119,7 @@ def survey_visible_attributes(
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
-    if concealment_label not in behaviors: return names_base
+    if _nomina.concealment_label not in behaviors: return names_base
     names_name = attributes_namer( level, 'visibles_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
@@ -278,32 +243,18 @@ def produce_class_initialization_completer(
         record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'class', basename = 'mutables',
-            label = immutability_label, behaviors = behaviors,
+            label = _nomina.immutability_label, behaviors = behaviors,
             verifiers = mutables )
         record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'class', basename = 'visibles',
-            label = concealment_label, behaviors = behaviors,
+            label = _nomina.concealment_label, behaviors = behaviors,
             verifiers = visibles )
         # Set behaviors attribute last since it enables enforcement.
         behaviors_name = attributes_namer( 'class', 'behaviors' )
         _utilities.setattr0( cls, behaviors_name, frozenset( behaviors ) )
 
     return complete
-
-
-def produce_dynadoc_configuration(
-    context: _nomina.DynadocContextArgument = _dynadoc_context,
-    introspection: _nomina.DynadocIntrospectionArgument = (
-        _dynadoc_introspection ),
-    preserve: _nomina.DynadocPreserveArgument = True,
-    table: _nomina.DynadocTableArgument = __.dictproxy_empty,
-) -> _nomina.ProduceDynadocConfigurationReturn:
-    return __.types.MappingProxyType( dict(
-        context = _dynadoc_context,
-        introspection = _dynadoc_introspection,
-        preserve = True,
-        table = __.dictproxy_empty ) )
 
 
 def record_behavior( # noqa: PLR0913
