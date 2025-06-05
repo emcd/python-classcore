@@ -81,6 +81,8 @@ nitpick_ignore = [
     # Type annotation weirdnesses.
     ( 'py:class', "Doc" ),
     ( 'py:class', "builtins.NotImplementedType" ),
+    ( 'py:class', "classcore.__.T" ),
+    ( 'py:class', "classcore.__.U" ),
     ( 'py:class', "classcore.standard.classes.Object" ),
     ( 'py:class', "collections.abc.Annotated" ),
     ( 'py:class', "dynadoc.context.Context" ),
