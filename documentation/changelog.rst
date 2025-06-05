@@ -23,6 +23,24 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.2 (2025-06-05)
+==========================
+
+Enhancements
+------------
+
+- Fill out docstrings for all public classes and functions in package.
+- Integrate with Dynadoc. Adds special introspection control which avoid
+  docstring updates on immutable classes. Adds Dynadoc ``with_docstring``
+  decorator to set of decorators on standard classes.
+
+
+Repairs
+-------
+
+- Address Pyright complaints about metaclass arguments in ``class`` statements.
+
+
 Classcore 1.1 (2025-05-01)
 ==========================
 
