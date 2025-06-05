@@ -70,8 +70,7 @@ def produce_dynadoc_introspection_control(
     limiters: __.dynadoc.IntrospectionLimiters = (
         dynadoc_introspection_limiter, ),
     targets: __.dynadoc.IntrospectionTargets = (
-            __.dynadoc.IntrospectionTargets.Descriptor
-        |   __.dynadoc.IntrospectionTargets.Function ),
+            __.dynadoc.IntrospectionTargetsSansModule ),
 ) -> __.dynadoc.IntrospectionControl:
     ''' Produces compatible Dynadoc introspection control. '''
     return __.dynadoc.IntrospectionControl(

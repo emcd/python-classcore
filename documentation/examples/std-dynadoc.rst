@@ -25,21 +25,17 @@ Dynadoc Integration
 Introduction
 ===============================================================================
 
-The Classcore library integrates seamlessly with Dynadoc to provide automatic
-documentation generation for classes and their members. This integration allows
-you to configure Dynadoc behavior at both the metaclass and individual class
-levels, ensuring that your classes receive appropriate documentation based on
-their structure and annotations.
-
-The integration is particularly powerful because it respects Classcore's
-immutability constraints—avoiding introspection of immutable objects that
-shouldn't be modified during the documentation process.
+Seamless integration with Dynadoc is provided to automate documentation of
+classes and their members. This integration allows you to configure Dynadoc
+behavior at both the metaclass and individual class levels, ensuring that your
+classes receive appropriate documentation based on their structure and
+annotations.
 
 .. doctest:: Dynadoc.Integration
 
+    >>> from typing import Annotated
     >>> import classcore.standard as ccstd
     >>> import dynadoc
-    >>> from typing import Annotated
 
 
 Basic Configuration
@@ -131,16 +127,17 @@ metaclass by setting configuration attributes directly on the metaclass:
     :returns: Product of x and y
     :rtype: float
 
-Notice how the original class docstring was completely replaced (due to ``preserve: False``)
-and is now ``None``, while the individual method docstrings were enhanced with
-parameter and return type documentation from their annotations.
+Notice how the original class docstring was completely replaced (due to
+``preserve: False``) and is now ``None``, while the individual method
+docstrings were enhanced with parameter and return type documentation from
+their annotations.
 
 
 Class-Level Configuration
 ===============================================================================
 
 Individual classes can override metaclass defaults by providing their own
-Dynadoc configuration as a class statement argument:
+Dynadoc configuration as a ``class`` statement argument:
 
 .. doctest:: Dynadoc.Integration
 
@@ -170,16 +167,12 @@ Since introspection was disabled, only the original docstring is preserved
 without any automatic parameter documentation.
 
 
-The Custom assign_module_docstring Function
+Documentation of Modules
 ===============================================================================
 
-Classcore provides its own version of ``assign_module_docstring`` that includes
-sensible defaults for working with Classcore's immutable classes. This function
-is used by Classcore itself to automatically generate documentation for its
-own modules.
-
-For example, here's how Classcore applies module documentation in its own
-``__init__.py`` file:
+A variation of ``assign_module_docstring`` is provided, which respects
+immutable classes. This function is used by this package, itself, to
+automatically generate documentation for its own modules:
 
 .. code-block:: python
 
@@ -190,8 +183,8 @@ For example, here's how Classcore applies module documentation in its own
     standard.dynadoc.assign_module_docstring( __name__, table = __.fragments )
     standard.reclassify_modules( __name__, recursive = True )
 
-This automatically generates comprehensive documentation for the entire Classcore
-package, including all submodules. The key benefits of Classcore's version include:
+This automatically generates comprehensive documentation for the entire
+package, including all submodules. The key benefits of this variation include:
 
 * **Automatic immutable class avoidance**: By default, immutable classes are not
   introspected during documentation generation to prevent potential issues.
@@ -211,5 +204,5 @@ You can apply this to your own modules and packages:
     # At the end of your module's __init__.py
     ccstd.dynadoc.assign_module_docstring( __name__ )
 
-    # Optionally make the module itself immutable
+    # Optionally make the entire package immutable
     ccstd.reclassify_modules( __name__, recursive = True )
