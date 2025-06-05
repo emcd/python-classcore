@@ -27,6 +27,46 @@ from . import imports as __
 _FragmentsTable: __.typx.TypeAlias = __.cabc.Mapping[ str, str ]
 fragments: _FragmentsTable = __.types.MappingProxyType( {
 
+    'cfc class conceal':
+    ''' By default, conceals non-public class attributes. ''',
+
+    'cfc class protect':
+    ''' By default, protects class attributes. ''',
+
+    'cfc dynadoc': ''' Applies Dynadoc decoration to classes. ''',
+
+    'cfc instance conceal':
+    ''' Produces classes which can conceal instance attributes. ''',
+
+    'cfc instance protect':
+    ''' Produces classes which can protect instance attributes. ''',
+
+    'cfc produce dataclass':
+    ''' Produces inheritable dataclasses with keyword-only instantiation. ''',
+
+    'cfc produce protocol class':
+    ''' Produces :pep:`544` protocol classes. ''',
+
+    'class concealment':
+    ''' By default, non-public class attributes are invisible. ''',
+
+    'class protection':
+    ''' By default, class attributes are immutable. ''',
+
+    'class instance conceal':
+    ''' By default, conceals non-public instance attributes. ''',
+
+    'class instance protect':
+    ''' By default, protects instance attributes. ''',
+
+    'dataclass':
+    ''' Inheritable dataclass with keyword-only instantiation. ''',
+
+    'protocol class':
+    ''' Protocol class (:pep:`544`). Nominal and structural subtyping. ''',
+
+    'class dynadoc': ''' Is decorated by Dynadoc. ''',
+
     'decorators':
     ''' Sequence of class decorators.
 

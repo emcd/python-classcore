@@ -37,6 +37,7 @@ def assign_attribute_if_mutable( # noqa: PLR0913
     name: str,
     value: __.typx.Any,
 ) -> None:
+    ''' Assigns attribute if it is mutable, else raises error. '''
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
@@ -77,6 +78,7 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     level: str,
     name: str,
 ) -> None:
+    ''' Deletes attribute if it is mutable, else raises error. '''
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
     behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
@@ -115,6 +117,7 @@ def survey_visible_attributes(
     attributes_namer: _nomina.AttributesNamer,
     level: str,
 ) -> __.cabc.Iterable[ str ]:
+    ''' Returns sequence of visible attributes. '''
     names_base = ligation( )
     leveli = 'instance' if level == 'instances' else level
     behaviors_name = attributes_namer( leveli, 'behaviors' )
@@ -155,6 +158,7 @@ def classify_behavior_exclusion_verifiers(
     _nomina.BehaviorExclusionRegexes,
     _nomina.BehaviorExclusionPredicates,
 ]:
+    ''' Threshes sequence of behavior exclusion verifiers into bins. '''
     names: set[ str ] = set( )
     regexes: list[ __.re.Pattern[ str ] ] = [ ]
     predicates: list[ __.cabc.Callable[ ..., bool ] ] = [ ]
@@ -174,6 +178,7 @@ def classify_behavior_exclusion_verifiers(
 def produce_class_construction_preprocessor(
     attributes_namer: _nomina.AttributesNamer
 ) -> _nomina.ClassConstructionPreprocessor[ __.U ]:
+    ''' Produces construction processor which handles metaclass arguments. '''
 
     def preprocess( # noqa: PLR0913
         clscls: type,
@@ -192,6 +197,7 @@ def produce_class_construction_preprocessor(
 def produce_class_construction_postprocessor(
     attributes_namer: _nomina.AttributesNamer
 ) -> _nomina.ClassConstructionPostprocessor[ __.U ]:
+    ''' Produces construction processor which determines class decorators. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def postprocess(
@@ -230,6 +236,7 @@ def produce_class_construction_postprocessor(
 def produce_class_initialization_completer(
     attributes_namer: _nomina.AttributesNamer
 ) -> _nomina.ClassInitializationCompleter:
+    ''' Produces initialization completer which finalizes class behaviors. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
 
     def complete( cls: type ) -> None:
@@ -266,6 +273,7 @@ def record_behavior( # noqa: PLR0913
     behaviors: set[ str ],
     verifiers: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> None:
+    ''' Records details of particular class behavior, such as immutability. '''
     names_name = attributes_namer( level, f"{basename}_names" )
     if verifiers == '*':
         setattr( cls, names_name, '*' )
@@ -298,6 +306,7 @@ def record_class_construction_arguments(
     namespace: dict[ str, __.typx.Any ],
     arguments: dict[ str, __.typx.Any ],
 ) -> None:
+    ''' Captures metaclass arguments as class attribute for later use. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
     arguments_ = namespace.get( arguments_name, { } )
     # Decorators, which replace classes, will cause construction of the

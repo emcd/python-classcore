@@ -53,6 +53,7 @@ including which objects to introspect and how to render the results.
 
     >>> class Person( ccstd.DataclassObject ):
     ...     ''' A person with basic information. '''
+    ...     _dynadoc_fragments_ = ( )
     ...     name: Annotated[ str, dynadoc.Doc( "Full name of the person" ) ]
     ...     age: Annotated[ int, dynadoc.Doc( "Age in years" ) ]
     ...     email: Annotated[ str | None, dynadoc.Doc( "Email address if available" ) ] = None

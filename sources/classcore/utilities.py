@@ -25,6 +25,7 @@ from . import __
 
 
 def describe_object( obj: object ) -> str:
+    ''' Returns object type with fully-qualified name. '''
     if __.inspect.isclass( obj ):
         return "class '{}'".format( qualify_class_name( obj ) )
     # TODO? functions, methods, etc...
@@ -34,7 +35,7 @@ def describe_object( obj: object ) -> str:
 def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
     ''' Returns private attribute from object.
 
-        Uses mangled attribute which is unique to the class.
+        Uses mangled attribute name which is unique to the class.
     '''
     name_m = mangle_name( obj, name )
     return getattr( obj, name_m, default )
@@ -43,7 +44,7 @@ def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
 def delattr0( obj: object, name: str ) -> None:
     ''' Deletes private attribute on object.
 
-        Uses mangled attribute which is unique to the class.
+        Uses mangled attribute name which is unique to the class.
     '''
     name_m = mangle_name( obj, name )
     delattr( obj, name_m )
@@ -52,7 +53,7 @@ def delattr0( obj: object, name: str ) -> None:
 def setattr0( obj: object, name: str, value: __.typx.Any ) -> None:
     ''' Assigns private attribute to object.
 
-        Uses mangled attribute which is unique to the class.
+        Uses mangled attribute name which is unique to the class.
     '''
     name_m = mangle_name( obj, name )
     setattr( obj, name_m, value )
@@ -73,6 +74,7 @@ def mangle_name( obj: object, name: str ) -> str:
 
 
 def qualify_class_name( cls: type ) -> str:
+    ''' Returns fully-qualified class name. '''
     return f"{cls.__module__}.{cls.__qualname__}"
 
 

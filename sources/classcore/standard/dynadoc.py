@@ -41,7 +41,7 @@ def dynadoc_avoid_immutables(
     introspection: __.dynadoc.IntrospectionControl,
     attributes_namer: _nomina.AttributesNamer,
 ) -> __.dynadoc.IntrospectionControl:
-    ''' Disable introspection of immutable objects. '''
+    ''' Disables introspection of immutable objects. '''
     if __.inspect.isclass( objct ):
         behaviors_name = attributes_namer( 'class', 'behaviors' )
         behaviors = _utilities.getattr0( objct, behaviors_name, frozenset( ) )
@@ -54,6 +54,7 @@ def dynadoc_avoid_immutables(
 def produce_dynadoc_introspection_limiter(
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
 ) -> __.dynadoc.IntrospectionLimiter:
+    ''' Produces introspection limiter which avoids immutable objects. '''
     return __.funct.partial(
         dynadoc_avoid_immutables, attributes_namer = attributes_namer )
 
@@ -72,6 +73,7 @@ def produce_dynadoc_introspection_control(
             __.dynadoc.IntrospectionTargets.Descriptor
         |   __.dynadoc.IntrospectionTargets.Function ),
 ) -> __.dynadoc.IntrospectionControl:
+    ''' Produces compatible Dynadoc introspection control. '''
     return __.dynadoc.IntrospectionControl(
         enable = enable,
         class_control = class_control,
@@ -98,7 +100,7 @@ def assign_module_docstring( # noqa: PLR0913
 ) -> None:
     ''' Updates module docstring based on introspection.
 
-        By default, recursively update docstrings of all module members
+        By default, recursively updates docstrings of all module members
         which have docstrings.
 
         By default, ignores previously-decorated immutable classes.
@@ -120,6 +122,7 @@ def produce_dynadoc_configuration(
     preserve: _nomina.DynadocPreserveArgument = True,
     table: _nomina.DynadocTableArgument = __.dictproxy_empty,
 ) -> _nomina.ProduceDynadocConfigurationReturn:
+    ''' Produces compatible Dynadoc configuration. '''
     return __.types.MappingProxyType( dict(
         context = context,
         introspection = introspection,

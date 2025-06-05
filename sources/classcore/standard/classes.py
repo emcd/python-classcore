@@ -23,7 +23,14 @@
 
 from . import __
 from . import decorators as _decorators
+from . import dynadoc as _dynadoc
 from . import nomina as _nomina
+
+
+_dynadoc_configuration = (
+    _dynadoc.produce_dynadoc_configuration( table = __.fragments ) )
+_class_factory = __.funct.partial(
+    _decorators.class_factory, dynadoc_configuration = _dynadoc_configuration )
 
 
 class _CfcExtraArguments( __.typx.TypedDict, total = False ):
@@ -35,10 +42,15 @@ class _CfcExtraArguments( __.typx.TypedDict, total = False ):
     instances_visibles: _nomina.BehaviorExclusionVerifiersOmni
 
 
-@_decorators.class_factory( )
+@_class_factory( )
 class Class( type ):
+    ''' Metaclass for standard classes. '''
 
-    def __new__(
+    _dynadoc_fragments_ = (
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal', 'cfc instance protect' )
+
+    def __new__( # Typechecker stub.
         clscls: type[ __.T ],
         name: str,
         bases: tuple[ type, ... ],
@@ -49,11 +61,17 @@ class Class( type ):
         return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.class_factory( )
+@_class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 class Dataclass( type ):
+    ''' Metaclass for standard dataclasses. '''
 
-    def __new__(
+    _dynadoc_fragments_ = (
+        'cfc produce dataclass',
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal', 'cfc instance protect' )
+
+    def __new__( # Typechecker stub.
         clscls: type[ __.T ],
         name: str,
         bases: tuple[ type, ... ],
@@ -64,11 +82,17 @@ class Dataclass( type ):
         return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.class_factory( )
+@_class_factory( )
 @__.typx.dataclass_transform( kw_only_default = True )
 class DataclassMutable( type ):
+    ''' Metaclass for dataclasses with mutable instance attributes. '''
 
-    def __new__(
+    _dynadoc_fragments_ = (
+        'cfc produce dataclass',
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal' )
+
+    def __new__( # Typechecker stub.
         clscls: type[ __.T ],
         name: str,
         bases: tuple[ type, ... ],
@@ -79,10 +103,16 @@ class DataclassMutable( type ):
         return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.class_factory( )
+@_class_factory( )
 class ProtocolClass( type( __.typx.Protocol ) ):
+    ''' Metaclass for standard protocol classes. '''
 
-    def __new__(
+    _dynadoc_fragments_ = (
+        'cfc produce protocol class',
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal', 'cfc instance protect' )
+
+    def __new__( # Typechecker stub.
         clscls: type[ __.T ],
         name: str,
         bases: tuple[ type, ... ],
@@ -93,11 +123,17 @@ class ProtocolClass( type( __.typx.Protocol ) ):
         return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.class_factory( )
+@_class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 class ProtocolDataclass( type( __.typx.Protocol ) ):
+    ''' Metaclass for standard protocol dataclasses. '''
 
-    def __new__(
+    _dynadoc_fragments_ = (
+        'cfc produce protocol class', 'cfc produce dataclass',
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal', 'cfc instance protect' )
+
+    def __new__( # Typechecker stub.
         clscls: type[ __.T ],
         name: str,
         bases: tuple[ type, ... ],
@@ -108,11 +144,18 @@ class ProtocolDataclass( type( __.typx.Protocol ) ):
         return super( ).__new__( clscls, name, bases, namespace )
 
 
-@_decorators.class_factory( )
+@_class_factory( )
 @__.typx.dataclass_transform( kw_only_default = True )
 class ProtocolDataclassMutable( type( __.typx.Protocol ) ):
+    ''' Metaclass for protocol dataclasses with mutable instance attributes.
+    '''
 
-    def __new__(
+    _dynadoc_fragments_ = (
+        'cfc produce protocol class', 'cfc produce dataclass',
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal' )
+
+    def __new__( # Typechecker stub.
         clscls: type[ __.T ],
         name: str,
         bases: tuple[ type, ... ],
@@ -123,31 +166,77 @@ class ProtocolDataclassMutable( type( __.typx.Protocol ) ):
         return super( ).__new__( clscls, name, bases, namespace )
 
 
-class Object( metaclass = Class ): pass
+class Object( metaclass = Class ):
+    ''' Standard base class. '''
+
+    _dynadoc_fragments_ = (
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal', 'class instance protect' )
 
 
-class ObjectMutable( metaclass = Class, instances_mutables = '*' ): pass
+class ObjectMutable( metaclass = Class, instances_mutables = '*' ):
+    ''' Base class with mutable instance attributes. '''
+
+    _dynadoc_fragments_ = (
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal' )
 
 
-class DataclassObject( metaclass = Dataclass ): pass
+class DataclassObject( metaclass = Dataclass ):
+    ''' Standard base dataclass. '''
+
+    _dynadoc_fragments_ = (
+        'dataclass',
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal', 'class instance protect' )
 
 
-class DataclassObjectMutable( metaclass = DataclassMutable ): pass
+class DataclassObjectMutable( metaclass = DataclassMutable ):
+    ''' Base dataclass with mutable instance attributes. '''
+
+    _dynadoc_fragments_ = (
+        'dataclass',
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal' )
 
 
-class Protocol( __.typx.Protocol, metaclass = ProtocolClass ): pass
+class Protocol( __.typx.Protocol, metaclass = ProtocolClass ):
+    ''' Standard base protocol class. '''
+
+    _dynadoc_fragments_ = (
+        'protocol class',
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal', 'class instance protect' )
 
 
 class ProtocolMutable(
     __.typx.Protocol, metaclass = ProtocolClass, instances_mutables = '*'
-): pass
+):
+    ''' Base protocol class with mutable instance attributes. '''
+
+    _dynadoc_fragments_ = (
+        'protocol class',
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal' )
 
 
 class DataclassProtocol(
     __.typx.Protocol, metaclass = ProtocolDataclass,
-): pass
+):
+    ''' Standard base protocol dataclass. '''
+
+    _dynadoc_fragments_ = (
+        'dataclass', 'protocol class',
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal', 'class instance protect' )
 
 
 class DataclassProtocolMutable(
     __.typx.Protocol, metaclass = ProtocolDataclassMutable,
-): pass
+):
+    ''' Base protocol dataclass with mutable instance attributes. '''
+
+    _dynadoc_fragments_ = (
+        'dataclass', 'protocol class',
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal' )

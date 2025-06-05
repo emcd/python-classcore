@@ -60,6 +60,7 @@ def apply_cfc_dynadoc_configuration(
     attributes_namer: _nomina.AttributesNamer,
     configuration: _nomina.DynadocConfiguration,
 ) -> None:
+    ''' Stores Dynadoc configuration on metaclass. '''
     configuration_name = attributes_namer( 'classes', 'dynadoc_configuration' )
     setattr( clscls, configuration_name, configuration )
 
@@ -67,6 +68,7 @@ def apply_cfc_dynadoc_configuration(
 def apply_cfc_constructor(
     clscls: type[ __.T ], /, attributes_namer: _nomina.AttributesNamer
 ) -> None:
+    ''' Injects '__new__' method into metaclass. '''
     preprocessors = (
         _behaviors.produce_class_construction_preprocessor(
             attributes_namer = attributes_namer ), )
@@ -86,6 +88,7 @@ def apply_cfc_constructor(
 def apply_cfc_initializer(
     clscls: type[ __.T ], attributes_namer: _nomina.AttributesNamer
 ) -> None:
+    ''' Injects '__init__' method into metaclass. '''
     completers = (
         _behaviors.produce_class_initialization_completer(
             attributes_namer = attributes_namer ), )
@@ -104,6 +107,7 @@ def apply_cfc_attributes_assigner(
     error_class_provider: _nomina.ErrorClassProvider,
     implementation_core: _nomina.AssignerCore,
 ) -> None:
+    ''' Injects '__setattr__' method into metaclass. '''
     decorator = produce_attributes_assignment_decorator(
         level = 'class',
         attributes_namer = attributes_namer,
@@ -118,6 +122,7 @@ def apply_cfc_attributes_deleter(
     error_class_provider: _nomina.ErrorClassProvider,
     implementation_core: _nomina.DeleterCore,
 ) -> None:
+    ''' Injects '__delattr__' method into metaclass. '''
     decorator = produce_attributes_deletion_decorator(
         level = 'class',
         attributes_namer = attributes_namer,
@@ -131,6 +136,7 @@ def apply_cfc_attributes_surveyor(
     attributes_namer: _nomina.AttributesNamer,
     implementation_core: _nomina.SurveyorCore,
 ) -> None:
+    ''' Injects '__dir__' method into metaclass. '''
     decorator = produce_attributes_surveillance_decorator(
         level = 'class',
         attributes_namer = attributes_namer,
@@ -150,6 +156,7 @@ def class_factory( # noqa: PLR0913
     dynadoc_configuration: __.cabc.Mapping[ str, __.typx.Any ] = (
         _dynadoc_configuration ),
 ) -> _nomina.Decorator[ __.T ]:
+    ''' Produces decorator to apply standard behaviors to metaclass. '''
     def decorate( clscls: type[ __.T ] ) -> type[ __.T ]:
         apply_cfc_dynadoc_configuration(
             clscls,
@@ -181,6 +188,7 @@ def produce_instances_initialization_decorator(
     mutables: _nomina.BehaviorExclusionVerifiersOmni,
     visibles: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorator[ __.U ]:
+    ''' Produces decorator to inject '__init__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         initializer_name = attributes_namer( 'instances', 'initializer' )
         extant = getattr( cls, initializer_name, None )
@@ -222,6 +230,7 @@ def produce_attributes_assignment_decorator(
     error_class_provider: _nomina.ErrorClassProvider,
     implementation_core: _nomina.AssignerCore,
 ) -> _nomina.Decorator[ __.U ]:
+    ''' Produces decorator to inject '__setattr__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         assigner_name = attributes_namer( level, 'assigner' )
         extant = getattr( cls, assigner_name, None )
@@ -251,6 +260,7 @@ def produce_attributes_deletion_decorator(
     error_class_provider: _nomina.ErrorClassProvider,
     implementation_core: _nomina.DeleterCore,
 ) -> _nomina.Decorator[ __.U ]:
+    ''' Produces decorator to inject '__delattr__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         deleter_name = attributes_namer( level, 'deleter' )
         extant = getattr( cls, deleter_name, None )
@@ -279,6 +289,7 @@ def produce_attributes_surveillance_decorator(
     attributes_namer: _nomina.AttributesNamer,
     implementation_core: _nomina.SurveyorCore,
 ) -> _nomina.Decorator[ __.U ]:
+    ''' Produces decorator to inject '__dir__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         surveyor_name = attributes_namer( level, 'surveyor' )
         extant = getattr( cls, surveyor_name, None )
@@ -317,6 +328,7 @@ def produce_decorators_factory( # noqa: PLR0913
     ],
     _nomina.Decorators[ __.U ]
 ]:
+    ''' Produces decorators to imbue class with standard behaviors. '''
     def produce(
         mutables: _nomina.BehaviorExclusionVerifiersOmni,
         visibles: _nomina.BehaviorExclusionVerifiersOmni,
@@ -356,6 +368,12 @@ def produce_decoration_preparers_factory(
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     class_preparer: __.typx.Optional[ _nomina.ClassPreparer ] = None,
 ) -> _nomina.DecorationPreparersFactory[ __.U ]:
+    ''' Produces factory to produce class decoration preparers.
+
+        E.g., a preparer needs to inject special annotations to ensure
+        compatibility with standard behaviors before
+        :py:func:`dataclasses.dataclass` decorates a class.
+    '''
     def produce( ) -> _nomina.DecorationPreparers[ __.U ]:
         ''' Produces processors for standard decorators. '''
         preprocessors: list[ _nomina.DecorationPreparer[ __.U ] ] = [ ]
