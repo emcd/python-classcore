@@ -35,7 +35,7 @@ def reclassify_modules(
     attributes: __.typx.Annotated[
         __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
         __.dynadoc.Doc(
-            'Module, module name, or dictionary of object attributes.' ),
+            ''' Module, module name, or dictionary of object attributes. ''' ),
     ], /, *,
     attributes_namer: __.typx.Annotated[
         _nomina.AttributesNamer,
@@ -43,8 +43,12 @@ def reclassify_modules(
             ''' Attributes namer function with which to seal class. ''' ),
     ] = __.calculate_attrname,
     recursive: __.typx.Annotated[
-        bool, __.dynadoc.Doc( 'Recursively reclassify package modules?' )
+        bool, __.dynadoc.Doc( ''' Recursively reclassify package modules? ''' )
     ] = False,
+    replacement_class: __.typx.Annotated[
+        type[ __.types.ModuleType ],
+        __.dynadoc.Doc( ''' New class for module. ''' ),
+    ] = Module,
 ) -> None:
     # TODO? Ensure correct operation with namespace packages.
     ''' Reclassifies modules to have attributes concealment and immutability.
@@ -72,16 +76,18 @@ def reclassify_modules(
         if not __.inspect.ismodule( value ): continue
         if not value.__name__.startswith( f"{package_name}." ): continue
         if recursive: reclassify_modules( value, recursive = True )
-        if isinstance( value, Module ): continue
-        _seal_module( value, attributes_namer )
-    if module and not isinstance( module, Module ):
-        _seal_module( module, attributes_namer )
+        if isinstance( value, replacement_class ): continue
+        _seal_module( value, attributes_namer, replacement_class )
+    if module and not isinstance( module, replacement_class ):
+        _seal_module( module, attributes_namer, replacement_class )
 
 
 def _seal_module(
-     module: __.types.ModuleType, attributes_namer: _nomina.AttributesNamer
+     module: __.types.ModuleType,
+     attributes_namer: _nomina.AttributesNamer,
+     replacement_class: type[ __.types.ModuleType ],
 ) -> None:
     behaviors = { _nomina.concealment_label, _nomina.immutability_label }
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
     _utilities.setattr0( module, behaviors_name, behaviors )
-    module.__class__ = Module
+    module.__class__ = replacement_class
