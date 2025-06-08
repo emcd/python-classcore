@@ -23,6 +23,22 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.3 (2025-06-07)
+==========================
+
+Enhancements
+------------
+
+- Allow arbitrary class to be supplied to ``reclassify_modules``.
+- Simplify production of class decorators.
+
+
+Repairs
+-------
+
+- Bugfix. Propagate error class provider from metaclass to class decorators.
+
+
 Classcore 1.2 (2025-06-05)
 ==========================
 
