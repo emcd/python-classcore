@@ -66,7 +66,9 @@ def apply_cfc_dynadoc_configuration(
 
 
 def apply_cfc_constructor(
-    clscls: type[ __.T ], /, attributes_namer: _nomina.AttributesNamer
+    clscls: type[ __.T ], /,
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
 ) -> None:
     ''' Injects '__new__' method into metaclass. '''
     preprocessors = (
@@ -74,7 +76,8 @@ def apply_cfc_constructor(
             attributes_namer = attributes_namer ), )
     postprocessors = (
         _behaviors.produce_class_construction_postprocessor(
-            attributes_namer = attributes_namer ), )
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider ), )
     constructor: _nomina.ClassConstructor[ __.T ] = (
         _factories.produce_class_constructor(
             attributes_namer = attributes_namer,
@@ -162,7 +165,10 @@ def class_factory( # noqa: PLR0913
             clscls,
             attributes_namer = attributes_namer,
             configuration = dynadoc_configuration )
-        apply_cfc_constructor( clscls, attributes_namer = attributes_namer )
+        apply_cfc_constructor(
+            clscls,
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider )
         apply_cfc_initializer( clscls, attributes_namer = attributes_namer )
         apply_cfc_attributes_assigner(
             clscls,
@@ -311,109 +317,116 @@ def produce_attributes_surveillance_decorator(
     return decorate
 
 
-def produce_decorators_factory( # noqa: PLR0913
-    level: str,
+@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
+def dataclass_with_standard_behaviors( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
+    decorators: _nomina.Decorators[ __.U ] = ( ),
     assigner_core: _nomina.AssignerCore = (
         _behaviors.assign_attribute_if_mutable ),
     deleter_core: _nomina.DeleterCore = (
         _behaviors.delete_attribute_if_mutable ),
     surveyor_core: _nomina.SurveyorCore = (
         _behaviors.survey_visible_attributes ),
-) -> __.cabc.Callable[
-    [
-        _nomina.BehaviorExclusionVerifiersOmni,
-        _nomina.BehaviorExclusionVerifiersOmni
-    ],
-    _nomina.Decorators[ __.U ]
-]:
-    ''' Produces decorators to imbue class with standard behaviors. '''
-    def produce(
-        mutables: _nomina.BehaviorExclusionVerifiersOmni,
-        visibles: _nomina.BehaviorExclusionVerifiersOmni,
-    ) -> _nomina.Decorators[ __.U ]:
-        ''' Produces standard decorators. '''
-        decorators: list[ _nomina.Decorator[ __.U ] ] = [ ]
-        decorators.append(
-            produce_instances_initialization_decorator(
-                attributes_namer = attributes_namer,
-                mutables = mutables, visibles = visibles ) )
-        if mutables != '*':
-            decorators.append(
-                produce_attributes_assignment_decorator(
-                    level = level,
-                    attributes_namer = attributes_namer,
-                    error_class_provider = error_class_provider,
-                    implementation_core = assigner_core ) )
-            decorators.append(
-                produce_attributes_deletion_decorator(
-                    level = level,
-                    attributes_namer = attributes_namer,
-                    error_class_provider = error_class_provider,
-                    implementation_core = deleter_core ) )
-        if visibles != '*':
-            decorators.append(
-                produce_attributes_surveillance_decorator(
-                    level = level,
-                    attributes_namer = attributes_namer,
-                    implementation_core = surveyor_core ) )
-        return decorators
-
-    return produce
-
-
-def produce_decoration_preparers_factory(
-    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
-    error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
-    class_preparer: __.typx.Optional[ _nomina.ClassPreparer ] = None,
-) -> _nomina.DecorationPreparersFactory[ __.U ]:
-    ''' Produces factory to produce class decoration preparers.
-
-        E.g., a preparer needs to inject special annotations to ensure
-        compatibility with standard behaviors before
-        :py:func:`dataclasses.dataclass` decorates a class.
-    '''
-    def produce( ) -> _nomina.DecorationPreparers[ __.U ]:
-        ''' Produces processors for standard decorators. '''
-        preprocessors: list[ _nomina.DecorationPreparer[ __.U ] ] = [ ]
-        if class_preparer is not None:
-            preprocessors.append(
-                __.funct.partial(
-                    class_preparer,
-                    attributes_namer = attributes_namer  ) )
-        return tuple( preprocessors )
-
-    return produce
-
-
-@__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-def dataclass_with_standard_behaviors(
-    decorators: _nomina.Decorators[ __.U ] = ( ),
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator[ __.U ]:
     # https://github.com/microsoft/pyright/discussions/10344
     ''' Dataclass decorator factory. '''
-    decorators_factory = produce_decorators_factory( level = 'instances' )
     decorators_: _nomina.Decorators[ __.U ] = (
-        decorators_factory( mutables, visibles ) )
-    preparers_factory = produce_decoration_preparers_factory(
-        class_preparer = prepare_dataclass_for_instances )
-    preparers: _nomina.DecorationPreparers[ __.U ] = preparers_factory( )
+        _produce_instances_decorators(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            assigner_core = assigner_core,
+            deleter_core = deleter_core,
+            surveyor_core = surveyor_core,
+            mutables = mutables,
+            visibles = visibles ) )
+    preparers: _nomina.DecorationPreparers[ __.U ] = (
+        _produce_instances_decoration_preparers(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            class_preparer = prepare_dataclass_for_instances ) )
     return decoration_by(
         *decorators, _dataclass_core, *decorators_, preparers = preparers )
 
 
-def with_standard_behaviors(
+def with_standard_behaviors( # noqa: PLR0913
+    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
+    error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     decorators: _nomina.Decorators[ __.U ] = ( ),
+    assigner_core: _nomina.AssignerCore = (
+        _behaviors.assign_attribute_if_mutable ),
+    deleter_core: _nomina.DeleterCore = (
+        _behaviors.delete_attribute_if_mutable ),
+    surveyor_core: _nomina.SurveyorCore = (
+        _behaviors.survey_visible_attributes ),
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator[ __.U ]:
     ''' Class decorator factory. '''
-    decorators_factory = produce_decorators_factory( level = 'instances' )
     decorators_: _nomina.Decorators[ __.U ] = (
-        decorators_factory( mutables, visibles ) )
-    preparers_factory = produce_decoration_preparers_factory( )
-    preparers: _nomina.DecorationPreparers[ __.U ] = preparers_factory( )
+        _produce_instances_decorators(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            assigner_core = assigner_core,
+            deleter_core = deleter_core,
+            surveyor_core = surveyor_core,
+            mutables = mutables,
+            visibles = visibles ) )
+    preparers: _nomina.DecorationPreparers[ __.U ] = (
+        _produce_instances_decoration_preparers(
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider ) )
     return decoration_by( *decorators, *decorators_, preparers = preparers )
+
+
+def _produce_instances_decoration_preparers(
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
+    class_preparer: __.typx.Optional[ _nomina.ClassPreparer ] = None,
+) -> _nomina.DecorationPreparers[ __.U ]:
+    ''' Produces processors for standard decorators. '''
+    preprocessors: list[ _nomina.DecorationPreparer[ __.U ] ] = [ ]
+    if class_preparer is not None:
+        preprocessors.append(
+            __.funct.partial(
+                class_preparer, attributes_namer = attributes_namer  ) )
+    return tuple( preprocessors )
+
+
+def _produce_instances_decorators( # noqa: PLR0913
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
+    assigner_core: _nomina.AssignerCore,
+    deleter_core: _nomina.DeleterCore,
+    surveyor_core: _nomina.SurveyorCore,
+    mutables: _nomina.BehaviorExclusionVerifiersOmni,
+    visibles: _nomina.BehaviorExclusionVerifiersOmni,
+) -> _nomina.Decorators[ __.U ]:
+    ''' Produces standard decorators. '''
+    decorators: list[ _nomina.Decorator[ __.U ] ] = [ ]
+    decorators.append(
+        produce_instances_initialization_decorator(
+            attributes_namer = attributes_namer,
+            mutables = mutables, visibles = visibles ) )
+    if mutables != '*':
+        decorators.append(
+            produce_attributes_assignment_decorator(
+                level = 'instances',
+                attributes_namer = attributes_namer,
+                error_class_provider = error_class_provider,
+                implementation_core = assigner_core ) )
+        decorators.append(
+            produce_attributes_deletion_decorator(
+                level = 'instances',
+                attributes_namer = attributes_namer,
+                error_class_provider = error_class_provider,
+                implementation_core = deleter_core ) )
+    if visibles != '*':
+        decorators.append(
+            produce_attributes_surveillance_decorator(
+                level = 'instances',
+                attributes_namer = attributes_namer,
+                implementation_core = surveyor_core ) )
+    return decorators
