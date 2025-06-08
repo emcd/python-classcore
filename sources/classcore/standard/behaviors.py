@@ -195,7 +195,8 @@ def produce_class_construction_preprocessor(
 
 
 def produce_class_construction_postprocessor(
-    attributes_namer: _nomina.AttributesNamer
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
 ) -> _nomina.ClassConstructionPostprocessor[ __.U ]:
     ''' Produces construction processor which determines class decorators. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
@@ -214,6 +215,12 @@ def produce_class_construction_postprocessor(
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
         if not dcls_spec: # either base class or metaclass may be marked
             dcls_spec = getattr( clscls, '__dataclass_transform__', None )
+        instances_assigner = arguments.get(
+            'instances_assigner_core', assign_attribute_if_mutable )
+        instances_deleter = arguments.get(
+            'instances_deleter_core', delete_attribute_if_mutable )
+        instances_surveyor = arguments.get(
+            'instances_surveyor_core', survey_visible_attributes )
         instances_mutables = arguments.get(
             'instances_mutables', __.mutables_default )
         instances_visibles = arguments.get(
@@ -227,7 +234,13 @@ def produce_class_construction_postprocessor(
             from .decorators import with_standard_behaviors
             decorator_factory = with_standard_behaviors
         decorator: _nomina.Decorator[ __.U ] = decorator_factory(
-            mutables = instances_mutables, visibles = instances_visibles )
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            assigner_core = instances_assigner,
+            deleter_core = instances_deleter,
+            surveyor_core = instances_surveyor,
+            mutables = instances_mutables,
+            visibles = instances_visibles )
         decorators.append( decorator )
 
     return postprocess
@@ -316,6 +329,9 @@ def record_class_construction_arguments(
     arguments_ = { }
     for name in (
         'class_mutables', 'class_visibles',
+        'instances_assigner_core',
+        'instances_deleter_core',
+        'instances_surveyor_core',
         'instances_mutables', 'instances_visibles',
         'dynadoc_configuration',
     ):
