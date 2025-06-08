@@ -23,6 +23,16 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.3.1 (2025-06-07)
+============================
+
+Repairs
+-------
+
+- When reclassifying modules recursively, ensure that replacement class is
+  included in recursive invocations.
+
+
 Classcore 1.3 (2025-06-07)
 ==========================
 
