@@ -151,6 +151,29 @@ def survey_visible_attributes(
     return names_
 
 
+def augment_class_attributes_allocations(
+    attributes_namer: _nomina.AttributesNamer,
+    namespace: dict[ str, __.typx.Any ],
+) -> None:
+    ''' Adds necessary slots for record-keeping attributes. '''
+    behaviors_name = attributes_namer( 'instance', 'behaviors' )
+    slots: __.typx.Union[
+        __.cabc.Mapping[ str, __.typx.Any ],
+        __.cabc.Sequence[ str ],
+        None
+    ] = namespace.get( '__slots__' )
+    if isinstance( slots, __.cabc.Mapping ):
+        slots_ = dict( slots )
+        slots_[ behaviors_name ] = 'Active behaviors.'
+        slots_ = __.types.MappingProxyType( slots_ )
+    elif isinstance( slots, __.cabc.Sequence ):
+        slots_ = list( slots )
+        slots_.append( behaviors_name )
+        slots_ = tuple( slots_ )
+    else: return # pragma: no cover
+    namespace[ '__slots__' ] = slots_
+
+
 def classify_behavior_exclusion_verifiers(
     verifiers: _nomina.BehaviorExclusionVerifiers
 ) -> tuple[
@@ -190,6 +213,8 @@ def produce_class_construction_preprocessor(
     ) -> None:
         record_class_construction_arguments(
             attributes_namer, namespace, arguments )
+        if '__slots__' in namespace:
+            augment_class_attributes_allocations( attributes_namer, namespace )
 
     return preprocess
 

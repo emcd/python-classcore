@@ -159,3 +159,44 @@ attributes, there is a convenience class, ``ObjectMutable``.
     >>> point.x, point.y = 20, 21
     >>> point.x, point.y
     (20, 21)
+
+
+Attribute Preallocations
+===============================================================================
+
+You can preallocate attributes using the standard Python ``__slots__``
+mechanism. In addition to potential performance gains for attribute lookups,
+this can be useful if you are making a namespace class and want to keep the
+namespace dictionary free of record-keeping attributes. You cannot inherit a
+standard base class, such as ``Object``, for this purpose, as it is
+``__dict__``-based. However, you can create the namespace class via metaclass.
+
+.. doctest:: Standard.Classes
+
+   >>> class Namespace( metaclass = ccstd.Class ):
+   ...     __slots__ = ( '__dict__', )
+   ...     def __init__( self, **arguments: float ) -> None:
+   ...         self.__dict__.update( arguments )
+   ...
+   >>> ns = Namespace( x = 20, y = 21 )
+   >>> ns.__slots__
+   ('__dict__', '_classcore_instance_behaviors_')
+   >>> 'x' in ns.__dict__
+   True
+   >>> '_classcore_instance_behaviors_' in ns.__dict__
+   False
+   >>> ns.x, ns.y
+   (20, 21)
+
+The mapping form of ``__slots__`` is also supported.
+
+.. doctest:: Standard.Classes
+
+   >>> class Namespace( metaclass = ccstd.Class ):
+   ...     __slots__ = { '__dict__': 'Namespace attributes.' }
+   ...     def __init__( self, **arguments: float ):
+   ...         self.__dict__.update( arguments )
+   ...
+   >>> ns = Namespace( x = 20, y = 21 )
+   >>> ns.__slots__[ '__dict__' ]
+   'Namespace attributes.'
