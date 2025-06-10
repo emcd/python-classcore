@@ -354,11 +354,11 @@ def record_class_construction_arguments(
     arguments_ = { }
     for name in (
         'class_mutables', 'class_visibles',
+        'dynadoc_configuration',
         'instances_assigner_core',
         'instances_deleter_core',
         'instances_surveyor_core',
         'instances_mutables', 'instances_visibles',
-        'dynadoc_configuration',
     ):
         if name not in arguments: continue
         arguments_[ name ] = arguments.pop( name )

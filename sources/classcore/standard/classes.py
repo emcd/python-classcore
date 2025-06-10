@@ -33,11 +33,15 @@ _class_factory = __.funct.partial(
     _decorators.class_factory, dynadoc_configuration = _dynadoc_configuration )
 
 
-class _CfcExtraArguments( __.typx.TypedDict, total = False ):
+class ClassFactoryExtraArguments( __.typx.TypedDict, total = False ):
+    ''' Extra arguments accepted by standard metaclasses. '''
 
     class_mutables: _nomina.BehaviorExclusionVerifiersOmni
     class_visibles: _nomina.BehaviorExclusionVerifiersOmni
     dynadoc_configuration: _nomina.DynadocConfiguration
+    instances_assigner_core: _nomina.AssignerCore
+    instances_deleter_core: _nomina.DeleterCore
+    instances_surveyor_core: _nomina.SurveyorCore
     instances_mutables: _nomina.BehaviorExclusionVerifiersOmni
     instances_visibles: _nomina.BehaviorExclusionVerifiersOmni
 
@@ -56,7 +60,7 @@ class Class( type ):
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ], *,
         decorators: _nomina.Decorators[ __.T ] = ( ),
-        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
         return super( ).__new__( clscls, name, bases, namespace )
 
@@ -77,7 +81,7 @@ class Dataclass( type ):
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ], *,
         decorators: _nomina.Decorators[ __.T ] = ( ),
-        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
         return super( ).__new__( clscls, name, bases, namespace )
 
@@ -98,7 +102,7 @@ class DataclassMutable( type ):
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ], *,
         decorators: _nomina.Decorators[ __.T ] = ( ),
-        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
         return super( ).__new__( clscls, name, bases, namespace )
 
@@ -118,7 +122,7 @@ class ProtocolClass( type( __.typx.Protocol ) ):
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ], *,
         decorators: _nomina.Decorators[ __.T ] = ( ),
-        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
         return super( ).__new__( clscls, name, bases, namespace )
 
@@ -139,7 +143,7 @@ class ProtocolDataclass( type( __.typx.Protocol ) ):
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ], *,
         decorators: _nomina.Decorators[ __.T ] = ( ),
-        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
         return super( ).__new__( clscls, name, bases, namespace )
 
@@ -161,7 +165,7 @@ class ProtocolDataclassMutable( type( __.typx.Protocol ) ):
         bases: tuple[ type, ... ],
         namespace: dict[ str, __.typx.Any ], *,
         decorators: _nomina.Decorators[ __.T ] = ( ),
-        **arguments: __.typx.Unpack[ _CfcExtraArguments ],
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
         return super( ).__new__( clscls, name, bases, namespace )
 
