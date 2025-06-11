@@ -23,6 +23,15 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.4.1 (2025-06-10)
+============================
+
+Repairs
+-------
+
+- Enforce attributes concealment and immutability on modules.
+
+
 Classcore 1.4 (2025-06-10)
 ==========================
 
