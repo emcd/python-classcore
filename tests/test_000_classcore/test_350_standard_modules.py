@@ -20,6 +20,8 @@
 
 import types
 
+import pytest
+
 from . import PACKAGE_NAME, cache_import_module
 
 
@@ -29,6 +31,7 @@ MODULE_QNAME = f"{PACKAGE_NAME}.standard.modules"
 def test_200_reclassification_of_package_module( ):
     ''' Reclassifies package module directly. '''
     module = cache_import_module( MODULE_QNAME )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
     module_class = module.Module
     module_ = types.ModuleType( 'foobarnotreal' )
     module_.__package__ = None
@@ -37,11 +40,14 @@ def test_200_reclassification_of_package_module( ):
     assert module_.__class__ is module_class
     module.reclassify_modules( module_ ) # idempotence
     assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module.foo = 1
 
 
 def test_201_reclassification_of_normal_module( ):
     ''' Reclassifies normal module directly. '''
     module = cache_import_module( MODULE_QNAME )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
     module_class = module.Module
     module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
     module_.__package__ = 'fakepackage'
@@ -50,6 +56,8 @@ def test_201_reclassification_of_normal_module( ):
     assert module_.__class__ is module_class
     module.reclassify_modules( module_ ) # idempotence
     assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module.foo = 1
 
 
 def test_202_reclassification_of_incomplete_module( ):
@@ -67,6 +75,7 @@ def test_202_reclassification_of_incomplete_module( ):
 def test_205_reclassification_via_module_globals( ):
     ''' Reclassifies via module globals dictionary. '''
     module = cache_import_module( MODULE_QNAME )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
     module_class = module.Module
     module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
     module_dict = { 'mod': module_, '__package__': 'fakepackage' }
@@ -75,3 +84,5 @@ def test_205_reclassification_via_module_globals( ):
     assert module_.__class__ is module_class
     module.reclassify_modules( module_dict ) # idempotence
     assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module.foo = 1
