@@ -27,7 +27,7 @@ from . import classes as _classes
 from . import nomina as _nomina
 
 
-class Module( __.types.ModuleType, _classes.Object ):
+class Module( _classes.Object, __.types.ModuleType ):
     ''' Modules with attributes immutability and concealment. '''
 
 
@@ -93,5 +93,5 @@ def _seal_module(
 ) -> None:
     behaviors = { _nomina.concealment_label, _nomina.immutability_label }
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    _utilities.setattr0( module, behaviors_name, behaviors )
     module.__class__ = replacement_class
+    _utilities.setattr0( module, behaviors_name, behaviors )
