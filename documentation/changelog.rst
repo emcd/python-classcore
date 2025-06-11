@@ -23,6 +23,29 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.4 (2025-06-10)
+==========================
+
+Enhancements
+------------
+
+- Fully support slotted classes. Bookkeeping attributes will now be in slots if
+  class is slotted. Potential performance improvement since names do not need to
+  be mangled for inheritance isolation.
+- Publicly expose the ``TypedDict`` which tracks available metaclass arguments
+  for the standard classes. This allows for easier extension by downstream
+  packages and centralizes documentation on the metaclasses interface.
+
+
+Repairs
+-------
+
+- Bugfix. Ensure idempotent execution in all scenarios: CPython vs PyPy, slotted
+  vs non-slotted.
+- Bugfix. Ensure that methods added by decoration properly respect class method
+  resolution order (MRO) when they are not wrapping existing methods.
+
+
 Classcore 1.3.1 (2025-06-07)
 ============================
 
