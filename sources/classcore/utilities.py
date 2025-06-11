@@ -24,51 +24,81 @@
 from . import __
 
 
-def describe_object( obj: object ) -> str:
+def describe_object( objct: object, / ) -> str:
     ''' Returns object type with fully-qualified name. '''
-    if __.inspect.isclass( obj ):
-        return "class '{}'".format( qualify_class_name( obj ) )
+    if __.inspect.isclass( objct ):
+        return "class '{}'".format( qualify_class_name( objct ) )
     # TODO? functions, methods, etc...
-    return "instance of {}".format( describe_object( type( obj ) ) )
+    return "instance of {}".format( describe_object( type( objct ) ) )
 
 
-def getattr0( obj: object, name: str, default: __.typx.Any ) -> __.typx.Any:
-    ''' Returns private attribute from object.
+def getattr0(
+    objct: object, /, name: str, default: __.typx.Any
+) -> __.typx.Any:
+    ''' Returns special private attribute from object.
 
-        Uses mangled attribute name which is unique to the class.
+        This avoids inheritance-related collisions.
+
+        Uses mangled attribute name which is unique to the class,
+        except when attribute is slotted. Slotted attributes are effectively
+        isolated from inheritance.
     '''
-    name_m = mangle_name( obj, name )
-    return getattr( obj, name_m, default )
+    if not __.inspect.isclass( objct ):
+        for base in type( objct ).mro( ):
+            slots = getattr( base, '__slots__', ( ) )
+            if name in slots: return getattr( objct, name, default )
+    name_m = mangle_name( objct, name )
+    return getattr( objct, name_m, default )
 
 
-def delattr0( obj: object, name: str ) -> None:
-    ''' Deletes private attribute on object.
+def delattr0( objct: object, /, name: str ) -> None:
+    ''' Deletes special private attribute on object.
 
-        Uses mangled attribute name which is unique to the class.
+        This avoids inheritance-related collisions.
+
+        Uses mangled attribute name which is unique to the class,
+        except when attribute is slotted. Slotted attributes are effectively
+        isolated from inheritance.
     '''
-    name_m = mangle_name( obj, name )
-    delattr( obj, name_m )
+    if not __.inspect.isclass( objct ):
+        for base in type( objct ).mro( ):
+            slots = getattr( base, '__slots__', ( ) )
+            if name in slots:
+                delattr( objct, name )
+                return
+    name_m = mangle_name( objct, name )
+    delattr( objct, name_m )
 
 
-def setattr0( obj: object, name: str, value: __.typx.Any ) -> None:
-    ''' Assigns private attribute to object.
+def setattr0( objct: object, /, name: str, value: __.typx.Any ) -> None:
+    ''' Assigns special private attribute to object.
 
-        Uses mangled attribute name which is unique to the class.
+        This avoids inheritance-related collisions.
+
+        Uses mangled attribute name which is unique to the class,
+        except when attribute is slotted. Slotted attributes are effectively
+        isolated from inheritance.
     '''
-    name_m = mangle_name( obj, name )
-    setattr( obj, name_m, value )
+    if not __.inspect.isclass( objct ):
+        for base in type( objct ).mro( ):
+            slots = getattr( base, '__slots__', ( ) )
+            if name in slots:
+                setattr( objct, name, value )
+                return
+    name_m = mangle_name( objct, name )
+    setattr( objct, name_m, value )
 
 
-def mangle_name( obj: object, name: str ) -> str:
+def mangle_name( objct: object, /, name: str ) -> str:
     ''' Mangles attribute name so that it is unique.
 
         Effectively provides name of private member attribute,
         which is unique across class inheritance.
     '''
-    if not __.inspect.isclass( obj ):
-        return mangle_name( type( obj ), name )
+    if not __.inspect.isclass( objct ):
+        return mangle_name( type( objct ), name )
     namehash = __.hashlib.sha256( )
-    namehash.update( qualify_class_name( obj ).encode( ) )
+    namehash.update( qualify_class_name( objct ).encode( ) )
     namehash_hex = namehash.hexdigest( )
     return f"{name}_{namehash_hex}"
 

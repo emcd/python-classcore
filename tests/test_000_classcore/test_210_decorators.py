@@ -18,21 +18,32 @@
 #============================================================================#
 
 
+# import pytest
+
 from . import PACKAGE_NAME, cache_import_module
 
 
-MODULE_QNAME = f"{PACKAGE_NAME}.standard.decorators"
+MODULE_QNAME = f"{PACKAGE_NAME}.decorators"
 
 
-def test_210_class_factory_decorator_idempotence( ):
-    ''' Class factory decorators are idempotent. '''
+def test_111_produce_class_initialization_decorator_original( ):
     module = cache_import_module( MODULE_QNAME )
-    @module.class_factory( )
-    class Class: pass
-    @module.class_factory( )
-    class BetterClass( Class ): pass
-    assert Class.__new__ is BetterClass.__new__
-    assert Class.__init__ is BetterClass.__init__
-    assert Class.__setattr__ is BetterClass.__setattr__
-    assert Class.__delattr__ is BetterClass.__delattr__
-    assert Class.__dir__ is BetterClass.__dir__
+    base_module = cache_import_module( f"{PACKAGE_NAME}.__" )
+    factories_module = cache_import_module( f"{PACKAGE_NAME}.factories" )
+    constructor = factories_module.produce_class_constructor(
+        attributes_namer = base_module.calculate_attrname )
+    cdecorator = module.produce_class_construction_decorator(
+        attributes_namer = base_module.calculate_attrname,
+        constructor = constructor )
+    initializer = factories_module.produce_class_initializer(
+        attributes_namer = base_module.calculate_attrname )
+    idecorator = module.produce_class_initialization_decorator(
+        attributes_namer = base_module.calculate_attrname,
+        initializer = initializer )
+    @idecorator
+    @cdecorator
+    class Class( type ):
+        def __init__( self, *posargs, **nomargs ):
+            self._hello = 'Hi'
+    class Object( metaclass = Class ): pass
+    assert Object._hello == 'Hi'

@@ -75,25 +75,45 @@ def produce_class_construction_decorator(
         Decorator overrides ``__new__`` on metaclass.
     '''
     def decorate( clscls: type[ __.T ] ) -> type[ __.T ]:
-        constructor_name = attributes_namer( 'classes', 'constructor' )
-        extant = getattr( clscls, constructor_name, None )
-        original = getattr( clscls, '__new__' )
-        if extant is original: return clscls
+        original = __.typx.cast(
+            _nomina.ClassConstructorLigation | None,
+            clscls.__dict__.get( '__new__' ) ) # pyright: ignore
 
-        def construct(
-            clscls_: type[ __.T ],
-            name: str,
-            bases: tuple[ type, ... ],
-            namespace: dict[ str, __.typx.Any ], *,
-            decorators: _nomina.Decorators[ __.T ] = ( ),
-            **arguments: __.typx.Any,
-        ) -> type[ object ]:
-            return constructor(
-                clscls_, original,
-                name, bases, namespace, arguments, decorators )
+        if original is None:
 
-        setattr( clscls, constructor_name, construct )
-        setattr( clscls, '__new__', construct )
+            def construct_with_super(
+                clscls_: type[ __.T ],
+                name: str,
+                bases: tuple[ type, ... ],
+                namespace: dict[ str, __.typx.Any ], *,
+                decorators: _nomina.Decorators[ __.T ] = ( ),
+                **arguments: __.typx.Any,
+            ) -> type[ object ]:
+                superf = super( clscls, clscls_ ).__new__
+                # TODO? Short-circuit if not at start of MRO.
+                return constructor(
+                    clscls_, superf,
+                    name, bases, namespace, arguments, decorators )
+
+            setattr( clscls, '__new__', construct_with_super )
+
+        else:
+
+            def construct_with_original(
+                clscls_: type[ __.T ],
+                name: str,
+                bases: tuple[ type, ... ],
+                namespace: dict[ str, __.typx.Any ], *,
+                decorators: _nomina.Decorators[ __.T ] = ( ),
+                **arguments: __.typx.Any,
+            ) -> type[ object ]:
+                # TODO? Short-circuit if not at start of MRO.
+                return constructor(
+                    clscls_, original,
+                    name, bases, namespace, arguments, decorators )
+
+            setattr( clscls, '__new__', construct_with_original )
+
         return clscls
 
     return decorate
@@ -108,20 +128,33 @@ def produce_class_initialization_decorator(
         Decorator overrides ``__init__`` on metaclass.
     '''
     def decorate( clscls: type[ __.T ] ) -> type[ __.T ]:
-        initializer_name = attributes_namer( 'classes', 'initializer' )
-        extant = getattr( clscls, initializer_name, None )
-        original = getattr( clscls, '__init__' )
-        if extant is original: return clscls
+        original = __.typx.cast(
+            _nomina.InitializerLigation | None,
+            clscls.__dict__.get( '__init__' ) ) # pyright: ignore
 
-        @__.funct.wraps( original )
-        def initialize(
-            cls: type, *posargs: __.typx.Any, **nomargs: __.typx.Any
-        ) -> None:
-            ligation = __.funct.partial( original, cls )
-            initializer( cls, ligation, posargs, nomargs )
+        if original is None:
 
-        setattr( clscls, initializer_name, initialize )
-        clscls.__init__ = initialize
+            def initialize_with_super(
+                cls: type, *posargs: __.typx.Any, **nomargs: __.typx.Any
+            ) -> None:
+                ligation = super( clscls, cls ).__init__
+                # TODO? Short-circuit if not at start of MRO.
+                initializer( cls, ligation, posargs, nomargs )
+
+            clscls.__init__ = initialize_with_super
+
+        else:
+
+            @__.funct.wraps( original )
+            def initialize_with_original(
+                cls: type, *posargs: __.typx.Any, **nomargs: __.typx.Any
+            ) -> None:
+                ligation = __.funct.partial( original, cls )
+                # TODO? Short-circuit if not at start of MRO.
+                initializer( cls, ligation, posargs, nomargs )
+
+            clscls.__init__ = initialize_with_original
+
         return clscls
 
     return decorate

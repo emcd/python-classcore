@@ -62,6 +62,15 @@ def test_200_attr0( ):
     assert 2 == module.getattr0( D, 'y', sentinel )
     module.delattr0( C, 'x' )
     assert sentinel == module.getattr0( C, 'x', sentinel )
+    class CS: __slots__ = ( 'z', )
+    cs = CS( )
+    assert sentinel == module.getattr0( cs, 'z', sentinel )
+    module.setattr0( cs, 'z', 3 )
+    assert 3 == module.getattr0( cs, 'z', sentinel )
+    module.delattr0( cs, 'z' )
+    assert sentinel == module.getattr0( cs, 'z', sentinel )
+    with pytest.raises( AttributeError ):
+        module.delattr0( cs, 'missing' )
 
 
 @pytest.mark.skipif(
