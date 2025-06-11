@@ -26,31 +26,31 @@ from . import standard as _standard
 
 
 class Omniexception(
-    BaseException, _standard.Object,
+    _standard.Object, BaseException,
     instances_visibles = ( '__cause__', '__context__' ),
 ):
     ''' Base exception for package. '''
 
 
-class Omnierror( Exception, Omniexception ):
+class Omnierror( Omniexception, Exception ):
     ''' Base error for package. '''
 
 
-class AttributeImmutability( AttributeError, Omnierror ):
+class AttributeImmutability( Omnierror, AttributeError ):
 
     def __init__( self, name: str, target: str ):
         super( ).__init__(
             f"Could not assign or delete attribute {name!r} on {target}." )
 
 
-class BehaviorExclusionInvalidity( TypeError, ValueError, Omnierror ):
+class BehaviorExclusionInvalidity( Omnierror, TypeError, ValueError ):
 
     def __init__( self, verifier: __.typx.Any ):
         super( ).__init__(
             f"Invalid behavior exclusion verifier: {verifier!r}" )
 
 
-class ErrorProvideFailure( RuntimeError, Omnierror ):
+class ErrorProvideFailure( Omnierror, RuntimeError ):
 
     def __init__( self, name: str, reason: str ):
         super( ).__init__(

@@ -90,7 +90,7 @@ def apply_cfc_constructor(
 
 
 def apply_cfc_initializer(
-    clscls: type[ __.T ], attributes_namer: _nomina.AttributesNamer
+    clscls: type[ __.T ], /, attributes_namer: _nomina.AttributesNamer
 ) -> None:
     ''' Injects '__init__' method into metaclass. '''
     completers = (
@@ -113,7 +113,7 @@ def apply_cfc_attributes_assigner(
 ) -> None:
     ''' Injects '__setattr__' method into metaclass. '''
     decorator = produce_attributes_assignment_decorator(
-        level = 'class',
+        level = 'classes',
         attributes_namer = attributes_namer,
         error_class_provider = error_class_provider,
         implementation_core = implementation_core )
@@ -128,7 +128,7 @@ def apply_cfc_attributes_deleter(
 ) -> None:
     ''' Injects '__delattr__' method into metaclass. '''
     decorator = produce_attributes_deletion_decorator(
-        level = 'class',
+        level = 'classes',
         attributes_namer = attributes_namer,
         error_class_provider = error_class_provider,
         implementation_core = implementation_core )
@@ -142,7 +142,7 @@ def apply_cfc_attributes_surveyor(
 ) -> None:
     ''' Injects '__dir__' method into metaclass. '''
     decorator = produce_attributes_surveillance_decorator(
-        level = 'class',
+        level = 'classes',
         attributes_namer = attributes_namer,
         implementation_core = implementation_core )
     decorator( clscls )
@@ -197,10 +197,6 @@ def produce_instances_initialization_decorator(
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__init__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
-        initializer_name = attributes_namer( 'instances', 'initializer' )
-        extant = getattr( cls, initializer_name, None )
-        original = getattr( cls, '__init__' )
-        if extant is original: return cls
         behaviors: set[ str ] = set( )
         behaviors_name = attributes_namer( 'instance', 'behaviors' )
         _behaviors.record_behavior(
@@ -213,20 +209,41 @@ def produce_instances_initialization_decorator(
             level = 'instances', basename = 'visibles',
             label = _nomina.concealment_label, behaviors = behaviors,
             verifiers = visibles )
+        original = cls.__dict__.get( '__init__' )
 
-        @__.funct.wraps( original )
-        def initialize(
-            self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
-        ) -> None:
-            original( self, *posargs, **nomargs )
-            behaviors_: set[ str ] = (
-                _utilities.getattr0( self, behaviors_name, set( ) ) )
-            behaviors_.update( behaviors )
-            _utilities.setattr0(
-                self, behaviors_name, frozenset( behaviors_ ) )
+        if original is None:
 
-        setattr( cls, initializer_name, initialize )
-        cls.__init__ = initialize
+            def initialize_with_super(
+                self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
+            ) -> None:
+                super( cls, self ).__init__( *posargs, **nomargs )
+                # Only record behaviors at start of MRO.
+                if cls is not type( self ): return
+                behaviors_: set[ str ] = (
+                    _utilities.getattr0( self, behaviors_name, set( ) ) )
+                behaviors_.update( behaviors )
+                _utilities.setattr0(
+                    self, behaviors_name, frozenset( behaviors_ ) )
+
+            cls.__init__ = initialize_with_super
+
+        else:
+
+            @__.funct.wraps( original )
+            def initialize_with_original(
+                self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
+            ) -> None:
+                original( self, *posargs, **nomargs )
+                # Only record behaviors at start of MRO.
+                if cls is not type( self ): return
+                behaviors_: set[ str ] = (
+                    _utilities.getattr0( self, behaviors_name, set( ) ) )
+                behaviors_.update( behaviors )
+                _utilities.setattr0(
+                    self, behaviors_name, frozenset( behaviors_ ) )
+
+            cls.__init__ = initialize_with_original
+
         return cls
 
     return decorate
@@ -240,23 +257,50 @@ def produce_attributes_assignment_decorator(
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__setattr__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
-        assigner_name = attributes_namer( level, 'assigner' )
-        extant = getattr( cls, assigner_name, None )
-        original = getattr( cls, '__setattr__' )
-        if extant is original: return cls
+        leveli = 'class' if level == 'classes' else level
+        original = cls.__dict__.get( '__setattr__' )
 
-        @__.funct.wraps( original )
-        def assign( self: object, name: str, value: __.typx.Any ) -> None:
-            implementation_core(
-                self,
-                ligation = __.funct.partial( original, self ),
-                attributes_namer = attributes_namer,
-                error_class_provider = error_class_provider,
-                level = level,
-                name = name, value = value )
+        if original is None:
 
-        setattr( cls, assigner_name, assign )
-        cls.__setattr__ = assign
+            def assign_with_super(
+                self: object, name: str, value: __.typx.Any
+            ) -> None:
+                ligation = super( cls, self ).__setattr__
+                # Only enforce behaviors at start of MRO.
+                if cls is not type( self ):
+                    ligation( name, value )
+                    return
+                implementation_core(
+                    self,
+                    ligation = ligation,
+                    attributes_namer = attributes_namer,
+                    error_class_provider = error_class_provider,
+                    level = leveli,
+                    name = name, value = value )
+
+            cls.__setattr__ = assign_with_super
+
+        else:
+
+            @__.funct.wraps( original )
+            def assign_with_original(
+                self: object, name: str, value: __.typx.Any
+            ) -> None:
+                ligation = __.funct.partial( original, self )
+                # Only enforce behaviors at start of MRO.
+                if cls is not type( self ):
+                    ligation( name, value )
+                    return
+                implementation_core(
+                    self,
+                    ligation = ligation,
+                    attributes_namer = attributes_namer,
+                    error_class_provider = error_class_provider,
+                    level = leveli,
+                    name = name, value = value )
+
+            cls.__setattr__ = assign_with_original
+
         return cls
 
     return decorate
@@ -270,23 +314,46 @@ def produce_attributes_deletion_decorator(
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__delattr__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
-        deleter_name = attributes_namer( level, 'deleter' )
-        extant = getattr( cls, deleter_name, None )
-        original = getattr( cls, '__delattr__' )
-        if extant is original: return cls
+        leveli = 'class' if level == 'classes' else level
+        original = cls.__dict__.get( '__delattr__' )
 
-        @__.funct.wraps( original )
-        def delete( self: object, name: str ) -> None:
-            implementation_core(
-                self,
-                ligation = __.funct.partial( original, self ),
-                attributes_namer = attributes_namer,
-                error_class_provider = error_class_provider,
-                level = level,
-                name = name )
+        if original is None:
 
-        setattr( cls, deleter_name, delete )
-        cls.__delattr__ = delete
+            def delete_with_super( self: object, name: str ) -> None:
+                ligation = super( cls, self ).__delattr__
+                # Only enforce behaviors at start of MRO.
+                if cls is not type( self ):
+                    ligation( name )
+                    return
+                implementation_core(
+                    self,
+                    ligation = ligation,
+                    attributes_namer = attributes_namer,
+                    error_class_provider = error_class_provider,
+                    level = leveli,
+                    name = name )
+
+            cls.__delattr__ = delete_with_super
+
+        else:
+
+            @__.funct.wraps( original )
+            def delete_with_original( self: object, name: str ) -> None:
+                ligation = __.funct.partial( original, self )
+                # Only enforce behaviors at start of MRO.
+                if cls is not type( self ):
+                    ligation( name )
+                    return
+                implementation_core(
+                    self,
+                    ligation = ligation,
+                    attributes_namer = attributes_namer,
+                    error_class_provider = error_class_provider,
+                    level = leveli,
+                    name = name )
+
+            cls.__delattr__ = delete_with_original
+
         return cls
 
     return decorate
@@ -299,21 +366,42 @@ def produce_attributes_surveillance_decorator(
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__dir__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
-        surveyor_name = attributes_namer( level, 'surveyor' )
-        extant = getattr( cls, surveyor_name, None )
-        original = getattr( cls, '__dir__' )
-        if extant is original: return cls
+        leveli = 'class' if level == 'classes' else level
+        original = cls.__dict__.get( '__dir__' )
 
-        @__.funct.wraps( original )
-        def survey( self: object ) -> __.cabc.Iterable[ str ]:
-            return implementation_core(
-                self,
-                ligation = __.funct.partial( original, self ),
-                attributes_namer = attributes_namer,
-                level = level )
+        if original is None:
 
-        setattr( cls, surveyor_name, survey )
-        cls.__dir__ = survey
+            def survey_with_super(
+                self: object
+            ) -> __.cabc.Iterable[ str ]:
+                ligation = super( cls, self ).__dir__
+                # Only enforce behaviors at start of MRO.
+                if cls is not type( self ): return ligation( )
+                return implementation_core(
+                    self,
+                    ligation = ligation,
+                    attributes_namer = attributes_namer,
+                    level = leveli )
+
+            cls.__dir__ = survey_with_super
+
+        else:
+
+            @__.funct.wraps( original )
+            def survey_with_original(
+                self: object
+            ) -> __.cabc.Iterable[ str ]:
+                ligation = __.funct.partial( original, self )
+                # Only enforce behaviors at start of MRO.
+                if cls is not type( self ): return ligation( )
+                return implementation_core(
+                    self,
+                    ligation = ligation,
+                    attributes_namer = attributes_namer,
+                    level = leveli )
+
+            cls.__dir__ = survey_with_original
+
         return cls
 
     return decorate
