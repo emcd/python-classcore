@@ -95,8 +95,11 @@ def mangle_name( objct: object, /, name: str ) -> str:
         Effectively provides name of private member attribute,
         which is unique across class inheritance.
     '''
+    # TODO: Replace expensive SHA-256 hash with simple 'id'.
+    #       Need to debug weird issue with using 'id' early on dataclasses.
     if not __.inspect.isclass( objct ):
         return mangle_name( type( objct ), name )
+    # return "{name}_{uid}".format( name = name, uid = id( objct ) )
     namehash = __.hashlib.sha256( )
     namehash.update( qualify_class_name( objct ).encode( ) )
     namehash_hex = namehash.hexdigest( )
