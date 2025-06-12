@@ -23,6 +23,16 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.4.2 (2025-06-11)
+============================
+
+Repairs
+-------
+
+- Ensure that custom attributes namer is passed during recursive module
+  reclassification.
+
+
 Classcore 1.4.1 (2025-06-10)
 ============================
 

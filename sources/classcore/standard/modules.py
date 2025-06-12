@@ -78,6 +78,7 @@ def reclassify_modules(
         if recursive:
             reclassify_modules(
                 value,
+                attributes_namer = attributes_namer,
                 recursive = True,
                 replacement_class = replacement_class )
         if isinstance( value, replacement_class ): continue
