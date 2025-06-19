@@ -27,7 +27,7 @@ from . import utilities as _utilities
 
 
 def apply_decorators(
-    cls: type[ __.U ], decorators: _nomina.Decorators[ __.U ]
+    cls: type[ __.U ], decorators: _nomina.DecoratorsArgument[ __.U ]
 ) -> type:
     ''' Applies sequence of decorators to class.
 
@@ -46,8 +46,8 @@ def apply_decorators(
 
 
 def decoration_by(
-    *decorators: _nomina.Decorator[ __.U ],
-    preparers: _nomina.DecorationPreparers[ __.U ] = ( ),
+    *decorators: _nomina.DecoratorArgument[ __.U ],
+    preparers: _nomina.DecorationPreparersArgument[ __.U ] = ( ),
 ) -> _nomina.Decorator[ __.U ]:
     ''' Class decorator which applies other class decorators.
 
@@ -68,7 +68,7 @@ def decoration_by(
 
 def produce_class_construction_decorator(
     attributes_namer: _nomina.AttributesNamer,
-    constructor: _nomina.ClassConstructor[ __.T ],
+    constructor: _nomina.ClassConstructorArgument[ __.T ],
 ) -> _nomina.Decorator[ __.T ]:
     ''' Produces metaclass decorator to control class construction.
 
@@ -121,7 +121,7 @@ def produce_class_construction_decorator(
 
 def produce_class_initialization_decorator(
     attributes_namer: _nomina.AttributesNamer,
-    initializer: _nomina.ClassInitializer,
+    initializer: _nomina.ClassInitializerArgument,
 ) -> _nomina.Decorator[ __.T ]:
     ''' Produces metaclass decorator to control class initialization.
 

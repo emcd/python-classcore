@@ -30,7 +30,7 @@ from . import nomina as _nomina
 
 def assign_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
-    ligation: _nomina.AssignerLigation,
+    ligation: _nomina.AssignerLigationArgument,
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
     level: str,
@@ -72,7 +72,7 @@ def assign_attribute_if_mutable( # noqa: PLR0913
 
 def delete_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
-    ligation: _nomina.DeleterLigation,
+    ligation: _nomina.DeleterLigationArgument,
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
     level: str,

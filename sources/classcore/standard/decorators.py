@@ -43,7 +43,7 @@ _dynadoc_configuration = _dynadoc.produce_dynadoc_configuration( )
 
 def prepare_dataclass_for_instances(
     cls: type,
-    decorators: _nomina.DecoratorsMutable[ __.U ], /, *,
+    decorators: _nomina.DecoratorsMutableArgument[ __.U ], /, *,
     attributes_namer: _nomina.AttributesNamer,
 ) -> None:
     ''' Annotates dataclass in support of instantiation machinery. '''
