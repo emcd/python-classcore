@@ -51,46 +51,23 @@ DecorationPreparers: __.typx.TypeAlias = (
 DecorationPreparersFactory: __.typx.TypeAlias = (
     __.cabc.Callable[ [ ], DecorationPreparers[ __.U ] ] )
 
-ClassConstructorLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ ..., type ],
-    __.dynadoc.Doc(
-        ''' Bound class constructor function.
-
-            Usually from ``super( ).__new__`` or a partial function.
-        ''' ),
-]
-InitializerLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ ..., None ],
-    __.dynadoc.Doc(
-        ''' Bound initializer function.
-
-            Usually from ``super( ).__init__`` or a partial function.
-        ''' ),
-]
-AssignerLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ str, __.typx.Any ], None ],
-    __.dynadoc.Doc(
-        ''' Bound attributes assigner function.
-
-            Usually from ``super( ).__setattr__`` or a partial function.
-        ''' ),
-]
-DeleterLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ str ], None ],
-    __.dynadoc.Doc(
-        ''' Bound attributes deleter function.
-
-            Usually from ``super( ).__delattr__`` or a partial function.
-        ''' ),
-]
-SurveyorLigation: __.typx.TypeAlias = __.typx.Annotated[
-    __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ],
-    __.dynadoc.Doc(
-        ''' Bound attributes surveyor function.
-
-            Usually from ``super( ).__dir__`` or a partial function.
-        ''' ),
-]
+# Bound class constructor function. Usually from super().__new__ or a partial
+# function.
+ClassConstructorLigation: __.typx.TypeAlias = __.cabc.Callable[ ..., type ]
+# Bound initializer function. Usually from super().__init__ or a partial
+# function.
+InitializerLigation: __.typx.TypeAlias = __.cabc.Callable[ ..., None ]
+# Bound attributes assigner function. Usually from super().__setattr__ or a
+# partial function.
+AssignerLigation: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ str, __.typx.Any ], None ] )
+# Bound attributes deleter function. Usually from super().__delattr__ or a
+# partial function.
+DeleterLigation: __.typx.TypeAlias = __.cabc.Callable[ [ str ], None ]
+# Bound attributes surveyor function. Usually from super().__dir__ or a
+# partial function.
+SurveyorLigation: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ ], __.cabc.Iterable[ str ] ] )
 
 
 ClassConstructionPreprocessor: __.typx.TypeAlias = __.typx.Annotated[
@@ -174,4 +151,47 @@ ProduceInitializerCompletersArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Sequence[ ClassInitializationCompleter ],
     __.dynadoc.Doc(
         ''' Processors to apply at final stage of class initialization. ''' ),
+]
+
+
+# Ligation *Argument type aliases
+ClassConstructorLigationArgument: __.typx.TypeAlias = __.typx.Annotated[
+    ClassConstructorLigation,
+    __.dynadoc.Doc(
+        ''' Bound class constructor function.
+
+            Usually from ``super( ).__new__`` or a partial function.
+        ''' ),
+]
+InitializerLigationArgument: __.typx.TypeAlias = __.typx.Annotated[
+    InitializerLigation,
+    __.dynadoc.Doc(
+        ''' Bound initializer function.
+
+            Usually from ``super( ).__init__`` or a partial function.
+        ''' ),
+]
+AssignerLigationArgument: __.typx.TypeAlias = __.typx.Annotated[
+    AssignerLigation,
+    __.dynadoc.Doc(
+        ''' Bound attributes assigner function.
+
+            Usually from ``super( ).__setattr__`` or a partial function.
+        ''' ),
+]
+DeleterLigationArgument: __.typx.TypeAlias = __.typx.Annotated[
+    DeleterLigation,
+    __.dynadoc.Doc(
+        ''' Bound attributes deleter function.
+
+            Usually from ``super( ).__delattr__`` or a partial function.
+        ''' ),
+]
+SurveyorLigationArgument: __.typx.TypeAlias = __.typx.Annotated[
+    SurveyorLigation,
+    __.dynadoc.Doc(
+        ''' Bound attributes surveyor function.
+
+            Usually from ``super( ).__dir__`` or a partial function.
+        ''' ),
 ]
