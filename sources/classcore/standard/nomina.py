@@ -46,8 +46,15 @@ BehaviorExclusionVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ BehaviorExclusionVerifier ] )
 BehaviorExclusionVerifiersOmni: __.typx.TypeAlias = (
     BehaviorExclusionVerifiers | __.typx.Literal[ '*' ] )
-ErrorClassProvider: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str ], type[ Exception ] ] )
+ErrorClassProvider: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str ], type[ Exception ] ],
+    __.ddoc.Doc(
+        ''' Takes name of exception class and returns corresponding class.
+
+            Can be used by downstream packages to provide exceptions from their
+            own hierarchies rather than the hierarchy from this package.
+        ''' ),
+]
 
 
 class AssignerCore( __.typx.Protocol ):
@@ -103,6 +110,7 @@ class ClassPreparer( __.typx.Protocol ):
 
 
 DynadocConfiguration: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
+# TODO: Use argument type aliases from 'dynadoc' package.
 DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.ddoc.Context,
     __.ddoc.Doc(

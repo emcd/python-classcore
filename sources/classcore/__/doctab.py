@@ -67,10 +67,4 @@ fragments: _FragmentsTable = __.types.MappingProxyType( {
 
     'class dynadoc': ''' Is decorated by Dynadoc. ''',
 
-    'decorators':
-    ''' Sequence of class decorators.
-
-        Each element takes a class argument and returns a class.
-    ''',
-
 } )
