@@ -236,7 +236,7 @@ def produce_class_construction_postprocessor(
             dynadoc_cfg_name = (
                 attributes_namer( 'classes', 'dynadoc_configuration' ) )
             dynadoc_cfg = getattr( clscls, dynadoc_cfg_name, { } )
-        decorators.append( __.dynadoc.with_docstring( **dynadoc_cfg ) )
+        decorators.append( __.ddoc.with_docstring( **dynadoc_cfg ) )
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
         if not dcls_spec: # either base class or metaclass may be marked
             dcls_spec = getattr( clscls, '__dataclass_transform__', None )

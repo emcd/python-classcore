@@ -33,7 +33,7 @@ import                      re
 import                      sys
 import                      types
 
-import                      dynadoc
+import dynadoc as           ddoc
 import typing_extensions as typx
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---

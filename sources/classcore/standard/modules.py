@@ -34,20 +34,20 @@ class Module( _classes.Object, __.types.ModuleType ):
 def reclassify_modules(
     attributes: __.typx.Annotated[
         __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
-        __.dynadoc.Doc(
+        __.ddoc.Doc(
             ''' Module, module name, or dictionary of object attributes. ''' ),
     ], /, *,
     attributes_namer: __.typx.Annotated[
         _nomina.AttributesNamer,
-        __.dynadoc.Doc(
+        __.ddoc.Doc(
             ''' Attributes namer function with which to seal class. ''' ),
     ] = __.calculate_attrname,
     recursive: __.typx.Annotated[
-        bool, __.dynadoc.Doc( ''' Recursively reclassify package modules? ''' )
+        bool, __.ddoc.Doc( ''' Recursively reclassify package modules? ''' )
     ] = False,
     replacement_class: __.typx.Annotated[
         type[ __.types.ModuleType ],
-        __.dynadoc.Doc( ''' New class for module. ''' ),
+        __.ddoc.Doc( ''' New class for module. ''' ),
     ] = Module,
 ) -> None:
     # TODO? Ensure correct operation with namespace packages.

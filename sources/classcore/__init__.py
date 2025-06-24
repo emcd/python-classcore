@@ -61,7 +61,7 @@ from .decorators import *
 from .factories import *
 
 
-__version__: __.typx.Annotated[ str, __.dynadoc.Visibilities.Reveal ]
+__version__: __.typx.Annotated[ str, __.ddoc.Visibilities.Reveal ]
 __version__ = '1.5a0'
 
 
