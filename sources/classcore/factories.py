@@ -29,8 +29,8 @@ from . import utilities as _utilities
 
 def produce_class_constructor(
     attributes_namer: _nomina.AttributesNamer,
-    preprocessors: _nomina.ProduceConstructorPreprocsArgument[ __.T ] = ( ),
-    postprocessors: _nomina.ProduceConstructorPostprocsArgument[ __.T ] = ( ),
+    preprocessors: _nomina.ClassConstructionPreprocessors[ __.T ] = ( ),
+    postprocessors: _nomina.ClassConstructionPostprocessors[ __.T ] = ( ),
 ) -> _nomina.ClassConstructor[ __.T ]:
     ''' Produces constructors for classes. '''
 
@@ -68,7 +68,7 @@ def produce_class_constructor(
 
 def produce_class_initializer(
     attributes_namer: _nomina.AttributesNamer,
-    completers: _nomina.ProduceInitializerCompletersArgument = ( ),
+    completers: _nomina.ClassInitializationCompleters = ( ),
 ) -> _nomina.ClassInitializer:
     ''' Produces initializers for classes. '''
 

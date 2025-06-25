@@ -28,6 +28,26 @@ from . import __
 from . import nomina as _nomina
 
 
+def access_core_function( # noqa: PLR0913
+    cls: type, /, *,
+    attributes_namer: _nomina.AttributesNamer,
+    arguments: __.cabc.Mapping[ str, __.typx.Any ],
+    level: str,
+    name: str,
+    default: __.cabc.Callable[ ..., __.typx.Any ],
+) -> __.cabc.Callable[ ..., __.typx.Any ]:
+    ''' Accesses core behavior function.
+
+        First checks for override argument, then checks for heritable
+        attribute. Finally, falls back to provided default.
+    '''
+    argument_name = f"{level}_{name}_core"
+    attribute_name = attributes_namer( level, f"{name}_core" )
+    return (
+            arguments.get( argument_name )
+        or  getattr( cls, attribute_name, default ) )
+
+
 def assign_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
     ligation: _nomina.AssignerLigation,
@@ -225,6 +245,10 @@ def produce_class_construction_postprocessor(
 ) -> _nomina.ClassConstructionPostprocessor[ __.U ]:
     ''' Produces construction processor which determines class decorators. '''
     arguments_name = attributes_namer( 'class', 'construction_arguments' )
+    cores_default = dict(
+        assigner = assign_attribute_if_mutable,
+        deleter = delete_attribute_if_mutable,
+        surveyor = survey_visible_attributes )
 
     def postprocess(
         cls: type, decorators: _nomina.DecoratorsMutable[ __.U ]
@@ -236,16 +260,19 @@ def produce_class_construction_postprocessor(
             dynadoc_cfg_name = (
                 attributes_namer( 'classes', 'dynadoc_configuration' ) )
             dynadoc_cfg = getattr( clscls, dynadoc_cfg_name, { } )
-        decorators.append( __.dynadoc.with_docstring( **dynadoc_cfg ) )
+        decorators.append( __.ddoc.with_docstring( **dynadoc_cfg ) )
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
         if not dcls_spec: # either base class or metaclass may be marked
             dcls_spec = getattr( clscls, '__dataclass_transform__', None )
-        instances_assigner = arguments.get(
-            'instances_assigner_core', assign_attribute_if_mutable )
-        instances_deleter = arguments.get(
-            'instances_deleter_core', delete_attribute_if_mutable )
-        instances_surveyor = arguments.get(
-            'instances_surveyor_core', survey_visible_attributes )
+        cores = { }
+        for core_name in ( 'assigner', 'deleter', 'surveyor' ):
+            core_function = access_core_function(
+                cls,
+                attributes_namer = attributes_namer,
+                arguments = arguments,
+                level = 'instances', name = core_name,
+                default = cores_default[ core_name ] )
+            cores[ core_name ] = core_function
         instances_mutables = arguments.get(
             'instances_mutables', __.mutables_default )
         instances_visibles = arguments.get(
@@ -261,9 +288,12 @@ def produce_class_construction_postprocessor(
         decorator: _nomina.Decorator[ __.U ] = decorator_factory(
             attributes_namer = attributes_namer,
             error_class_provider = error_class_provider,
-            assigner_core = instances_assigner,
-            deleter_core = instances_deleter,
-            surveyor_core = instances_surveyor,
+            assigner_core = __.typx.cast(
+                _nomina.AssignerCore, cores[ 'assigner' ] ),
+            deleter_core = __.typx.cast(
+                _nomina.DeleterCore, cores[ 'deleter' ] ),
+            surveyor_core = __.typx.cast(
+                _nomina.SurveyorCore, cores[ 'surveyor' ] ),
             mutables = instances_mutables,
             visibles = instances_visibles )
         decorators.append( decorator )

@@ -46,8 +46,15 @@ BehaviorExclusionVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ BehaviorExclusionVerifier ] )
 BehaviorExclusionVerifiersOmni: __.typx.TypeAlias = (
     BehaviorExclusionVerifiers | __.typx.Literal[ '*' ] )
-ErrorClassProvider: __.typx.TypeAlias = (
-    __.cabc.Callable[ [ str ], type[ Exception ] ] )
+ErrorClassProvider: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ str ], type[ Exception ] ],
+    __.ddoc.Doc(
+        ''' Takes name of exception class and returns corresponding class.
+
+            Can be used by downstream packages to provide exceptions from their
+            own hierarchies rather than the hierarchy from this package.
+        ''' ),
+]
 
 
 class AssignerCore( __.typx.Protocol ):
@@ -103,9 +110,10 @@ class ClassPreparer( __.typx.Protocol ):
 
 
 DynadocConfiguration: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
+# TODO: Use argument type aliases from 'dynadoc' package.
 DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.dynadoc.Context,
-    __.dynadoc.Doc(
+    __.ddoc.Context,
+    __.ddoc.Doc(
         ''' Dynadoc context.
 
             Renderer, dictionaries for resolution of stringified annotations,
@@ -113,8 +121,8 @@ DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 DynadocIntrospectionArgument: __.typx.TypeAlias = __.typx.Annotated[
-    __.dynadoc.IntrospectionControl,
-    __.dynadoc.Doc(
+    __.ddoc.IntrospectionControl,
+    __.ddoc.Doc(
         ''' Dynadoc introspection control.
 
             Which kinds of object to recursively introspect?
@@ -124,15 +132,15 @@ DynadocIntrospectionArgument: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 DynadocPreserveArgument: __.typx.TypeAlias = __.typx.Annotated[
-    bool, __.dynadoc.Doc( ''' Preserve existing docstring? ''' )
+    bool, __.ddoc.Doc( ''' Preserve existing docstring? ''' )
 ]
 DynadocTableArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Mapping[ str, str ],
-    __.dynadoc.Doc( ''' Table of documentation fragments. ''' ),
+    __.ddoc.Doc( ''' Table of documentation fragments. ''' ),
 ]
 ProduceDynadocConfigurationReturn: __.typx.TypeAlias = __.typx.Annotated[
     DynadocConfiguration,
-    __.dynadoc.Doc(
+    __.ddoc.Doc(
         ''' Dynadoc configuration dictionary.
 
             Suitable as a keyword expansion (``**``) argument to

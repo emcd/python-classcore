@@ -26,34 +26,34 @@ from . import __
 from . import nomina as _nomina
 
 
-dynadoc_context = __.dynadoc.produce_context( )
+dynadoc_context = __.ddoc.produce_context( )
 dynadoc_class_introspection_control = (
-    __.dynadoc.ClassIntrospectionControl(
+    __.ddoc.ClassIntrospectionControl(
         inheritance = True,
         introspectors = (
-            __.dynadoc.introspection.introspect_special_classes, ) ) )
+            __.ddoc.introspection.introspect_special_classes, ) ) )
 dynadoc_module_introspection_control = (
-    __.dynadoc.ModuleIntrospectionControl( ) )
+    __.ddoc.ModuleIntrospectionControl( ) )
 
 
 def dynadoc_avoid_immutables(
     objct: object,
-    introspection: __.dynadoc.IntrospectionControl,
+    introspection: __.ddoc.IntrospectionControl,
     attributes_namer: _nomina.AttributesNamer,
-) -> __.dynadoc.IntrospectionControl:
+) -> __.ddoc.IntrospectionControl:
     ''' Disables introspection of immutable objects. '''
     if __.inspect.isclass( objct ):
         behaviors_name = attributes_namer( 'class', 'behaviors' )
         behaviors = _utilities.getattr0( objct, behaviors_name, frozenset( ) )
         if _nomina.immutability_label in behaviors:
             return introspection.with_limit(
-                __.dynadoc.IntrospectionLimit( disable = True ) )
+                __.ddoc.IntrospectionLimit( disable = True ) )
     return introspection
 
 
 def produce_dynadoc_introspection_limiter(
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
-) -> __.dynadoc.IntrospectionLimiter:
+) -> __.ddoc.IntrospectionLimiter:
     ''' Produces introspection limiter which avoids immutable objects. '''
     return __.funct.partial(
         dynadoc_avoid_immutables, attributes_namer = attributes_namer )
@@ -63,17 +63,17 @@ dynadoc_introspection_limiter = produce_dynadoc_introspection_limiter( )
 
 def produce_dynadoc_introspection_control(
     enable: bool = True,
-    class_control: __.dynadoc.ClassIntrospectionControl = (
+    class_control: __.ddoc.ClassIntrospectionControl = (
         dynadoc_class_introspection_control ),
-    module_control: __.dynadoc.ModuleIntrospectionControl = (
+    module_control: __.ddoc.ModuleIntrospectionControl = (
         dynadoc_module_introspection_control ),
-    limiters: __.dynadoc.IntrospectionLimiters = (
+    limiters: __.ddoc.IntrospectionLimiters = (
         dynadoc_introspection_limiter, ),
-    targets: __.dynadoc.IntrospectionTargets = (
-            __.dynadoc.IntrospectionTargetsSansModule ),
-) -> __.dynadoc.IntrospectionControl:
+    targets: __.ddoc.IntrospectionTargets = (
+            __.ddoc.IntrospectionTargetsSansModule ),
+) -> __.ddoc.IntrospectionControl:
     ''' Produces compatible Dynadoc introspection control. '''
-    return __.dynadoc.IntrospectionControl(
+    return __.ddoc.IntrospectionControl(
         enable = enable,
         class_control = class_control,
         module_control = module_control,
@@ -83,18 +83,18 @@ def produce_dynadoc_introspection_control(
 dynadoc_introspection_on_class = produce_dynadoc_introspection_control( )
 dynadoc_introspection_on_package = (
     produce_dynadoc_introspection_control(
-        targets = __.dynadoc.IntrospectionTargetsOmni ) )
+        targets = __.ddoc.IntrospectionTargetsOmni ) )
 
 
 def assign_module_docstring( # noqa: PLR0913
     module: str | __.types.ModuleType, /,
-    *fragments: __.dynadoc.interfaces.Fragment,
+    *fragments: __.ddoc.interfaces.Fragment,
     context: _nomina.DynadocContextArgument = dynadoc_context,
     introspection: _nomina.DynadocIntrospectionArgument = (
         dynadoc_introspection_on_package ),
     preserve: _nomina.DynadocPreserveArgument = True,
-    renderer: __.dynadoc.xtnsapi.Renderer = (
-        __.dynadoc.assembly.renderer_default ),
+    renderer: __.ddoc.xtnsapi.Renderer = (
+        __.ddoc.assembly.renderer_default ),
     table: _nomina.DynadocTableArgument = __.dictproxy_empty,
 ) -> None:
     ''' Updates module docstring based on introspection.
@@ -104,7 +104,7 @@ def assign_module_docstring( # noqa: PLR0913
 
         By default, ignores previously-decorated immutable classes.
     '''
-    __.dynadoc.assign_module_docstring(
+    __.ddoc.assign_module_docstring(
         module,
         *fragments,
         context = context,
