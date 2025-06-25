@@ -188,13 +188,34 @@ def class_factory( # noqa: PLR0913
     return decorate
 
 
-def produce_instances_initialization_decorator(
+def produce_instances_initialization_decorator( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer,
+    assigner_core: __.typx.Optional[ _nomina.AssignerCore ],
+    deleter_core: __.typx.Optional[ _nomina.DeleterCore ],
+    surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ],
     mutables: _nomina.BehaviorExclusionVerifiersOmni,
     visibles: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__init__' method into class. '''
+    cores = dict(
+        instances_assigner_core = assigner_core,
+        instances_deleter_core = deleter_core,
+        instances_surveyor_core = surveyor_core )
+    cores_default = dict(
+        assigner = _behaviors.assign_attribute_if_mutable,
+        deleter = _behaviors.delete_attribute_if_mutable,
+        surveyor = _behaviors.survey_visible_attributes )
+
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
+        for core_name in ( 'assigner', 'deleter', 'surveyor' ):
+            core_function = _behaviors.access_core_function(
+                cls,
+                attributes_namer = attributes_namer,
+                arguments = cores,
+                level = 'instances', name = core_name,
+                default = cores_default[ core_name ] )
+            core_aname = attributes_namer( 'instances', f"{core_name}_core" )
+            setattr( cls, core_aname, core_function )
         behaviors: set[ str ] = set( )
         behaviors_name = attributes_namer( 'instance', 'behaviors' )
         _behaviors.record_behavior(
@@ -251,12 +272,18 @@ def produce_attributes_assignment_decorator(
     level: str,
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    implementation_core: _nomina.AssignerCore,
+    implementation_core: __.typx.Optional[ _nomina.AssignerCore ],
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__setattr__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         leveli = 'class' if level == 'classes' else level
         original = cls.__dict__.get( '__setattr__' )
+        core = _behaviors.access_core_function(
+            cls,
+            attributes_namer = attributes_namer,
+            arguments = { f"{leveli}_assigner": implementation_core },
+            level = leveli, name = 'assigner',
+            default = _behaviors.assign_attribute_if_mutable )
 
         if original is None:
 
@@ -268,7 +295,7 @@ def produce_attributes_assignment_decorator(
                 if cls is not type( self ):
                     ligation( name, value )
                     return
-                implementation_core(
+                core(
                     self,
                     ligation = ligation,
                     attributes_namer = attributes_namer,
@@ -289,7 +316,7 @@ def produce_attributes_assignment_decorator(
                 if cls is not type( self ):
                     ligation( name, value )
                     return
-                implementation_core(
+                core(
                     self,
                     ligation = ligation,
                     attributes_namer = attributes_namer,
@@ -308,12 +335,18 @@ def produce_attributes_deletion_decorator(
     level: str,
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    implementation_core: _nomina.DeleterCore,
+    implementation_core: __.typx.Optional[ _nomina.DeleterCore ],
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__delattr__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         leveli = 'class' if level == 'classes' else level
         original = cls.__dict__.get( '__delattr__' )
+        core = _behaviors.access_core_function(
+            cls,
+            attributes_namer = attributes_namer,
+            arguments = { f"{leveli}_deleter": implementation_core },
+            level = leveli, name = 'deleter',
+            default = _behaviors.delete_attribute_if_mutable )
 
         if original is None:
 
@@ -323,7 +356,7 @@ def produce_attributes_deletion_decorator(
                 if cls is not type( self ):
                     ligation( name )
                     return
-                implementation_core(
+                core(
                     self,
                     ligation = ligation,
                     attributes_namer = attributes_namer,
@@ -342,7 +375,7 @@ def produce_attributes_deletion_decorator(
                 if cls is not type( self ):
                     ligation( name )
                     return
-                implementation_core(
+                core(
                     self,
                     ligation = ligation,
                     attributes_namer = attributes_namer,
@@ -360,12 +393,18 @@ def produce_attributes_deletion_decorator(
 def produce_attributes_surveillance_decorator(
     level: str,
     attributes_namer: _nomina.AttributesNamer,
-    implementation_core: _nomina.SurveyorCore,
+    implementation_core: __.typx.Optional[ _nomina.SurveyorCore ],
 ) -> _nomina.Decorator[ __.U ]:
     ''' Produces decorator to inject '__dir__' method into class. '''
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
         leveli = 'class' if level == 'classes' else level
         original = cls.__dict__.get( '__dir__' )
+        core = _behaviors.access_core_function(
+            cls,
+            attributes_namer = attributes_namer,
+            arguments = { f"{leveli}_surveyor": implementation_core },
+            level = leveli, name = 'surveyor',
+            default = _behaviors.survey_visible_attributes )
 
         if original is None:
 
@@ -375,7 +414,7 @@ def produce_attributes_surveillance_decorator(
                 ligation = super( cls, self ).__dir__
                 # Only enforce behaviors at start of MRO.
                 if cls is not type( self ): return ligation( )
-                return implementation_core(
+                return core(
                     self,
                     ligation = ligation,
                     attributes_namer = attributes_namer,
@@ -392,7 +431,7 @@ def produce_attributes_surveillance_decorator(
                 ligation = __.funct.partial( original, self )
                 # Only enforce behaviors at start of MRO.
                 if cls is not type( self ): return ligation( )
-                return implementation_core(
+                return core(
                     self,
                     ligation = ligation,
                     attributes_namer = attributes_namer,
@@ -410,12 +449,9 @@ def dataclass_with_standard_behaviors( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     decorators: _nomina.Decorators[ __.U ] = ( ),
-    assigner_core: _nomina.AssignerCore = (
-        _behaviors.assign_attribute_if_mutable ),
-    deleter_core: _nomina.DeleterCore = (
-        _behaviors.delete_attribute_if_mutable ),
-    surveyor_core: _nomina.SurveyorCore = (
-        _behaviors.survey_visible_attributes ),
+    assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
+    deleter_core: __.typx.Optional[ _nomina.DeleterCore ] = None,
+    surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ] = None,
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator[ __.U ]:
@@ -443,12 +479,9 @@ def with_standard_behaviors( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     decorators: _nomina.Decorators[ __.U ] = ( ),
-    assigner_core: _nomina.AssignerCore = (
-        _behaviors.assign_attribute_if_mutable ),
-    deleter_core: _nomina.DeleterCore = (
-        _behaviors.delete_attribute_if_mutable ),
-    surveyor_core: _nomina.SurveyorCore = (
-        _behaviors.survey_visible_attributes ),
+    assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
+    deleter_core: __.typx.Optional[ _nomina.DeleterCore ] = None,
+    surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ] = None,
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator[ __.U ]:
@@ -486,9 +519,9 @@ def _produce_instances_decoration_preparers(
 def _produce_instances_decorators( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    assigner_core: _nomina.AssignerCore,
-    deleter_core: _nomina.DeleterCore,
-    surveyor_core: _nomina.SurveyorCore,
+    assigner_core: __.typx.Optional[ _nomina.AssignerCore ],
+    deleter_core: __.typx.Optional[ _nomina.DeleterCore ],
+    surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ],
     mutables: _nomina.BehaviorExclusionVerifiersOmni,
     visibles: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorators[ __.U ]:
@@ -497,24 +530,25 @@ def _produce_instances_decorators( # noqa: PLR0913
     decorators.append(
         produce_instances_initialization_decorator(
             attributes_namer = attributes_namer,
+            assigner_core = assigner_core,
+            deleter_core = deleter_core,
+            surveyor_core = surveyor_core,
             mutables = mutables, visibles = visibles ) )
-    if mutables != '*':
-        decorators.append(
-            produce_attributes_assignment_decorator(
-                level = 'instances',
-                attributes_namer = attributes_namer,
-                error_class_provider = error_class_provider,
-                implementation_core = assigner_core ) )
-        decorators.append(
-            produce_attributes_deletion_decorator(
-                level = 'instances',
-                attributes_namer = attributes_namer,
-                error_class_provider = error_class_provider,
-                implementation_core = deleter_core ) )
-    if visibles != '*':
-        decorators.append(
-            produce_attributes_surveillance_decorator(
-                level = 'instances',
-                attributes_namer = attributes_namer,
-                implementation_core = surveyor_core ) )
+    decorators.append(
+        produce_attributes_assignment_decorator(
+            level = 'instances',
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = assigner_core ) )
+    decorators.append(
+        produce_attributes_deletion_decorator(
+            level = 'instances',
+            attributes_namer = attributes_namer,
+            error_class_provider = error_class_provider,
+            implementation_core = deleter_core ) )
+    decorators.append(
+        produce_attributes_surveillance_decorator(
+            level = 'instances',
+            attributes_namer = attributes_namer,
+            implementation_core = surveyor_core ) )
     return decorators
