@@ -23,6 +23,25 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.5 (2025-06-24)
+==========================
+
+Enhancements
+------------
+
+- Improve docstrings for various public type aliases. Also, drop ``Fname``
+  references from public type aliases, such as ``Decorators`` so that they can be
+  reused in downstream packages.
+
+
+Repairs
+-------
+
+- Ensure that replacement implementations (``assigner_core``, ``deleter_core``,
+  and ``surveyor_core``) are inherited so that behaviors do not regress to
+  standard baseline behaviors in descendant classes.
+
+
 Classcore 1.4.2 (2025-06-11)
 ============================
 
