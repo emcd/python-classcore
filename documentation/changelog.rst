@@ -23,6 +23,16 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.5.1 (2025-06-26)
+============================
+
+Repairs
+-------
+
+- Ensure the inheritance of replacement functions works via metaclasses and not
+  just decorators.
+
+
 Classcore 1.5 (2025-06-24)
 ==========================
 

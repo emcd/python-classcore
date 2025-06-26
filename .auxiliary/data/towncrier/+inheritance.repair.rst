@@ -1,3 +1,2 @@
-Ensure that replacement implementations (``assigner_core``, ``deleter_core``,
-and ``surveyor_core``) are inherited so that behaviors do not regress to
-standard baseline behaviors in descendant classes.
+Ensure the inheritance of replacement functions works via metaclasses and not
+just decorators.

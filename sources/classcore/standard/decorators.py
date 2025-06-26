@@ -54,6 +54,33 @@ def prepare_dataclass_for_instances(
     setattr( cls, behaviors_name_m, __.dcls.field( init = False ) )
 
 
+def apply_cfc_core_functions(
+    clscls: type[ __.T ], /,
+    attributes_namer: _nomina.AttributesNamer,
+    assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
+    deleter_core: __.typx.Optional[ _nomina.DeleterCore ] = None,
+    surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ] = None,
+) -> None:
+    ''' Stores core functions on metaclass. '''
+    cores = dict(
+        classes_assigner_core = assigner_core,
+        classes_deleter_core = deleter_core,
+        classes_surveyor_core = surveyor_core )
+    cores_default = dict(
+        assigner = _behaviors.assign_attribute_if_mutable,
+        deleter = _behaviors.delete_attribute_if_mutable,
+        surveyor = _behaviors.survey_visible_attributes )
+    for core_name in ( 'assigner', 'deleter', 'surveyor' ):
+        core_function = _behaviors.access_core_function(
+            clscls,
+            attributes_namer = attributes_namer,
+            arguments = cores,
+            level = 'classes', name = core_name,
+            default = cores_default[ core_name ] )
+        core_aname = attributes_namer( 'classes', f"{core_name}_core" )
+        setattr( clscls, core_aname, core_function )
+
+
 def apply_cfc_dynadoc_configuration(
     clscls: type[ __.T ], /,
     attributes_namer: _nomina.AttributesNamer,
@@ -107,7 +134,7 @@ def apply_cfc_attributes_assigner(
     clscls: type[ __.T ], /,
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    implementation_core: _nomina.AssignerCore,
+    implementation_core: __.typx.Optional[ _nomina.AssignerCore ],
 ) -> None:
     ''' Injects '__setattr__' method into metaclass. '''
     decorator = produce_attributes_assignment_decorator(
@@ -122,7 +149,7 @@ def apply_cfc_attributes_deleter(
     clscls: type[ __.T ], /,
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
-    implementation_core: _nomina.DeleterCore,
+    implementation_core: __.typx.Optional[ _nomina.DeleterCore ],
 ) -> None:
     ''' Injects '__delattr__' method into metaclass. '''
     decorator = produce_attributes_deletion_decorator(
@@ -136,7 +163,7 @@ def apply_cfc_attributes_deleter(
 def apply_cfc_attributes_surveyor(
     clscls: type[ __.T ],
     attributes_namer: _nomina.AttributesNamer,
-    implementation_core: _nomina.SurveyorCore,
+    implementation_core: __.typx.Optional[ _nomina.SurveyorCore ],
 ) -> None:
     ''' Injects '__dir__' method into metaclass. '''
     decorator = produce_attributes_surveillance_decorator(
@@ -149,17 +176,20 @@ def apply_cfc_attributes_surveyor(
 def class_factory( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
-    assigner_core: _nomina.AssignerCore = (
-        _behaviors.assign_attribute_if_mutable ),
-    deleter_core: _nomina.DeleterCore = (
-        _behaviors.delete_attribute_if_mutable ),
-    surveyor_core: _nomina.SurveyorCore = (
-        _behaviors.survey_visible_attributes ),
+    assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
+    deleter_core: __.typx.Optional[ _nomina.DeleterCore ] = None,
+    surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ] = None,
     dynadoc_configuration: __.cabc.Mapping[ str, __.typx.Any ] = (
         _dynadoc_configuration ),
 ) -> _nomina.Decorator[ __.T ]:
     ''' Produces decorator to apply standard behaviors to metaclass. '''
     def decorate( clscls: type[ __.T ] ) -> type[ __.T ]:
+        apply_cfc_core_functions(
+            clscls,
+            attributes_namer = attributes_namer,
+            assigner_core = assigner_core,
+            deleter_core = deleter_core,
+            surveyor_core = surveyor_core )
         apply_cfc_dynadoc_configuration(
             clscls,
             attributes_namer = attributes_namer,
@@ -281,8 +311,8 @@ def produce_attributes_assignment_decorator(
         core = _behaviors.access_core_function(
             cls,
             attributes_namer = attributes_namer,
-            arguments = { f"{leveli}_assigner": implementation_core },
-            level = leveli, name = 'assigner',
+            arguments = { f"{level}_assigner": implementation_core },
+            level = level, name = 'assigner',
             default = _behaviors.assign_attribute_if_mutable )
 
         if original is None:
@@ -344,8 +374,8 @@ def produce_attributes_deletion_decorator(
         core = _behaviors.access_core_function(
             cls,
             attributes_namer = attributes_namer,
-            arguments = { f"{leveli}_deleter": implementation_core },
-            level = leveli, name = 'deleter',
+            arguments = { f"{level}_deleter": implementation_core },
+            level = level, name = 'deleter',
             default = _behaviors.delete_attribute_if_mutable )
 
         if original is None:
@@ -402,8 +432,8 @@ def produce_attributes_surveillance_decorator(
         core = _behaviors.access_core_function(
             cls,
             attributes_namer = attributes_namer,
-            arguments = { f"{leveli}_surveyor": implementation_core },
-            level = leveli, name = 'surveyor',
+            arguments = { f"{level}_surveyor": implementation_core },
+            level = level, name = 'surveyor',
             default = _behaviors.survey_visible_attributes )
 
         if original is None:
@@ -512,7 +542,7 @@ def _produce_instances_decoration_preparers(
     if class_preparer is not None:
         preprocessors.append(
             __.funct.partial(
-                class_preparer, attributes_namer = attributes_namer  ) )
+                class_preparer, attributes_namer = attributes_namer ) )
     return tuple( preprocessors )
 
 

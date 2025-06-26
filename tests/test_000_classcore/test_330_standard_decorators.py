@@ -50,8 +50,32 @@ def simple_surveyor_core( objct, ligation, attributes_namer, level ):
     return object.__dir__( objct )
 
 
-def test_120_core_function_inheritance( ):
-    ''' Core functions inherited. '''
+def class_simple_assigner_core(
+    cls,
+    ligation,
+    attributes_namer,
+    error_class_provider,
+    level, name, value
+):
+    type.__setattr__( cls, name, value )
+
+
+def class_simple_deleter_core(
+    cls,
+    ligation,
+    attributes_namer,
+    error_class_provider,
+    level, name
+):
+    type.__delattr__( cls, name )
+
+
+def class_simple_surveyor_core( cls, ligation, attributes_namer, level ):
+    return type.__dir__( cls )
+
+
+def test_120_decorator_core_function_inheritance( ):
+    ''' Core functions (via decorator) inherited. '''
     module = cache_import_module( MODULE_QNAME )
     exceptions = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
 
@@ -78,8 +102,8 @@ def test_120_core_function_inheritance( ):
         del d.foo
 
 
-def test_121_core_function_replacements_inheritance( ):
-    ''' Replacement core functions inherited. '''
+def test_121_decorator_core_function_replacements_inheritance( ):
+    ''' Replacement core functions (via decorator) inherited. '''
     module = cache_import_module( MODULE_QNAME )
 
     @module.with_standard_behaviors(
@@ -105,3 +129,58 @@ def test_121_core_function_replacements_inheritance( ):
     assert 'foo' in dir( d )
     del d.foo
     assert not hasattr( d, 'foo' )
+
+
+def test_220_cfc_core_function_inheritance( ):
+    ''' Core functions (via metaclass) inherited. '''
+    module = cache_import_module( MODULE_QNAME )
+    exceptions = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+
+    @module.class_factory( )
+    class Class( type ): pass
+
+    class Base( metaclass = Class ): pass
+
+    with pytest.raises( exceptions.AttributeImmutability ):
+        Base.bar = 6
+    assert not hasattr( Base, 'bar' )
+    assert 'bar' not in dir( Base )
+    with pytest.raises( exceptions.AttributeImmutability ):
+        del Base.bar
+
+    class Derivation( Base ): pass
+
+    with pytest.raises( exceptions.AttributeImmutability ):
+        Derivation.foo = 2
+    assert not hasattr( Derivation, 'foo' )
+    assert 'foo' not in dir( Derivation )
+    with pytest.raises( exceptions.AttributeImmutability ):
+        del Derivation.foo
+
+
+def test_221_cfc_core_function_replacements_inheritance( ):
+    ''' Replacement core functions (via metaclass) inherited. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    @module.class_factory(
+        assigner_core = class_simple_assigner_core,
+        deleter_core = class_simple_deleter_core,
+        surveyor_core = class_simple_surveyor_core,
+    )
+    class Class( type ): pass
+
+    class Base( metaclass = Class ): pass
+
+    Base.bar = 6
+    assert Base.bar == 6
+    assert 'bar' in dir( Base )
+    del Base.bar
+    assert not hasattr( Base, 'bar' )
+
+    class Derivation( Base ): pass
+
+    Derivation.foo = 2
+    assert Derivation.foo == 2
+    assert 'foo' in dir( Derivation )
+    del Derivation.foo
+    assert not hasattr( Derivation, 'foo' )
