@@ -255,12 +255,6 @@ def produce_class_construction_postprocessor(
     ) -> None:
         arguments = getattr( cls, arguments_name, { } )
         clscls = type( cls )
-        dynadoc_cfg = arguments.get( 'dynadoc_configuration', { } )
-        if not dynadoc_cfg: # either metaclass argument or attribute
-            dynadoc_cfg_name = (
-                attributes_namer( 'classes', 'dynadoc_configuration' ) )
-            dynadoc_cfg = getattr( clscls, dynadoc_cfg_name, { } )
-        decorators.append( __.ddoc.with_docstring( **dynadoc_cfg ) )
         dcls_spec = getattr( cls, '__dataclass_transform__', None )
         if not dcls_spec: # either base class or metaclass may be marked
             dcls_spec = getattr( clscls, '__dataclass_transform__', None )
@@ -297,6 +291,14 @@ def produce_class_construction_postprocessor(
             mutables = instances_mutables,
             visibles = instances_visibles )
         decorators.append( decorator )
+        # Dynadoc tracks objects in weakset.
+        # Must decorate after any potential class replacements.
+        dynadoc_cfg = arguments.get( 'dynadoc_configuration', { } )
+        if not dynadoc_cfg: # either metaclass argument or attribute
+            dynadoc_cfg_name = (
+                attributes_namer( 'classes', 'dynadoc_configuration' ) )
+            dynadoc_cfg = getattr( clscls, dynadoc_cfg_name, { } )
+        decorators.append( __.ddoc.with_docstring( **dynadoc_cfg ) )
 
     return postprocess
 
