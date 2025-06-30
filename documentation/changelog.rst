@@ -23,6 +23,18 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.5.2 (2025-06-29)
+============================
+
+Repairs
+-------
+
+- Standard Classes: Ensure that Dynadoc decorator applies last, after any
+  decorators which may potentially replace classes (e.g., ``dataclass( slots =
+  True )``), so that the Dynadoc visitees weak set captures the correct reference
+  to prevent multiple decoration.
+
+
 Classcore 1.5.1 (2025-06-26)
 ============================
 
