@@ -99,7 +99,7 @@ on instances of the decorated class.
     >>> del point.x
 
 
-Selective Visibility
+Selective Mutability
 -------------------------------------------------------------------------------
 
 Explicit attribute names for selective mutability:
