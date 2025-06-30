@@ -62,7 +62,7 @@ from .factories import *
 
 
 __version__: __.typx.Annotated[ str, __.ddoc.Visibilities.Reveal ]
-__version__ = '1.5.1'
+__version__ = '1.5.2'
 
 
 standard.dynadoc.assign_module_docstring( __name__, table = __.fragments )
