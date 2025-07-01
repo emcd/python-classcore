@@ -62,7 +62,7 @@ from .factories import *
 
 
 __version__: __.typx.Annotated[ str, __.ddoc.Visibilities.Reveal ]
-__version__ = '1.6a0'
+__version__ = '1.6'
 
 
 standard.finalize_module(
