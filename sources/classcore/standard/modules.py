@@ -88,6 +88,7 @@ def finalize_module( # noqa: PLR0913
         replacement_class = replacement_class )
 
 
+@__.typx.deprecated( "Use 'finalize_module' instead." )
 def reclassify_modules(
     attributes: __.typx.Annotated[
         __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
