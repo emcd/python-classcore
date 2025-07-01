@@ -23,6 +23,19 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.5.3 (2025-06-30)
+============================
+
+Repairs
+-------
+
+- Standard: Do not create duplicate slots for behaviors tracking.
+- Standard: Ensure that behaviors tracking attribute is not part of comparisons,
+  hashes, or ``repr`` calculations for dataclasses. Attributes with "private"
+  names which resemble the CPython scheme for class-local (non-inheritable)
+  attributes can create confusion for the internal machinery of ``dataclasses``.
+
+
 Classcore 1.5.2 (2025-06-29)
 ============================
 
