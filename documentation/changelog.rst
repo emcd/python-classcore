@@ -23,6 +23,21 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.6 (2025-07-01)
+==========================
+
+Enhancements
+------------
+
+- Add ``finalize_module`` function to combine Dynadoc docstring generation with module reclassification for immutability and concealment.
+
+
+Notices
+-------
+
+- Deprecate ``reclassify_modules`` function. Use ``finalize_module`` instead.
+
+
 Classcore 1.5.3 (2025-06-30)
 ============================
 
