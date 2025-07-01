@@ -182,6 +182,7 @@ def augment_class_attributes_allocations(
         __.cabc.Sequence[ str ],
         None
     ] = namespace.get( '__slots__' )
+    if slots and behaviors_name in slots: return
     if isinstance( slots, __.cabc.Mapping ):
         slots_ = dict( slots )
         slots_[ behaviors_name ] = 'Active behaviors.'
