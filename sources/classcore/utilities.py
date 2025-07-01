@@ -99,11 +99,11 @@ def mangle_name( objct: object, /, name: str ) -> str:
     #       Need to debug weird issue with using 'id' early on dataclasses.
     if not __.inspect.isclass( objct ):
         return mangle_name( type( objct ), name )
-    # return "{name}_{uid}".format( name = name, uid = id( objct ) )
+    # return "{name}{uid}".format( name = name, uid = id( objct ) )
     namehash = __.hashlib.sha256( )
     namehash.update( qualify_class_name( objct ).encode( ) )
     namehash_hex = namehash.hexdigest( )
-    return f"{name}_{namehash_hex}"
+    return f"{name}{namehash_hex}"
 
 
 def qualify_class_name( cls: type ) -> str:

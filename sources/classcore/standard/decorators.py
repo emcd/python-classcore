@@ -47,11 +47,13 @@ def prepare_dataclass_for_instances(
     ''' Annotates dataclass in support of instantiation machinery. '''
     annotations = __.inspect.get_annotations( cls )
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    # TODO? Only use mangling if not slotted.
-    behaviors_name_m = _utilities.mangle_name( cls, behaviors_name )
-    annotations[ behaviors_name_m ] = set[ str ]
+    # TODO: Only use mangling if not slotted.
+    # behaviors_name_ = _utilities.mangle_name( cls, behaviors_name )
+    behaviors_name_ = behaviors_name
+    annotations[ behaviors_name_ ] = set[ str ]
     setattr( cls, '__annotations__', annotations ) # in case of absence
-    setattr( cls, behaviors_name_m, __.dcls.field( init = False ) )
+    setattr( cls, behaviors_name_, __.dcls.field(
+        compare = False, hash = False, init = False, repr = False ) )
 
 
 def apply_cfc_core_functions(
