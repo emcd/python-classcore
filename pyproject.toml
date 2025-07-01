@@ -54,6 +54,7 @@ year-of-origin = 2025
 gha-runners = [
   '/home/runner/work/python-classcore/python-classcore/',
   '/Users/runner/work/python-classcore/python-classcore/',
+  'C:\a\python-classcore\python-classcore\',
   'D:\a\python-classcore\python-classcore\',
 ]
 [tool.coverage.run]
@@ -95,9 +96,7 @@ description = ''' Development environment. '''
 dependencies = [
   'Jinja2',
   'coverage[toml]',
-  'emcd-projects',
   'furo',
-  'icecream-truck',
   'packaging',
   'pre-commit',
   'pyright',
