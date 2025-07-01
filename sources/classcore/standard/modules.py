@@ -24,11 +24,68 @@
 from .. import utilities as _utilities
 from . import __
 from . import classes as _classes
+from . import dynadoc as _dynadoc
 from . import nomina as _nomina
 
 
 class Module( _classes.Object, __.types.ModuleType ):
     ''' Modules with attributes immutability and concealment. '''
+
+
+def finalize_module( # noqa: PLR0913
+    module: __.typx.Annotated[
+        str | __.types.ModuleType,
+        __.ddoc.Doc( ''' Module or module name to finalize. ''' ),
+    ], /,
+    *fragments: __.ddoc.interfaces.Fragment,
+    attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
+    dynadoc_introspection: _nomina.DynadocIntrospectionArgument = (
+        _dynadoc.dynadoc_introspection_on_package ),
+    dynadoc_table: _nomina.DynadocTableArgument = __.dictproxy_empty,
+    recursive: __.typx.Annotated[
+        bool, __.ddoc.Doc( ''' Recursively reclassify package modules? ''' )
+    ] = False,
+    replacement_class: __.typx.Annotated[
+        type[ __.types.ModuleType ],
+        __.ddoc.Doc( ''' New class for module. ''' ),
+    ] = Module,
+) -> None:
+    ''' Combines Dynadoc docstring assignment and module reclassification.
+
+        Applies module docstring generation via Dynadoc introspection,
+        then reclassifies modules for immutability and concealment.
+
+        When recursive is False, automatically excludes module targets from
+        dynadoc introspection to document only the provided module. When
+        recursive is True, automatically includes module targets so Dynadoc
+        can recursively document all modules.
+    '''
+    module_target = __.ddoc.IntrospectionTargets.Module
+    if recursive:
+        if not ( dynadoc_introspection.targets & module_target ):
+            targets = dynadoc_introspection.targets | module_target
+            introspection = __.ddoc.IntrospectionControl(
+                enable = dynadoc_introspection.enable,
+                class_control = dynadoc_introspection.class_control,
+                module_control = dynadoc_introspection.module_control,
+                limiters = dynadoc_introspection.limiters,
+                targets = targets )
+        else: introspection = dynadoc_introspection
+    elif dynadoc_introspection.targets & module_target:
+        limit = __.ddoc.IntrospectionLimit(
+            targets_exclusions = module_target )
+        introspection = dynadoc_introspection.with_limit( limit )
+    else: introspection = dynadoc_introspection
+    _dynadoc.assign_module_docstring(
+        module,
+        *fragments,
+        introspection = introspection,
+        table = dynadoc_table )
+    reclassify_modules(
+        module,
+        attributes_namer = attributes_namer,
+        recursive = recursive,
+        replacement_class = replacement_class )
 
 
 def reclassify_modules(

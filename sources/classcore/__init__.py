@@ -65,5 +65,5 @@ __version__: __.typx.Annotated[ str, __.ddoc.Visibilities.Reveal ]
 __version__ = '1.6a0'
 
 
-standard.dynadoc.assign_module_docstring( __name__, table = __.fragments )
-standard.reclassify_modules( __name__, recursive = True )
+standard.finalize_module(
+    __name__, dynadoc_table = __.fragments, recursive = True )

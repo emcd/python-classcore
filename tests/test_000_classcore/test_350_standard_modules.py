@@ -86,3 +86,95 @@ def test_205_reclassification_via_module_globals( ):
     assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
         module.foo = 1
+
+
+def test_210_finalize_module_basic( ):
+    ''' Finalizes module with default parameters. '''
+    module = cache_import_module( MODULE_QNAME )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
+    module_.__package__ = 'fakepackage'
+    assert module_.__class__ is not module_class
+    module.finalize_module( module_ )
+    assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module_.foo = 1
+
+
+def test_211_finalize_module_recursive_with_module_targets( ):
+    ''' Finalizes module recursively when introspection has Module targets. '''
+    module = cache_import_module( MODULE_QNAME )
+    dynadoc_module = cache_import_module( f"{PACKAGE_NAME}.standard.dynadoc" )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
+    module_.__package__ = 'fakepackage'
+    introspection_with_module = dynadoc_module.dynadoc_introspection_on_package
+    assert module_.__class__ is not module_class
+    module.finalize_module(
+        module_,
+        dynadoc_introspection = introspection_with_module,
+        recursive = True )
+    assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module_.foo = 1
+
+
+def test_212_finalize_module_recursive_without_module_targets( ):
+    ''' Finalizes module recursively when introspection lacks targets. '''
+    module = cache_import_module( MODULE_QNAME )
+    dynadoc_module = cache_import_module( f"{PACKAGE_NAME}.standard.dynadoc" )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
+    module_.__package__ = 'fakepackage'
+    introspection_without_module = (
+        dynadoc_module.dynadoc_introspection_on_class )
+    assert module_.__class__ is not module_class
+    module.finalize_module(
+        module_,
+        dynadoc_introspection = introspection_without_module,
+        recursive = True )
+    assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module_.foo = 1
+
+
+def test_213_finalize_module_nonrecursive_with_module_targets( ):
+    ''' Finalizes module non-recursively when introspection has targets. '''
+    module = cache_import_module( MODULE_QNAME )
+    dynadoc_module = cache_import_module( f"{PACKAGE_NAME}.standard.dynadoc" )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
+    module_.__package__ = 'fakepackage'
+    introspection_with_module = dynadoc_module.dynadoc_introspection_on_package
+    assert module_.__class__ is not module_class
+    module.finalize_module(
+        module_,
+        dynadoc_introspection = introspection_with_module,
+        recursive = False )
+    assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module_.foo = 1
+
+
+def test_214_finalize_module_nonrecursive_without_module_targets( ):
+    ''' Finalizes module non-recursively when introspection lacks targets. '''
+    module = cache_import_module( MODULE_QNAME )
+    dynadoc_module = cache_import_module( f"{PACKAGE_NAME}.standard.dynadoc" )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
+    module_.__package__ = 'fakepackage'
+    introspection_without_module = (
+        dynadoc_module.dynadoc_introspection_on_class )
+    assert module_.__class__ is not module_class
+    module.finalize_module(
+        module_,
+        dynadoc_introspection = introspection_without_module,
+        recursive = False )
+    assert module_.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module_.foo = 1

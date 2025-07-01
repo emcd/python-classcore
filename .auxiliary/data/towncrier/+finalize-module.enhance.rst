@@ -1,0 +1,1 @@
+Add ``finalize_module`` function to combine Dynadoc docstring generation with module reclassification for immutability and concealment.
