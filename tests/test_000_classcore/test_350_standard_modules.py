@@ -19,6 +19,7 @@
 
 
 import types
+import warnings
 
 import pytest
 
@@ -36,10 +37,12 @@ def test_200_reclassification_of_package_module( ):
     module_ = types.ModuleType( 'foobarnotreal' )
     module_.__package__ = None
     assert module_.__class__ is not module_class
-    module.reclassify_modules( module_ )
-    assert module_.__class__ is module_class
-    module.reclassify_modules( module_ ) # idempotence
-    assert module_.__class__ is module_class
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( module_ )
+        assert module_.__class__ is module_class
+        module.reclassify_modules( module_ ) # idempotence
+        assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
         module.foo = 1
 
@@ -52,10 +55,12 @@ def test_201_reclassification_of_normal_module( ):
     module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
     module_.__package__ = 'fakepackage'
     assert module_.__class__ is not module_class
-    module.reclassify_modules( module_ )
-    assert module_.__class__ is module_class
-    module.reclassify_modules( module_ ) # idempotence
-    assert module_.__class__ is module_class
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( module_ )
+        assert module_.__class__ is module_class
+        module.reclassify_modules( module_ ) # idempotence
+        assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
         module.foo = 1
 
@@ -68,7 +73,9 @@ def test_202_reclassification_of_incomplete_module( ):
     module_.__package__ = None
     del module_.__name__
     assert module_.__class__ is not module_class
-    module.reclassify_modules( module_ )
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( module_ )
     assert module_.__class__ is not module_class
 
 
@@ -80,10 +87,12 @@ def test_205_reclassification_via_module_globals( ):
     module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
     module_dict = { 'mod': module_, '__package__': 'fakepackage' }
     assert module_.__class__ is not module_class
-    module.reclassify_modules( module_dict )
-    assert module_.__class__ is module_class
-    module.reclassify_modules( module_dict ) # idempotence
-    assert module_.__class__ is module_class
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( module_dict )
+        assert module_.__class__ is module_class
+        module.reclassify_modules( module_dict ) # idempotence
+        assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
         module.foo = 1
 

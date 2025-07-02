@@ -81,7 +81,7 @@ def finalize_module( # noqa: PLR0913
         *fragments,
         introspection = introspection,
         table = dynadoc_table )
-    reclassify_modules(
+    _reclassify_module(
         module,
         attributes_namer = attributes_namer,
         recursive = recursive,
@@ -108,9 +108,48 @@ def reclassify_modules(
         __.ddoc.Doc( ''' New class for module. ''' ),
     ] = Module,
 ) -> None:
-    # TODO? Ensure correct operation with namespace packages.
     ''' Reclassifies modules to have attributes concealment and immutability.
 
+        Can operate on individual modules or entire package hierarchies.
+
+        Only converts modules within the same package to prevent unintended
+        modifications to external modules.
+
+        When used with a dictionary, converts any module objects found as
+        values if they belong to the same package.
+
+        Has no effect on already-reclassified modules.
+    '''
+    _reclassify_module(
+        attributes,
+        attributes_namer = attributes_namer,
+        recursive = recursive,
+        replacement_class = replacement_class )
+
+
+def _reclassify_module(
+    attributes: __.typx.Annotated[
+        __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
+        __.ddoc.Doc(
+            ''' Module, module name, or dictionary of object attributes. ''' ),
+    ], /, *,
+    attributes_namer: __.typx.Annotated[
+        _nomina.AttributesNamer,
+        __.ddoc.Doc(
+            ''' Attributes namer function with which to seal class. ''' ),
+    ] = __.calculate_attrname,
+    recursive: __.typx.Annotated[
+        bool, __.ddoc.Doc( ''' Recursively reclassify package modules? ''' )
+    ] = False,
+    replacement_class: __.typx.Annotated[
+        type[ __.types.ModuleType ],
+        __.ddoc.Doc( ''' New class for module. ''' ),
+    ] = Module,
+) -> None:
+    # TODO? Ensure correct operation with namespace packages.
+    ''' Core implementation for module reclassification.
+
+        Reclassifies modules to have attributes concealment and immutability.
         Can operate on individual modules or entire package hierarchies.
 
         Only converts modules within the same package to prevent unintended
@@ -134,7 +173,7 @@ def reclassify_modules(
         if not __.inspect.ismodule( value ): continue
         if not value.__name__.startswith( f"{package_name}." ): continue
         if recursive:
-            reclassify_modules(
+            _reclassify_module(
                 value,
                 attributes_namer = attributes_namer,
                 recursive = True,

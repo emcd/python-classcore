@@ -23,6 +23,15 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.6.1 (2025-07-01)
+============================
+
+Repairs
+-------
+
+- Fix deprecation warnings from finalize_module by refactoring to use private _reclassify_module implementation.
+
+
 Classcore 1.6 (2025-07-01)
 ==========================
 
