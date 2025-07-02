@@ -77,15 +77,11 @@ nitpick_ignore = [
     ( 'py:class',
       "v, remove specified key and return the corresponding value." ),
     # Type annotation weirdnesses.
-    ( 'py:class', "Doc" ),
     ( 'py:class', "builtins.NotImplementedType" ),
     ( 'py:class', "classcore.__.T" ),
     ( 'py:class', "classcore.__.U" ),
-    ( 'py:class', "classcore.standard.classes.Object" ),
-    ( 'py:class', "collections.abc.Annotated" ),
     ( 'py:class', "dynadoc.context.Context" ),
     ( 'py:class', "dynadoc.context.IntrospectionControl" ),
-    ( 'py:class', "types.Annotated" ),
     ( 'py:class', "typing_extensions._ProtocolMeta" ),
     ( 'py:class', "typing_extensions.Any" ),
 ]
