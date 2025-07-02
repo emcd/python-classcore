@@ -1,0 +1,1 @@
+Fix deprecation warnings from finalize_module by refactoring to use private _reclassify_module implementation.
