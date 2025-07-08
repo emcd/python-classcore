@@ -42,6 +42,7 @@ class ClassFactoryExtraArguments( __.typx.TypedDict, total = False ):
     instances_assigner_core: _nomina.AssignerCore
     instances_deleter_core: _nomina.DeleterCore
     instances_surveyor_core: _nomina.SurveyorCore
+    instances_ignore_init_arguments: bool
     instances_mutables: _nomina.BehaviorExclusionVerifiersOmni
     instances_visibles: _nomina.BehaviorExclusionVerifiersOmni
 

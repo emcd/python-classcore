@@ -220,15 +220,19 @@ def class_factory( # noqa: PLR0913
     return decorate
 
 
-def produce_instances_initialization_decorator( # noqa: PLR0913
+def produce_instances_inception_decorator( # noqa: PLR0913
     attributes_namer: _nomina.AttributesNamer,
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ],
     deleter_core: __.typx.Optional[ _nomina.DeleterCore ],
     surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ],
+    ignore_init_arguments: bool,
     mutables: _nomina.BehaviorExclusionVerifiersOmni,
     visibles: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorator[ __.U ]:
-    ''' Produces decorator to inject '__init__' method into class. '''
+    ''' Produces decorator to inject '__new__' or '__init__' method.
+
+        Also handles common bookkeeping tasks.
+    '''
     cores = dict(
         instances_assigner_core = assigner_core,
         instances_deleter_core = deleter_core,
@@ -249,7 +253,6 @@ def produce_instances_initialization_decorator( # noqa: PLR0913
             core_aname = attributes_namer( 'instances', f"{core_name}_core" )
             setattr( cls, core_aname, core_function )
         behaviors: set[ str ] = set( )
-        behaviors_name = attributes_namer( 'instance', 'behaviors' )
         _behaviors.record_behavior(
             cls, attributes_namer = attributes_namer,
             level = 'instances', basename = 'mutables',
@@ -260,6 +263,66 @@ def produce_instances_initialization_decorator( # noqa: PLR0913
             level = 'instances', basename = 'visibles',
             label = _nomina.concealment_label, behaviors = behaviors,
             verifiers = visibles )
+        decorator = produce_instances_initialization_decorator(
+            attributes_namer = attributes_namer,
+            behaviors = behaviors,
+            ignore_init_arguments = ignore_init_arguments )
+        return decorator( cls )
+
+    return decorate
+
+
+# def produce_instances_construction_decorator(
+#     attributes_namer: _nomina.AttributesNamer,
+#     behaviors: __.cabc.MutableSet[ str ],
+# ) -> _nomina.Decorator[ __.U ]:
+#     ''' Produces decorator to inject '__new__' method. '''
+#     def decorate( cls_: type[ __.U ] ) -> type[ __.U ]:
+#         behaviors_name = attributes_namer( 'instance', 'behaviors' )
+#         original = cls_.__dict__.get( '__new__' )
+#
+#         if original is None:
+#
+#             def initialize_with_super(
+#                 cls: type[ __.U ],
+#                 *posargs: __.typx.Any,
+#                 **nomargs: __.typx.Any,
+#             ) -> __.U:
+#                 self = super( cls_, cls ).__new__( cls, *posargs, **nomargs )
+#                 _activate_instance_behaviors(
+#                     cls_, self, behaviors_name, behaviors )
+#                 return self
+#
+#             cls_.__new__ = initialize_with_super
+#
+#         else:
+#
+#             @__.funct.wraps( original )
+#             def initialize_with_original(
+#                 cls: type[ __.U ],
+#                 *posargs: __.typx.Any,
+#                 **nomargs: __.typx.Any,
+#             ) -> __.U:
+#                 self = original( cls, *posargs, **nomargs )
+#                 _activate_instance_behaviors(
+#                     cls_, self, behaviors_name, behaviors )
+#                 return self
+#
+#             cls_.__new__ = initialize_with_original
+#
+#         return cls_
+#
+#     return decorate
+
+
+def produce_instances_initialization_decorator(
+    attributes_namer: _nomina.AttributesNamer,
+    behaviors: __.cabc.MutableSet[ str ],
+    ignore_init_arguments: bool,
+) -> _nomina.Decorator[ __.U ]:
+    ''' Produces decorator to inject '__init__' method into class. '''
+    def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
+        behaviors_name = attributes_namer( 'instance', 'behaviors' )
         original = cls.__dict__.get( '__init__' )
 
         if original is None:
@@ -267,14 +330,10 @@ def produce_instances_initialization_decorator( # noqa: PLR0913
             def initialize_with_super(
                 self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
             ) -> None:
-                super( cls, self ).__init__( *posargs, **nomargs )
-                # Only record behaviors at start of MRO.
-                if cls is not type( self ): return
-                behaviors_: set[ str ] = (
-                    _utilities.getattr0( self, behaviors_name, set( ) ) )
-                behaviors_.update( behaviors )
-                _utilities.setattr0(
-                    self, behaviors_name, frozenset( behaviors_ ) )
+                if ignore_init_arguments: super( cls, self ).__init__( )
+                else: super( cls, self ).__init__( *posargs, **nomargs )
+                _activate_instance_behaviors(
+                    cls, self, behaviors_name, behaviors )
 
             cls.__init__ = initialize_with_super
 
@@ -284,14 +343,10 @@ def produce_instances_initialization_decorator( # noqa: PLR0913
             def initialize_with_original(
                 self: object, *posargs: __.typx.Any, **nomargs: __.typx.Any
             ) -> None:
-                original( self, *posargs, **nomargs )
-                # Only record behaviors at start of MRO.
-                if cls is not type( self ): return
-                behaviors_: set[ str ] = (
-                    _utilities.getattr0( self, behaviors_name, set( ) ) )
-                behaviors_.update( behaviors )
-                _utilities.setattr0(
-                    self, behaviors_name, frozenset( behaviors_ ) )
+                if ignore_init_arguments: original( self )
+                else: original( self, *posargs, **nomargs )
+                _activate_instance_behaviors(
+                    cls, self, behaviors_name, behaviors )
 
             cls.__init__ = initialize_with_original
 
@@ -484,6 +539,7 @@ def dataclass_with_standard_behaviors( # noqa: PLR0913
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
     deleter_core: __.typx.Optional[ _nomina.DeleterCore ] = None,
     surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ] = None,
+    ignore_init_arguments: bool = False,
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator[ __.U ]:
@@ -496,6 +552,7 @@ def dataclass_with_standard_behaviors( # noqa: PLR0913
             assigner_core = assigner_core,
             deleter_core = deleter_core,
             surveyor_core = surveyor_core,
+            ignore_init_arguments = ignore_init_arguments,
             mutables = mutables,
             visibles = visibles ) )
     preparers: _nomina.DecorationPreparers[ __.U ] = (
@@ -514,6 +571,7 @@ def with_standard_behaviors( # noqa: PLR0913
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
     deleter_core: __.typx.Optional[ _nomina.DeleterCore ] = None,
     surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ] = None,
+    ignore_init_arguments: bool = False,
     mutables: _nomina.BehaviorExclusionVerifiersOmni = __.mutables_default,
     visibles: _nomina.BehaviorExclusionVerifiersOmni = __.visibles_default,
 ) -> _nomina.Decorator[ __.U ]:
@@ -525,6 +583,7 @@ def with_standard_behaviors( # noqa: PLR0913
             assigner_core = assigner_core,
             deleter_core = deleter_core,
             surveyor_core = surveyor_core,
+            ignore_init_arguments = ignore_init_arguments,
             mutables = mutables,
             visibles = visibles ) )
     preparers: _nomina.DecorationPreparers[ __.U ] = (
@@ -532,6 +591,20 @@ def with_standard_behaviors( # noqa: PLR0913
             attributes_namer = attributes_namer,
             error_class_provider = error_class_provider ) )
     return decoration_by( *decorators, *decorators_, preparers = preparers )
+
+
+def _activate_instance_behaviors(
+    cls: type[ __.U ],
+    self: object,
+    behaviors_name: str,
+    behaviors: __.cabc.MutableSet[ str ],
+) -> None:
+    # Only record behaviors at start of MRO.
+    if cls is not type( self ): return
+    behaviors_: set[ str ] = (
+        _utilities.getattr0( self, behaviors_name, set( ) ) )
+    behaviors_.update( behaviors )
+    _utilities.setattr0( self, behaviors_name, frozenset( behaviors_ ) )
 
 
 def _produce_instances_decoration_preparers(
@@ -554,17 +627,19 @@ def _produce_instances_decorators( # noqa: PLR0913
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ],
     deleter_core: __.typx.Optional[ _nomina.DeleterCore ],
     surveyor_core: __.typx.Optional[ _nomina.SurveyorCore ],
+    ignore_init_arguments: bool,
     mutables: _nomina.BehaviorExclusionVerifiersOmni,
     visibles: _nomina.BehaviorExclusionVerifiersOmni,
 ) -> _nomina.Decorators[ __.U ]:
     ''' Produces standard decorators. '''
     decorators: list[ _nomina.Decorator[ __.U ] ] = [ ]
     decorators.append(
-        produce_instances_initialization_decorator(
+        produce_instances_inception_decorator(
             attributes_namer = attributes_namer,
             assigner_core = assigner_core,
             deleter_core = deleter_core,
             surveyor_core = surveyor_core,
+            ignore_init_arguments = ignore_init_arguments,
             mutables = mutables, visibles = visibles ) )
     decorators.append(
         produce_attributes_assignment_decorator(

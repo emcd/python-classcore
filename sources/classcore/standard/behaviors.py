@@ -272,6 +272,8 @@ def produce_class_construction_postprocessor(
             'instances_mutables', __.mutables_default )
         instances_visibles = arguments.get(
             'instances_visibles', __.visibles_default )
+        instances_ignore_init_arguments = arguments.get(
+            'instances_ignore_init_arguments', False )
         if dcls_spec and dcls_spec.get( 'kw_only_default', False ):
             from .decorators import dataclass_with_standard_behaviors
             decorator_factory = dataclass_with_standard_behaviors
@@ -289,6 +291,7 @@ def produce_class_construction_postprocessor(
                 _nomina.DeleterCore, cores[ 'deleter' ] ),
             surveyor_core = __.typx.cast(
                 _nomina.SurveyorCore, cores[ 'surveyor' ] ),
+            ignore_init_arguments = instances_ignore_init_arguments,
             mutables = instances_mutables,
             visibles = instances_visibles )
         decorators.append( decorator )
@@ -391,6 +394,7 @@ def record_class_construction_arguments(
         'instances_assigner_core',
         'instances_deleter_core',
         'instances_surveyor_core',
+        'instances_ignore_init_arguments',
         'instances_mutables', 'instances_visibles',
     ):
         if name not in arguments: continue
