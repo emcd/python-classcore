@@ -202,6 +202,34 @@ The mapping form of ``__slots__`` is also supported.
     'Namespace attributes.'
 
 
+Suppression of Initialization Arguments
+===============================================================================
+
+In some cases, you may inherit from classes which process their instance
+construction arguments via ``__new__`` rather than ``__init__``. This is
+experienced, for example, where :py:class:`tuple` and other immutable builtins
+are subclassed. To prevent the construction arguments from being applied to the
+``__init__`` call chain, you can set ``instances_ignore_init_arguments`` to
+``True`` as a class argument.
+
+.. doctest:: Standard.Classes
+
+    >>> from urllib.parse import ParseResult, urlparse
+    >>> class Url( ccstd.Object, ParseResult, instances_ignore_init_arguments = True ):
+    ...     pass
+    ...
+    >>> u = Url( *urlparse( 'https://python.org' ) )
+
+Or as ``ignore_init_arguments`` as ``True`` to a decorator.
+
+.. doctest:: Standard.Classes
+
+    >>> @ccstd.with_standard_behaviors( ignore_init_arguments = True )
+    ... class Url( ParseResult ): pass
+    ...
+    >>> u = Url( *urlparse( 'https://python.org' ) )
+
+
 Integrations with Custom Behaviors
 ===============================================================================
 
