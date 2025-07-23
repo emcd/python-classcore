@@ -42,6 +42,10 @@ def finalize_module( # noqa: PLR0913
     dynadoc_introspection: _nomina.DynadocIntrospectionArgument = (
         _dynadoc.dynadoc_introspection_on_package ),
     dynadoc_table: _nomina.DynadocTableArgument = __.dictproxy_empty,
+    excludes: __.typx.Annotated[
+        __.typx.Optional[ __.cabc.MutableSet[ __.types.ModuleType ] ],
+        __.ddoc.Doc( ''' Modules to exclude from reclassification. ''' ),
+    ] = None,
     recursive: __.typx.Annotated[
         bool, __.ddoc.Doc( ''' Recursively reclassify package modules? ''' )
     ] = False,
@@ -84,7 +88,7 @@ def finalize_module( # noqa: PLR0913
     _reclassify_module(
         module,
         attributes_namer = attributes_namer,
-        recursive = recursive,
+        excludes = excludes, recursive = recursive,
         replacement_class = replacement_class )
 
 
@@ -100,6 +104,10 @@ def reclassify_modules(
         __.ddoc.Doc(
             ''' Attributes namer function with which to seal class. ''' ),
     ] = __.calculate_attrname,
+    excludes: __.typx.Annotated[
+        __.typx.Optional[ __.cabc.MutableSet[ __.types.ModuleType ] ],
+        __.ddoc.Doc( ''' Modules to exclude from reclassification. ''' ),
+    ] = None,
     recursive: __.typx.Annotated[
         bool, __.ddoc.Doc( ''' Recursively reclassify package modules? ''' )
     ] = False,
@@ -123,11 +131,11 @@ def reclassify_modules(
     _reclassify_module(
         attributes,
         attributes_namer = attributes_namer,
-        recursive = recursive,
+        excludes = excludes, recursive = recursive,
         replacement_class = replacement_class )
 
 
-def _reclassify_module(
+def _reclassify_module( # noqa: C901,PLR0912
     attributes: __.typx.Annotated[
         __.cabc.Mapping[ str, __.typx.Any ] | __.types.ModuleType | str,
         __.ddoc.Doc(
@@ -138,6 +146,10 @@ def _reclassify_module(
         __.ddoc.Doc(
             ''' Attributes namer function with which to seal class. ''' ),
     ] = __.calculate_attrname,
+    excludes: __.typx.Annotated[
+        __.typx.Optional[ __.cabc.MutableSet[ __.types.ModuleType ] ],
+        __.ddoc.Doc( ''' Modules to exclude from reclassification. ''' ),
+    ] = None,
     recursive: __.typx.Annotated[
         bool, __.ddoc.Doc( ''' Recursively reclassify package modules? ''' )
     ] = False,
@@ -164,22 +176,24 @@ def _reclassify_module(
         attributes = __.sys.modules[ attributes ]
     if isinstance( attributes, __.types.ModuleType ):
         module = attributes
-        attributes = attributes.__dict__
+        if excludes and module in excludes: return
+        attributes = module.__dict__
     else: module = None
+    if excludes is None: excludes = set( )
+    if module: excludes.add( module )
     package_name = (
         attributes.get( '__package__' ) or attributes.get( '__name__' ) )
     if not package_name: return
     for value in attributes.values( ):
         if not __.inspect.ismodule( value ): continue
         if not value.__name__.startswith( f"{package_name}." ): continue
+        if isinstance( value, replacement_class ): continue
         if recursive:
             _reclassify_module(
                 value,
                 attributes_namer = attributes_namer,
-                recursive = True,
+                excludes = excludes, recursive = True,
                 replacement_class = replacement_class )
-        if isinstance( value, replacement_class ): continue
-        _seal_module( value, attributes_namer, replacement_class )
     if module and not isinstance( module, replacement_class ):
         _seal_module( module, attributes_namer, replacement_class )
 
