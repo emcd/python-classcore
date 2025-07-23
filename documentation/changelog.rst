@@ -23,6 +23,22 @@ Release Notes
 
 .. towncrier release notes start
 
+Classcore 1.8 (2025-07-23)
+==========================
+
+Enhancements
+------------
+
+- Standard: Modules: Allow certain modules to be excluded from reclassification.
+  Also, implement cycle detection.
+
+
+Repairs
+-------
+
+- Standard: Modules: Reclassify modules with proper depth-first traversal.
+
+
 Classcore 1.7 (2025-07-08)
 ==========================
 
