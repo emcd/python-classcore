@@ -44,7 +44,7 @@ def test_200_reclassification_of_independent_module( ):
         module.reclassify_modules( module_ ) # idempotence
         assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
-        module.foo = 1
+        module_.foo = 1
 
 
 def test_201_reclassification_of_normal_module( ):
@@ -62,7 +62,7 @@ def test_201_reclassification_of_normal_module( ):
         module.reclassify_modules( module_ ) # idempotence
         assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
-        module.foo = 1
+        module_.foo = 1
 
 
 def test_202_reclassification_of_package( ):
@@ -81,10 +81,11 @@ def test_202_reclassification_of_package( ):
         warnings.simplefilter( 'ignore', DeprecationWarning )
         module.reclassify_modules( package_module )
         assert package_module.__class__ is module_class
-        module.reclassify_modules( package_module ) # idempotence
-        assert package_module.__class__ is module_class
+        assert member_module.__class__ is not module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
-        module.foo = 1
+        package_module.foo = 1
+    member_module.foo = 1
+    assert member_module.foo == 1
 
 
 def test_203_reclassification_of_package_recursive( ):
@@ -105,10 +106,27 @@ def test_203_reclassification_of_package_recursive( ):
         assert package_module.__class__ is module_class
         assert member_module.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
-        module.foo = 1
+        package_module.foo = 1
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        member_module.foo = 1
 
 
-def test_204_reclassification_of_incomplete_module( ):
+def test_204_reclassification_of_module_exclude( ):
+    ''' Reclassification ignores excluded module. '''
+    module = cache_import_module( MODULE_QNAME )
+    module_class = module.Module
+    module_ = types.ModuleType( 'fakepackage.foobarnotreal' )
+    module_.__package__ = 'fakepackage'
+    assert module_.__class__ is not module_class
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( module_, excludes = { module_ } )
+        assert module_.__class__ is not module_class
+    module_.foo = 1
+    assert module_.foo == 1
+
+
+def test_205_reclassification_of_incomplete_module( ):
     ''' Reclassification ignores incomplete module. '''
     module = cache_import_module( MODULE_QNAME )
     module_class = module.Module
@@ -122,7 +140,7 @@ def test_204_reclassification_of_incomplete_module( ):
     assert module_.__class__ is not module_class
 
 
-def test_205_reclassification_via_module_globals( ):
+def test_206_reclassification_via_module_globals( ):
     ''' Reclassifies via module globals dictionary. '''
     module = cache_import_module( MODULE_QNAME )
     exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
