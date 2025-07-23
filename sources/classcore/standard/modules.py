@@ -172,14 +172,13 @@ def _reclassify_module(
     for value in attributes.values( ):
         if not __.inspect.ismodule( value ): continue
         if not value.__name__.startswith( f"{package_name}." ): continue
+        if isinstance( value, replacement_class ): continue
         if recursive:
             _reclassify_module(
                 value,
                 attributes_namer = attributes_namer,
                 recursive = True,
                 replacement_class = replacement_class )
-        if isinstance( value, replacement_class ): continue
-        _seal_module( value, attributes_namer, replacement_class )
     if module and not isinstance( module, replacement_class ):
         _seal_module( module, attributes_namer, replacement_class )
 

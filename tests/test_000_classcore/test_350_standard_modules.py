@@ -29,8 +29,8 @@ from . import PACKAGE_NAME, cache_import_module
 MODULE_QNAME = f"{PACKAGE_NAME}.standard.modules"
 
 
-def test_200_reclassification_of_package_module( ):
-    ''' Reclassifies package module directly. '''
+def test_200_reclassification_of_independent_module( ):
+    ''' Reclassifies independent module directly. '''
     module = cache_import_module( MODULE_QNAME )
     exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
     module_class = module.Module
@@ -65,7 +65,50 @@ def test_201_reclassification_of_normal_module( ):
         module.foo = 1
 
 
-def test_202_reclassification_of_incomplete_module( ):
+def test_202_reclassification_of_package( ):
+    ''' Reclassifies package directly. '''
+    module = cache_import_module( MODULE_QNAME )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    package_module = types.ModuleType( 'foobarnotreal' )
+    package_module.__package__ = 'foobarnotreal'
+    member_module = types.ModuleType( 'foobarnotreal.member' )
+    member_module.__package__ = 'foobarnotreal'
+    package_module.member = member_module
+    assert package_module.__class__ is not module_class
+    assert member_module.__class__ is not module_class
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( package_module )
+        assert package_module.__class__ is module_class
+        module.reclassify_modules( package_module ) # idempotence
+        assert package_module.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module.foo = 1
+
+
+def test_203_reclassification_of_package_recursive( ):
+    ''' Reclassifies package recursively. '''
+    module = cache_import_module( MODULE_QNAME )
+    exceptions_module = cache_import_module( f"{PACKAGE_NAME}.exceptions" )
+    module_class = module.Module
+    package_module = types.ModuleType( 'foobarnotreal' )
+    package_module.__package__ = 'foobarnotreal'
+    member_module = types.ModuleType( 'foobarnotreal.member' )
+    member_module.__package__ = 'foobarnotreal'
+    package_module.member = member_module
+    assert package_module.__class__ is not module_class
+    assert member_module.__class__ is not module_class
+    with warnings.catch_warnings( ):
+        warnings.simplefilter( 'ignore', DeprecationWarning )
+        module.reclassify_modules( package_module, recursive = True )
+        assert package_module.__class__ is module_class
+        assert member_module.__class__ is module_class
+    with pytest.raises( exceptions_module.AttributeImmutability ):
+        module.foo = 1
+
+
+def test_204_reclassification_of_incomplete_module( ):
     ''' Reclassification ignores incomplete module. '''
     module = cache_import_module( MODULE_QNAME )
     module_class = module.Module
@@ -89,9 +132,9 @@ def test_205_reclassification_via_module_globals( ):
     assert module_.__class__ is not module_class
     with warnings.catch_warnings( ):
         warnings.simplefilter( 'ignore', DeprecationWarning )
-        module.reclassify_modules( module_dict )
+        module.reclassify_modules( module_dict, recursive = True )
         assert module_.__class__ is module_class
-        module.reclassify_modules( module_dict ) # idempotence
+        module.reclassify_modules( module_dict, recursive = True ) # idempotent
         assert module_.__class__ is module_class
     with pytest.raises( exceptions_module.AttributeImmutability ):
         module.foo = 1
