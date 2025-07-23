@@ -13,7 +13,7 @@ For execution of a fully-automated final release.
 Below is a validated process to create a final release with automated
 monitoring and next development cycle setup.
 
-Target release version: `$ARGUMENTS` (e.g., `1.6`, `2.0`)
+Target release version: `$ARGUMENTS`
 
 **CRITICAL**: Verify exactly one target release version provided.
 **HALT if**:
@@ -28,8 +28,6 @@ Target release version: `$ARGUMENTS` (e.g., `1.6`, `2.0`)
 - Current version: !`hatch version`
 - Recent commits: !`git log --oneline -10`
 - Available towncrier fragments: !`ls .auxiliary/data/towncrier/*.rst 2>/dev/null || echo "No fragments found"`
-- Target release branch status: !`git branch -r | grep release-$ARGUMENTS || echo "Release branch not found - will create new"`
-- Local release branch status: !`git branch | grep release-$ARGUMENTS || echo "No local release branch"`
 
 ## Prerequisites
 
@@ -165,8 +163,8 @@ git push origin master
 Set up next development version:
 ```bash
 hatch version minor,alpha
-git commit -am "Version: $(hatch version)"
-git tag -m "Start development for v$(hatch version | sed 's/a[0-9]*$//')." i$(hatch version | sed 's/a[0-9]*$//')
+git commit -am "Start of development for release $(hatch version | sed 's/a[0-9]*$//')."
+git tag -m "Start of development for release $(hatch version | sed 's/a[0-9]*$//')." "i$(hatch version | sed 's/a[0-9]*$//')"
 git push origin master --tags
 ```
 
