@@ -1,0 +1,1 @@
+Fix PyPy compatibility with super() calls in slotted dataclasses.
