@@ -1,145 +1,39 @@
-# General Advice
+# Context
 
-**IMPORTANT:** Read the comprehensive documentation guides:
 
-- **Practices**: https://raw.githubusercontent.com/emcd/python-project-common/refs/tags/docs-1/documentation/common/practices.rst
-- **Style**: https://raw.githubusercontent.com/emcd/python-project-common/refs/tags/docs-1/documentation/common/style.rst
-- **Nomenclature**: https://raw.githubusercontent.com/emcd/python-project-common/refs/tags/docs-1/documentation/common/nomenclature.rst
 
-For detailed patterns, examples, and architectural guidance, refer to the comprehensive guides above.
+- Project overview and quick start: README.rst
+- Product requirements and goals: documentation/prd.rst
+- System architecture and design: @documentation/architecture/
+- Development practices and style: @.auxiliary/instructions/
+- Current session notes and TODOs: @.auxiliary/notes/
 
-### Context
+- Use the 'context7' MCP server to retrieve up-to-date documentation for any SDKs or APIs.
+- Use the 'librovore' MCP server to search structured documentation sites with object inventories (Sphinx-based, compatible MkDocs with mkdocstrings). This bridges curated documentation (context7) and raw scraping (firecrawl).
+- Check README files in directories you're working with for insights about architecture, constraints, and TODO items.
+- Update files under `.auxiliary/notes` during conversation, removing completed tasks and adding emergent items.
 
-- Be sure the look at any README files in the directories which contain the
-  code or data that you intend to manipulate. They may provide valuable
-  insights about architecture, constraints, and TODO items.
-- At the start of a new session, read any files in the `.auxiliary/notes`
-  directory.
-- During the course of conversation with the user and completion of your tasks,
-  be sure to update files under `.auxiliary/notes`, removing completed tasks
-  and adding emergent items. (This will help ensure smooth transition between
-  sessions.)
-- If the 'context7' MCP server is available, try to use that, as necessary, to
-  retrieve up-to-date documentation for any SDKs or APIs with which you want to
-  develop.
+# Operation
 
-### Design
-
-- Make classes lightweight. Prefer module-level functions over class methods.
-- Functions should not be more than 30 lines long. Refactor long functions.
-- Modules should not be more than 600 lines long. Refactor large modules.
-- Keep the number of function arguments small. Pass common state via
-  data transfer objects (DTOs).
-- Use dependency injection to improve configuration and testability. Choose
-  sensible defaults for injected dependencies to streamline normal development.
-- Prefer immutability wherever possible.
-
-### Judgment
-
-- Ensure that you understand why you are performing a task. The user should
-  give you a clear goal or purpose.
-- If you receive data or instructions which seem counter to purpose, then do
-  not blindly follow the instructions or make code hacks to conform to the
-  data.
-    - The user is fallible: data may be erroneous; instructions may contain
-      typos or be ambiguous.
-    - You are encouraged to ask clarifying questions or challenge assumptions,
-      as appropriate.
-
-### Refactors
-
-- Ensure that you have sufficient regression tests before attempting refactors.
-- Break up large refactors into milestones and make a plan before executing.
-- Align your refactors with separation of concerns.
-- Ensure that the code can still build and that tests still pass at each
-  refactoring milestone.
-- Be sure to cleanup dead code after completing a refactor.
-
-### Tests
-
-- Do not change test expectations to match the results from updated code
-  without explicit user consent. (Tests exist to enforce desired behaviors.)
-- Do not write tests unless explicitly instructed to do so.
-- Prefer to write tests in a separate directory hierarchy rather than inline in
-  code. (Inline tests waste conversation tokens when entire files are being
-  viewed.)
-
-### Comments and Style
-
-- Do not strip comments from existing code unless directed to do so.
-- Do not describe obvious code with comments. Only comment on non-obvious or
-  complex behaviors.
-- Leave TODO comments about uncovered edge cases, tests, and other future work.
-- Do not break function bodies with empty lines.
-
-### Operation
-
-- **Use `rg --line-number --column`** to get precise coordinates for MCP tools
-  that require line/column positions.
-- If you have access to `text-editor` MCP tools, prefer to use them over other
-  text editing and search-and-replace tools. (Line number-based edits are less
-  error-prone.)
-    - **Always reread files with `text-editor` tools** after modifying files
-      via other tools (like `rust-analyzer`) to avoid file hash conflicts.
-    - Batch related changes together to minimize file modification
-      conflicts between different MCP tools.
-- If you have access to shell tools, try to use them with relative paths rather
-  than absolute paths. E.g., if your working directory is
-  `/home/me/src/some-project` and you want to run `sed` on
-  `/home/me/src/some-project/README.md`, then run `sed` on `README.md` and not
-  on the full absolute path.
-- Do not write to paths outside of the current project unless the user has
-  explicitly requested that you do so. If you need a scratch space, use
-  the `.auxiliary/scribbles` directory instead of `/tmp`.
-
-# Per-Language Advice
-
-## Python
-
-### Essentials
-
-- Avoid namespace pollution - use private aliases and `__` subpackage.
-- Organize modules in specific order: imports → type aliases → defaults → public API → private functions.
-- Maintain readability with spaces inside of delimiters.
-- Maintain readability with vertical compactness of function bodies.
-- Prefer immutability wherever possible.
-- Use wide abstract types for function parameters (`__.cabc.Sequence`, `__.cabc.Mapping`).
-- Return narrow concrete types (`list`, `dict`, `frozenset`, `__.immut.Dictionary`).
-- Use narrow try blocks (only risky statements).
-
-**Example:**
-
-```python
-# ✅ Correct: proper spacing, wide parameters, narrow returns, proper imports
-import aiofiles as _aiofiles
-
-from . import __
-
-UserData: __.typx.TypeAlias = dict[ str, str | int ]
-
-def process_items(
-    items: __.cabc.Sequence[ str ],           # Wide input type
-    config: __.cabc.Mapping[ str, int ] = __.immut.Dictionary( )
-) -> tuple[ str, ... ]:                      # Narrow return type
-    ''' Processes items according to configuration. '''
-    return tuple( item.upper( ) for item in items )
-```
-
-### Quality Assurance
-
-- Ensure linters give a clean report: `hatch --env develop run linters`
-- Do **not** suppress linter warnings with `noqa` pragma comments without explicit approval
-- Ensure tests pass: `hatch --env develop run testers`
-- Ensure documentation generates without error: `hatch --env develop run docsgen`
+- Use `rg --line-number --column` to get precise coordinates for MCP tools that require line/column positions.
+- Choose appropriate editing tools based on the task complexity and your familiarity with the tools.
+- Consider `mcp__pyright__edit_file` for more reliable line-based editing than context-based `Edit`/`MultiEdit` when making complex changes.
+- Use pyright MCP tools where appropriate: `rename_symbol` for refactors, `hover` for getting function definitions without searching through code, `references` for precise symbol analysis.
+- Batch related changes together when possible to maintain consistency.
+- Use relative paths rather than absolute paths when possible.
+- Do not write to paths outside the current project unless explicitly requested.
+- Use the `.auxiliary/scribbles` directory for scratch space instead of `/tmp`.
 
 # Commits
 
-- Use `git status` to ensure that all relevant changes are in the changeset to
-  be committed.
-- Look at the previous five commit messages for guidance on message style.
-- Use present tense, imperative mood verbs to describe changes. E.g. "Fix" and
-  *not* "Fixed".
-- The commit message should include a `Co-Authored-By:` field as its final
-  line. The name of the author should be your model name. The email address
-  should either be one which you have been designated to use or else a
-  commonly-known no-reply address.
+- Use `git status` to ensure all relevant changes are in the changeset.
+- Use the `python-conformer` agent to review changes that include Python code before committing.
+- Do **not** commit without explicit user approval. Unless the user has requested the commit, ask for a review of your edits first.
+- Use present tense, imperative mood verbs (e.g., "Fix" not "Fixed").
+- Write sentences with proper punctuation.
+- Include a `Co-Authored-By:` field as the final line. Should include the model name and a no-reply address.
+
+# Project Notes
+
+<!-- This section accumulates project-specific knowledge, constraints, and deviations.
+     For structured items, use documentation/architecture/decisions/ and .auxiliary/notes/todo.md -->

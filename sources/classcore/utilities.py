@@ -114,7 +114,7 @@ def qualify_class_name( cls: type ) -> str:
 def repair_class_reproduction( original: type, reproduction: type ) -> None:
     ''' Repairs a class reproduction, if necessary. '''
     match __.platform.python_implementation( ):
-        case 'CPython':  # pragma: no branch
+        case 'CPython' | 'PyPy':  # pragma: no branch
             _repair_cpython_class_closures( original, reproduction )
         case _: pass  # pragma: no cover
 
