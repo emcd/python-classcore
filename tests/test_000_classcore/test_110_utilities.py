@@ -19,7 +19,6 @@
 
 
 from dataclasses import dataclass
-from platform import python_implementation
 
 import pytest
 
@@ -27,8 +26,6 @@ from .__ import PACKAGE_NAME, cache_import_module
 
 
 MODULE_QNAME = f"{PACKAGE_NAME}.utilities"
-
-pyimpl = python_implementation( )
 
 
 class Foo: x = 1
@@ -73,9 +70,7 @@ def test_200_attr0( ):
         module.delattr0( cs, 'missing' )
 
 
-@pytest.mark.skipif(
-    'CPython' != pyimpl, reason = 'Only relevant to CPython.' )
-def test_300_cpython_class_repair_function_closure( ):
+def test_300_class_repair_function_closure( ):
     ''' Reproduction has class cell repaired in function closure. '''
     class Wut:
         def __dir__( self ): return super( ).__dir__( )
@@ -88,9 +83,7 @@ def test_300_cpython_class_repair_function_closure( ):
     assert closure.cell_contents is DataclassWut
 
 
-@pytest.mark.skipif(
-    'CPython' != pyimpl, reason = 'Only relevant to CPython.' )
-def test_301_cpython_class_repair_property_closure( ):
+def test_301_class_repair_property_closure( ):
     ''' Reproduction has class cell repaired in property closure. '''
     class Wut:
         @property
@@ -103,9 +96,7 @@ def test_301_cpython_class_repair_property_closure( ):
     assert wut.name == str( wut )
 
 
-@pytest.mark.skipif(
-    'CPython' != pyimpl, reason = 'Only relevant to CPython.' )
-def test_302_cpython_class_repair_nothing( ):
+def test_302_class_repair_nothing( ):
     ''' Reproduction has no class cell to repair in anything. '''
     class Wut:
         @property
