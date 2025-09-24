@@ -23,6 +23,15 @@ Release Notes
 
 .. towncrier release notes start
 
+classcore 1.9 (2025-09-24)
+==========================
+
+Repairs
+-------
+
+- Fix PyPy compatibility with super() calls in slotted dataclasses.
+
+
 Classcore 1.8 (2025-07-23)
 ==========================
 
