@@ -22,9 +22,8 @@
 # ruff: noqa: F403,F405
 
 
-from . import __
 from ..nomina import *
-
+from . import __
 
 concealment_label = 'concealment'
 immutability_label = 'immutability'

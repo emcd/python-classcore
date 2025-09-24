@@ -20,15 +20,15 @@
 
 # import pytest
 
-from . import PACKAGE_NAME, cache_import_module
-
+from .__ import PACKAGE_NAME, cache_import_module
 
 MODULE_QNAME = f"{PACKAGE_NAME}.standard.classes"
 
 
 def test_124_cfc_instances_ignore_init_arguments( ):
     ''' Metaclass respects 'instances_ignore_init_arguments'. '''
-    from urllib.parse import ParseResult as UrlParts, urlparse
+    from urllib.parse import ParseResult as UrlParts
+    from urllib.parse import urlparse
     module = cache_import_module( MODULE_QNAME )
 
     class Url(
