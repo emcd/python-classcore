@@ -20,13 +20,11 @@
 
 ''' Common constants, imports, and utilities. '''
 
+# ruff: noqa: F403
 
-from ..__ import * # noqa: F403
 
-
-def is_public_identifier( name: str ) -> bool:
-    ''' Is Python identifier public? '''
-    return not name.startswith( '_' )
+from ..__ import *
+from ..nomina import is_public_identifier
 
 
 def provide_error_class( name: str ) -> type[ Exception ]:

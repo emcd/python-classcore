@@ -22,12 +22,20 @@
 
 
 from . import __
+from . import nomina as _nomina
 from . import standard as _standard
+
+
+exception_mutables_default = (
+    '__cause__', '__context__', '__suppress_context__', '__traceback__' )
+exception_visibles_default = (
+    *exception_mutables_default, _nomina.is_public_identifier )
 
 
 class Omniexception(
     _standard.Object, BaseException,
-    instances_visibles = ( '__cause__', '__context__' ),
+    instances_mutables = exception_mutables_default,
+    instances_visibles = exception_visibles_default,
 ):
     ''' Base exception for package. '''
 

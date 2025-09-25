@@ -204,3 +204,8 @@ ClassInitializer: __.typx.TypeAlias = __.typx.Annotated[
     ],
     __.ddoc.Doc( ''' Initializer to use with metaclass. ''' ),
 ]
+
+
+def is_public_identifier( name: str ) -> bool:
+    ''' Is Python identifier public? '''
+    return not name.startswith( '_' )

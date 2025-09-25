@@ -205,7 +205,16 @@ class DataclassObjectMutable( metaclass = DataclassMutable ):
         'class instance conceal' )
 
 
-class Protocol( __.typx.Protocol, metaclass = ProtocolClass ):
+class Protocol(
+    __.typx.Protocol,
+    metaclass = ProtocolClass,
+    class_mutables = (
+        '_abc_cache',
+        '_abc_negative_cache',
+        '_abc_negative_cache_version',
+        '_abc_registry',
+    ),
+):
     ''' Standard base protocol class. '''
 
     _dynadoc_fragments_ = (
@@ -215,7 +224,15 @@ class Protocol( __.typx.Protocol, metaclass = ProtocolClass ):
 
 
 class ProtocolMutable(
-    __.typx.Protocol, metaclass = ProtocolClass, instances_mutables = '*'
+    __.typx.Protocol,
+    metaclass = ProtocolClass,
+    class_mutables = (
+        '_abc_cache',
+        '_abc_negative_cache',
+        '_abc_negative_cache_version',
+        '_abc_registry',
+    ),
+    instances_mutables = '*',
 ):
     ''' Base protocol class with mutable instance attributes. '''
 
@@ -226,7 +243,14 @@ class ProtocolMutable(
 
 
 class DataclassProtocol(
-    __.typx.Protocol, metaclass = ProtocolDataclass,
+    __.typx.Protocol,
+    metaclass = ProtocolDataclass,
+    class_mutables = (
+        '_abc_cache',
+        '_abc_negative_cache',
+        '_abc_negative_cache_version',
+        '_abc_registry',
+    ),
 ):
     ''' Standard base protocol dataclass. '''
 
@@ -237,7 +261,14 @@ class DataclassProtocol(
 
 
 class DataclassProtocolMutable(
-    __.typx.Protocol, metaclass = ProtocolDataclassMutable,
+    __.typx.Protocol,
+    metaclass = ProtocolDataclassMutable,
+    class_mutables = (
+        '_abc_cache',
+        '_abc_negative_cache',
+        '_abc_negative_cache_version',
+        '_abc_registry',
+    ),
 ):
     ''' Base protocol dataclass with mutable instance attributes. '''
 
