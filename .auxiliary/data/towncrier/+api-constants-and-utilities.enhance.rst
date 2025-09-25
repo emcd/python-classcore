@@ -1,0 +1,1 @@
+Expose exception mutability constants and public identifier utility function for downstream reuse.
