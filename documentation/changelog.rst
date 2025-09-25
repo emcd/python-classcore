@@ -23,6 +23,21 @@ Release Notes
 
 .. towncrier release notes start
 
+classcore 1.10 (2025-09-25)
+===========================
+
+Enhancements
+------------
+
+- Expose exception mutability constants and public identifier utility function for downstream reuse.
+
+
+Repairs
+-------
+
+- Fix additional PyPy compatibility issues with exception and ABC cache attribute mutations.
+
+
 classcore 1.9 (2025-09-24)
 ==========================
 
