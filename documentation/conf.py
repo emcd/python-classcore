@@ -80,8 +80,6 @@ nitpick_ignore = [
     ( 'py:class', "builtins.NotImplementedType" ),
     ( 'py:class', "classcore.__.T" ),
     ( 'py:class', "classcore.__.U" ),
-    ( 'py:class', "dynadoc.context.Context" ),
-    ( 'py:class', "dynadoc.context.IntrospectionControl" ),
     ( 'py:class', "typing_extensions._ProtocolMeta" ),
     ( 'py:class', "typing_extensions.Any" ),
 ]
@@ -133,6 +131,8 @@ autodoc_use_type_comments = False
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
 
 intersphinx_mapping = {
+    'dynadoc': (
+        'https://emcd.github.io/python-dynadoc/stable/sphinx-html', None),
     'python': (
         'https://docs.python.org/3', None),
     'typing-extensions': (
