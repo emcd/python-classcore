@@ -27,6 +27,12 @@ from . import dynadoc as _dynadoc
 from . import nomina as _nomina
 
 
+_abc_class_mutables = (
+    '_abc_cache',
+    '_abc_negative_cache',
+    '_abc_negative_cache_version',
+    '_abc_registry',
+)
 _dynadoc_configuration = (
     _dynadoc.produce_dynadoc_configuration( table = __.fragments ) )
 _class_factory = __.funct.partial(
@@ -208,12 +214,7 @@ class DataclassObjectMutable( metaclass = DataclassMutable ):
 class Protocol(
     __.typx.Protocol,
     metaclass = ProtocolClass,
-    class_mutables = (
-        '_abc_cache',
-        '_abc_negative_cache',
-        '_abc_negative_cache_version',
-        '_abc_registry',
-    ),
+    class_mutables = _abc_class_mutables,
 ):
     ''' Standard base protocol class. '''
 
@@ -226,12 +227,7 @@ class Protocol(
 class ProtocolMutable(
     __.typx.Protocol,
     metaclass = ProtocolClass,
-    class_mutables = (
-        '_abc_cache',
-        '_abc_negative_cache',
-        '_abc_negative_cache_version',
-        '_abc_registry',
-    ),
+    class_mutables = _abc_class_mutables,
     instances_mutables = '*',
 ):
     ''' Base protocol class with mutable instance attributes. '''
@@ -245,12 +241,7 @@ class ProtocolMutable(
 class DataclassProtocol(
     __.typx.Protocol,
     metaclass = ProtocolDataclass,
-    class_mutables = (
-        '_abc_cache',
-        '_abc_negative_cache',
-        '_abc_negative_cache_version',
-        '_abc_registry',
-    ),
+    class_mutables = _abc_class_mutables,
 ):
     ''' Standard base protocol dataclass. '''
 
@@ -263,12 +254,7 @@ class DataclassProtocol(
 class DataclassProtocolMutable(
     __.typx.Protocol,
     metaclass = ProtocolDataclassMutable,
-    class_mutables = (
-        '_abc_cache',
-        '_abc_negative_cache',
-        '_abc_negative_cache_version',
-        '_abc_registry',
-    ),
+    class_mutables = _abc_class_mutables,
 ):
     ''' Base protocol dataclass with mutable instance attributes. '''
 
