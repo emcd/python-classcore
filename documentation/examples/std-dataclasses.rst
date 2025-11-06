@@ -129,7 +129,7 @@ class attributes:
     True
     >>> type( Point2d )
     <class 'type'>
-    >>> '__annotations__' in dir( Point2d )
+    >>> '__annotations__' in dir( Point2d ) or '__annotations_cache__' in dir( Point2d )
     True
     >>> del Point2d.__annotations__
 

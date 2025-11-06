@@ -265,7 +265,7 @@ the produced class itself.
     ...     x: float
     ...     y: float
     ...
-    >>> '__annotations__' in dir( Point2d )
+    >>> '__annotations__' in dir( Point2d ) or '__annotations_cache__' in dir( Point2d )
     True
 
 The ``instances_visibles`` metaclass argument controls visiblity of attributes
