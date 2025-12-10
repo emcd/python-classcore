@@ -1,7 +1,7 @@
 # Project Context
 
 ## Purpose
-`classcore` provides foundational class factories and decorators for providing classes with attribute immutability, concealment, and other custom behaviors. It aims to make Python programs safer by encouraging immutability and controlled attribute access, while integrating seamlessly with standard Python features like dataclasses and protocols.
+This package provides foundational class factories and decorators for providing classes with attribute immutability, concealment, and other custom behaviors. It aims to make Python programs safer by encouraging immutability and controlled attribute access, while integrating seamlessly with standard Python features like dataclasses and protocols.
 
 ## Tech Stack
 - **Languages**: Python 3.10+
