@@ -111,6 +111,8 @@ linkcheck_ignore = [
     r'https://github\.com/.*/.*/blob/.*',
     # Avoid timeouts for slow sites.
     r'http://www\.catb\.org/~esr/faqs/smart-questions\.html',
+    # GitHub intermittently returns 504 errors.
+    r'https://github\.com/.*',
 ]
 
 # -- Options for HTML output -------------------------------------------------
