@@ -59,7 +59,6 @@ templates_path = [ '_templates' ]
 exclude_patterns = [
     # Openspec workflow/meta files (not documentation)
     'architecture/openspec/AGENTS.md',
-    'architecture/openspec/project.md',
     'architecture/openspec/changes/**',
 ]
 
