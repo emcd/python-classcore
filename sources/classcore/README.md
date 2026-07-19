@@ -445,3 +445,8 @@ from ..exceptions import *      # Add package exceptions
 
 Modules in `standard/` use the same import pattern but gain access to both
 parent and subpackage-specific imports.
+
+## Sister Projects
+
+- **[frigid](https://github.com/emcd/python-frigid)** — Fully immutable data structures. Like classcore, but values cannot be added or changed after creation. Useful for configuration objects, constants, and thread-safe data carriers.
+- **[accretive](https://github.com/emcd/python-accretive)** — Grow-only data structures. Values can be added (never modified or removed) after creation. Useful for registries, plugin systems, and sticky-state configurations.
