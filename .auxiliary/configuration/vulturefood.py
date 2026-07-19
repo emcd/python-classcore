@@ -3,6 +3,11 @@ NominativeArguments     # unused variable
 PositionalArguments     # unused variable
 package_name            # unused variable
 
+ClassDecorator          # type alias for downstream consumption
+ClassDecorators         # type alias for downstream consumption
+ClassDecoratorFactory   # type alias for downstream consumption
+ModuleReclassifier      # type alias for downstream consumption
+
 # --- BEGIN: Injected by Copier ---
 # --- END: Injected by Copier ---
 
