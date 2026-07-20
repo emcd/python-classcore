@@ -109,7 +109,6 @@ class ClassPreparer( __.typx.Protocol ):
 
 
 DynadocConfiguration: __.typx.TypeAlias = __.cabc.Mapping[ str, __.typx.Any ]
-# TODO: Use argument type aliases from 'dynadoc' package.
 DynadocContextArgument: __.typx.TypeAlias = __.typx.Annotated[
     __.ddoc.Context,
     __.ddoc.Doc(
