@@ -23,6 +23,15 @@ Release Notes
 
 .. towncrier release notes start
 
+classcore 1.11 (2026-07-19)
+===========================
+
+Enhancements
+------------
+
+- Export ``ClassDecorator``, ``ClassDecorators``, ``ClassDecoratorFactory``, and ``ModuleReclassifier`` type aliases for downstream consumption.
+
+
 classcore 1.10 (2025-09-25)
 ===========================
 
