@@ -49,17 +49,27 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.githubpages',
+    'myst_parser',
     'sphinx_copybutton',
     'sphinx_inline_tabs',
 ]
 
 templates_path = [ '_templates' ]
 
-exclude_patterns = [ ]
+exclude_patterns = [
+    # Openspec workflow/meta files (not documentation)
+    'architecture/openspec/AGENTS.md',
+    'architecture/openspec/changes/**',
+]
 
 rst_prolog = f'''
 .. |project| replace:: {project}
 '''
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 nitpicky = True
 nitpick_ignore = [
@@ -80,8 +90,6 @@ nitpick_ignore = [
     ( 'py:class', "builtins.NotImplementedType" ),
     ( 'py:class', "classcore.__.T" ),
     ( 'py:class', "classcore.__.U" ),
-    ( 'py:class', "dynadoc.context.Context" ),
-    ( 'py:class', "dynadoc.context.IntrospectionControl" ),
     ( 'py:class', "typing_extensions._ProtocolMeta" ),
     ( 'py:class', "typing_extensions.Any" ),
 ]
@@ -102,6 +110,8 @@ linkcheck_ignore = [
     r'https://github\.com/.*/.*/blob/.*',
     # Avoid timeouts for slow sites.
     r'http://www\.catb\.org/~esr/faqs/smart-questions\.html',
+    # GitHub intermittently returns 504 errors.
+    r'https://github\.com/.*',
 ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -133,11 +143,35 @@ autodoc_use_type_comments = False
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
 
 intersphinx_mapping = {
+    'dynadoc': (
+        'https://emcd.github.io/python-dynadoc/stable/sphinx-html', None),
     'python': (
         'https://docs.python.org/3', None),
     'typing-extensions': (
         'https://typing-extensions.readthedocs.io/en/latest', None),
+  # --- BEGIN: Injected by Copier ---
+  # --- END: Injected by Copier ---
 }
+
+# -- Options for Myst extension ----------------------------------------------
+
+# https://myst-parser.readthedocs.io/en/latest/syntax/optional.html
+myst_enable_extensions = [
+    # 'amsmath',
+    # 'attrs_inline',
+    'colon_fence',      # ::: blocks
+    'deflist',          # Definition lists
+    # 'dollarmath',
+    # 'fieldlist',
+    # 'html_admonition',
+    # 'html_image',
+    # 'linkify',
+    # 'replacements',
+    # 'smartquotes',
+    # 'strikethrough',
+    # 'substitution',
+    'tasklist',         # - [ ] tasks
+]
 
 # -- Options for todo extension ----------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/todo.html#configuration

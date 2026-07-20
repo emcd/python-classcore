@@ -64,6 +64,40 @@ DecoratorsMutable: __.typx.TypeAlias = __.typx.Annotated[
         ''' ),
 ]
 
+ClassDecorator: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ type[ __.U ] ], type[ __.U ] ],
+    __.ddoc.Doc(
+        ''' Class decorator.
+
+            Takes class argument and returns class.
+        ''' ),
+]
+ClassDecorators: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Sequence[ ClassDecorator[ __.U ] ],
+    __.ddoc.Doc(
+        ''' Sequence of class decorators.
+
+            Each element takes a class argument and returns a class.
+        ''' ),
+]
+ClassDecoratorFactory: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ ..., ClassDecorator[ __.U ] ],
+    __.ddoc.Doc(
+        ''' Factory that produces class decorators.
+
+            Returns a class decorator when called.
+        ''' ),
+]
+ModuleReclassifier: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[ [ __.cabc.Mapping[ str, __.typx.Any ] ], None ],
+    __.ddoc.Doc(
+        ''' Reclassifies module attributes.
+
+            Takes a mapping of attribute names to values and applies
+            reclassification (e.g., immutability and concealment).
+        ''' ),
+]
+
 DecorationPreparer: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ type[ __.U ], DecoratorsMutable[ __.U ] ], None ],
     __.ddoc.Doc(
