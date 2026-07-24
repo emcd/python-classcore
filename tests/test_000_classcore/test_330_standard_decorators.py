@@ -26,7 +26,7 @@ from .__ import PACKAGE_NAME, cache_import_module
 MODULE_QNAME = f"{PACKAGE_NAME}.standard.decorators"
 
 
-def simple_assigner_core(
+def simple_assigner_core(  # noqa: PLR0917
     objct,
     ligation,
     attributes_namer,
@@ -36,7 +36,7 @@ def simple_assigner_core(
     object.__setattr__( objct, name, value )
 
 
-def simple_deleter_core(
+def simple_deleter_core(  # noqa: PLR0917
     objct,
     ligation,
     attributes_namer,
@@ -50,7 +50,7 @@ def simple_surveyor_core( objct, ligation, attributes_namer, level ):
     return object.__dir__( objct )
 
 
-def class_simple_assigner_core(
+def class_simple_assigner_core(  # noqa: PLR0917
     cls,
     ligation,
     attributes_namer,
@@ -60,7 +60,7 @@ def class_simple_assigner_core(
     type.__setattr__( cls, name, value )
 
 
-def class_simple_deleter_core(
+def class_simple_deleter_core(  # noqa: PLR0917
     cls,
     ligation,
     attributes_namer,

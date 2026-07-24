@@ -175,7 +175,7 @@ def apply_cfc_attributes_surveyor(
     decorator( clscls )
 
 
-def class_factory( # noqa: PLR0913
+def class_factory( # noqa: PLR0913, PLR0917
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ] = None,
@@ -220,7 +220,7 @@ def class_factory( # noqa: PLR0913
     return decorate
 
 
-def produce_instances_inception_decorator( # noqa: PLR0913
+def produce_instances_inception_decorator( # noqa: PLR0913, PLR0917
     attributes_namer: _nomina.AttributesNamer,
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ],
     deleter_core: __.typx.Optional[ _nomina.DeleterCore ],
@@ -532,7 +532,7 @@ def produce_attributes_surveillance_decorator(
 
 
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-def dataclass_with_standard_behaviors( # noqa: PLR0913
+def dataclass_with_standard_behaviors( # noqa: PLR0913, PLR0917
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     decorators: _nomina.Decorators[ __.U ] = ( ),
@@ -564,7 +564,7 @@ def dataclass_with_standard_behaviors( # noqa: PLR0913
         *decorators, _dataclass_core, *decorators_, preparers = preparers )
 
 
-def with_standard_behaviors( # noqa: PLR0913
+def with_standard_behaviors( # noqa: PLR0913, PLR0917
     attributes_namer: _nomina.AttributesNamer = __.calculate_attrname,
     error_class_provider: _nomina.ErrorClassProvider = __.provide_error_class,
     decorators: _nomina.Decorators[ __.U ] = ( ),
@@ -621,7 +621,7 @@ def _produce_instances_decoration_preparers(
     return tuple( preprocessors )
 
 
-def _produce_instances_decorators( # noqa: PLR0913
+def _produce_instances_decorators( # noqa: PLR0913, PLR0917
     attributes_namer: _nomina.AttributesNamer,
     error_class_provider: _nomina.ErrorClassProvider,
     assigner_core: __.typx.Optional[ _nomina.AssignerCore ],
