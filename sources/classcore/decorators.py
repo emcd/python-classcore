@@ -89,8 +89,14 @@ def produce_class_construction_decorator(
                 decorators: _nomina.Decorators[ __.T ] = ( ),
                 **arguments: __.typx.Any,
             ) -> type[ object ]:
-                superf = super( clscls, clscls_ ).__new__
-                # TODO? Short-circuit if not at start of MRO.
+                superf = __.typx.cast(
+                    _nomina.ClassConstructorLigation,
+                    super( clscls, clscls_ ).__new__ )
+                if clscls is not clscls_:
+                    # Parent metaclass within a hierarchy: delegate without
+                    # duplicating preprocessing or decoration.
+                    return superf(
+                        clscls_, name, bases, namespace, **arguments )
                 return constructor(
                     clscls_, superf,
                     name, bases, namespace, arguments, decorators )
@@ -107,7 +113,11 @@ def produce_class_construction_decorator(
                 decorators: _nomina.Decorators[ __.T ] = ( ),
                 **arguments: __.typx.Any,
             ) -> type[ object ]:
-                # TODO? Short-circuit if not at start of MRO.
+                if clscls is not clscls_:
+                    # Parent metaclass within a hierarchy: delegate without
+                    # duplicating preprocessing or decoration.
+                    return original(
+                        clscls_, name, bases, namespace, **arguments )
                 return constructor(
                     clscls_, original,
                     name, bases, namespace, arguments, decorators )
@@ -138,7 +148,11 @@ def produce_class_initialization_decorator(
                 cls: type, *posargs: __.typx.Any, **nomargs: __.typx.Any
             ) -> None:
                 ligation = super( clscls, cls ).__init__
-                # TODO? Short-circuit if not at start of MRO.
+                if clscls is not type( cls ):
+                    # Parent metaclass within a hierarchy: delegate without
+                    # duplicating completion logic.
+                    ligation( *posargs, **nomargs )
+                    return
                 initializer( cls, ligation, posargs, nomargs )
 
             clscls.__init__ = initialize_with_super
@@ -149,8 +163,12 @@ def produce_class_initialization_decorator(
             def initialize_with_original(
                 cls: type, *posargs: __.typx.Any, **nomargs: __.typx.Any
             ) -> None:
+                if clscls is not type( cls ):
+                    # Parent metaclass within a hierarchy: delegate without
+                    # duplicating completion logic.
+                    original( cls, *posargs, **nomargs )
+                    return
                 ligation = __.funct.partial( original, cls )
-                # TODO? Short-circuit if not at start of MRO.
                 initializer( cls, ligation, posargs, nomargs )
 
             clscls.__init__ = initialize_with_original

@@ -32,7 +32,56 @@ _abc_class_mutables = (
     '_abc_negative_cache',
     '_abc_negative_cache_version',
     '_abc_registry',
+    '_is_runtime_protocol',
+    '__non_callable_proto_members__',
 )
+_protocol_cls_set = frozenset( { __.typx.Protocol } )
+# Attributes never considered declared protocol members: typing internals,
+# class-creation machinery, and framework attributes declared in classcore
+# base class bodies.
+_protocol_attr_excluded = frozenset( {
+    '_is_protocol', '_is_runtime_protocol',
+    '__protocol_attrs__', '__subclasshook__',
+    '__non_callable_proto_members__',
+    '_dynadoc_fragments_',
+    # Injected during class creation by ABC, Generic, and typing machinery.
+    # '__init__' is '_no_init' on protocol bases; as a structural member it
+    # is vacuous since every candidate object has an '__init__'.
+    '__abstractmethods__', '__parameters__', '__init__', '__orig_bases__',
+} )
+_protocol_attr_prefixes = ( '_classcore_', '_abc_' )
+# Standard Python attributes present in every pre-decoration namespace.
+_python_class_defaults = frozenset( {
+    '__module__', '__qualname__', '__doc__', '__dict__', '__weakref__',
+    '__slots__', '__annotations__',
+    '__firstlineno__', '__static_attributes__', # Python 3.13+
+} )
+
+
+def _snapshot_declared_protocol_attrs( cls: type ) -> None:
+    ''' Records protocol members declared before framework decoration.
+
+        Called in metaclass '__new__' immediately after class creation,
+        before behavior decorators and dataclass machinery inject their
+        attributes. The pre-decoration namespace contains exactly the
+        members declared by the author, so a user-declared dunder (e.g.,
+        '__repr__') is preserved while framework-generated ones are absent.
+    '''
+    # Dataclass slot machinery reproduces classes, copying '__dict__'.
+    # Retain the original snapshot; the reproduction's namespace already
+    # contains decorated attributes.
+    if '_classcore_protocol_declared_' in cls.__dict__: return
+    declared = (
+        set( cls.__dict__ )
+        | set( __.inspect.get_annotations( cls ) ) )
+    declared -= _python_class_defaults
+    declared = {
+        attr for attr in declared
+        if attr not in _protocol_attr_excluded
+        and not any( attr.startswith( p ) for p in _protocol_attr_prefixes )
+    }
+    setattr( cls, '_classcore_protocol_declared_', frozenset( declared ) )
+
 _dynadoc_configuration = (
     _dynadoc.produce_dynadoc_configuration( table = __.fragments ) )
 _class_factory = __.funct.partial(
@@ -74,7 +123,7 @@ class Class( type ):
 
 @_class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-class Dataclass( type ):
+class Dataclass( Class ):
     ''' Metaclass for standard dataclasses. '''
 
     _dynadoc_fragments_ = (
@@ -95,7 +144,7 @@ class Dataclass( type ):
 
 @_class_factory( )
 @__.typx.dataclass_transform( kw_only_default = True )
-class DataclassMutable( type ):
+class DataclassMutable( Dataclass ):
     ''' Metaclass for dataclasses with mutable instance attributes. '''
 
     _dynadoc_fragments_ = (
@@ -131,12 +180,55 @@ class ProtocolClass( type( __.typx.Protocol ) ):
         decorators: _nomina.Decorators[ __.T ] = ( ),
         **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
     ) -> __.T:
-        return super( ).__new__( clscls, name, bases, namespace )
+        cls = super( ).__new__( clscls, name, bases, namespace )
+        # typing_extensions.Protocol.__init_subclass__ uses identity comparison
+        # (b is Protocol) to set _is_protocol on subclasses. Classcore protocol
+        # base classes are not typing.Protocol, so subclasses incorrectly get
+        # _is_protocol = False. Detect protocol base classes structurally and
+        # fix _is_protocol before decorators are applied
+        # (e.g., runtime_checkable).
+        if not cls.__dict__.get( '_is_protocol', False ):
+            for base in cls.__bases__:
+                if ( base.__dict__.get( '_is_protocol', False )
+                    and bool( _protocol_cls_set & set( base.__bases__ ) ) ):
+                    setattr( cls, '_is_protocol', True )
+                    break
+        if cls.__dict__.get( '_is_protocol', False ):
+            _snapshot_declared_protocol_attrs( cls )
+        return cls
+
+    def __init__(
+        cls,
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ],
+        **kwargs: __.typx.Any,
+    ) -> None:
+        super( ).__init__( name, bases, namespace, **kwargs )
+        # Replace _ProtocolMeta's scan of the decorated namespace with the
+        # pre-decoration snapshot, so isinstance() only checks declared
+        # protocol members. Snapshot persists because metaclass __init__ can
+        # run more than once when dataclass machinery reproduces classes.
+        if getattr( cls, '_is_protocol', False ):
+            declared: frozenset[ str ] = cls.__dict__.get(
+                '_classcore_protocol_declared_', frozenset( ) )
+            inherited: set[ str ] = set( )
+            for base in cls.__mro__[ 1: ]:
+                if not isinstance( base, ProtocolClass ): continue
+                inherited.update( base.__dict__.get(
+                    '__protocol_attrs__', ( ) ) )
+            attrs = {
+                attr for attr in declared | inherited
+                if attr not in _protocol_attr_excluded
+                and not any(
+                    attr.startswith( p ) for p in _protocol_attr_prefixes )
+            }
+            setattr( cls, '__protocol_attrs__', attrs )
 
 
 @_class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
-class ProtocolDataclass( type( __.typx.Protocol ) ):
+class ProtocolDataclass( ProtocolClass ):
     ''' Metaclass for standard protocol dataclasses. '''
 
     _dynadoc_fragments_ = (
@@ -157,7 +249,7 @@ class ProtocolDataclass( type( __.typx.Protocol ) ):
 
 @_class_factory( )
 @__.typx.dataclass_transform( kw_only_default = True )
-class ProtocolDataclassMutable( type( __.typx.Protocol ) ):
+class ProtocolDataclassMutable( ProtocolDataclass ):
     ''' Metaclass for protocol dataclasses with mutable instance attributes.
     '''
 
