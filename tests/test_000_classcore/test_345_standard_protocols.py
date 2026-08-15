@@ -281,6 +281,22 @@ def test_444_factory_hierarchy_delegation( ):
     assert invocations == [ 'Product' ]
 
 
+def test_445_function_local_dataclass_protocol( ):
+    ''' Function-local dataclass protocols construct despite digest
+        drift of the construction marker during slot reproduction. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    def produce( ):
+        class LocalProto( module.DataclassProtocol ):
+            y: int
+        return LocalProto
+
+    LocalProto = produce( )
+    assert LocalProto._is_protocol
+    assert 'y' in LocalProto.__protocol_attrs__
+    assert 'y' in LocalProto.__dataclass_fields__
+
+
 # =========================================================================== #
 # Dataclass Transform Preservation
 # =========================================================================== #

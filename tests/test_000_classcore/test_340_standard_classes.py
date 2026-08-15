@@ -18,7 +18,7 @@
 #============================================================================#
 
 
-# import pytest
+import pytest
 
 from .__ import PACKAGE_NAME, cache_import_module
 
@@ -46,3 +46,39 @@ def test_124_cfc_instances_ignore_init_arguments( ):
 
     u = UrlWithInit( *urlparse( 'https://python.org' ) )
     assert u.scheme == 'https'
+
+
+def test_125_cfc_function_local_dataclass( ):
+    ''' Function-local dataclass objects construct under slot
+        reproduction. During reproduction, the class is rebuilt with a
+        bare qualname, so the digest-mangled construction marker drifts;
+        detection must survive the drift. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    def produce( ):
+        class LocalData( module.DataclassObject ):
+            x: int
+        return LocalData
+
+    LocalData = produce( )
+    assert 'x' in LocalData.__dataclass_fields__
+    assert '<locals>' in LocalData.__qualname__
+    instance = LocalData( x = 3 )
+    assert 3 == instance.x
+
+
+@pytest.mark.parametrize( 'name', (
+    'DataclassObject', 'DataclassObjectMutable',
+    'DataclassProtocol', 'DataclassProtocolMutable' ) )
+def test_126_cfc_function_local_dataclass_bases( name ):
+    ''' Every dataclass base class constructs when function-local. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    def produce( ):
+        class LocalBase( getattr( module, name ) ):
+            value: int
+        return LocalBase
+
+    LocalBase = produce( )
+    assert '<locals>' in LocalBase.__qualname__
+    assert 'value' in LocalBase.__dataclass_fields__
