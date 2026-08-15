@@ -122,6 +122,32 @@ class Class( type ):
 
 
 @_class_factory( )
+class AbstractClass( Class, __.abc.ABCMeta ):
+    ''' Metaclass for abstract classes with standard behaviors.
+
+        Combines the standard behaviors of `Class` with the machinery of
+        `abc.ABCMeta` (abstract method enforcement, virtual subclass
+        registration) via a diamond hierarchy. `Class` itself remains
+        backed by plain `type`, so ABC machinery applies only where this
+        metaclass is used.
+    '''
+
+    _dynadoc_fragments_ = (
+        'cfc class conceal', 'cfc class protect', 'cfc dynadoc',
+        'cfc instance conceal', 'cfc instance protect' )
+
+    def __new__( # Typechecker stub.
+        clscls: type[ __.T ],
+        name: str,
+        bases: tuple[ type, ... ],
+        namespace: dict[ str, __.typx.Any ], *,
+        decorators: _nomina.Decorators[ __.T ] = ( ),
+        **arguments: __.typx.Unpack[ ClassFactoryExtraArguments ],
+    ) -> __.T:
+        return super( ).__new__( clscls, name, bases, namespace )
+
+
+@_class_factory( )
 @__.typx.dataclass_transform( frozen_default = True, kw_only_default = True )
 class Dataclass( Class ):
     ''' Metaclass for standard dataclasses. '''
@@ -164,7 +190,7 @@ class DataclassMutable( Dataclass ):
 
 
 @_class_factory( )
-class ProtocolClass( type( __.typx.Protocol ) ):
+class ProtocolClass( AbstractClass, type( __.typx.Protocol ) ):
     ''' Metaclass for standard protocol classes. '''
 
     _dynadoc_fragments_ = (
@@ -285,6 +311,22 @@ class ObjectMutable( metaclass = Class, instances_mutables = '*' ):
         'class instance conceal' )
 
 
+class AbstractObject(
+    metaclass = AbstractClass,
+    class_mutables = _abc_class_mutables,
+):
+    ''' Base class for abstract classes with standard behaviors.
+
+        Supports abstract method enforcement and virtual subclass
+        registration, and mixes with external classes whose metaclass is
+        `abc.ABCMeta`.
+    '''
+
+    _dynadoc_fragments_ = (
+        'class concealment', 'class protection', 'class dynadoc',
+        'class instance conceal', 'class instance protect' )
+
+
 class DataclassObject( metaclass = Dataclass ):
     ''' Standard base dataclass. '''
 
@@ -354,3 +396,41 @@ class DataclassProtocolMutable(
         'dataclass', 'protocol class',
         'class concealment', 'class protection', 'class dynadoc',
         'class instance conceal' )
+
+
+# =========================================================================== #
+# Type checker canaries. Private declarations, excluded from the public API
+# and the test suite. They exist so that Pyright (and other type checkers)
+# evaluates the structures declared above; regressions in checker support
+# surface as diagnostics on these declarations during routine linting.
+# =========================================================================== #
+
+
+class _CanaryAbstractObject( AbstractObject ):
+    ''' Canary for abstract base classes. '''
+
+    def provide( self ) -> int:
+        return 42
+
+
+class _CanaryProtocolUse( Protocol ):
+    ''' Canary for protocol definitions. '''
+
+    value: int
+
+    def greet( self ) -> str: ...
+
+
+class _CanaryProtocolImpl( _CanaryProtocolUse ):
+    ''' Canary for concrete protocol implementations. '''
+
+    def __init__( self ) -> None:
+        self.value = 7
+
+    def greet( self ) -> str:
+        return 'canary'
+
+
+_canary_abstract: int = _CanaryAbstractObject( ).provide( )
+_canary_protocol_iface: _CanaryProtocolUse = _CanaryProtocolImpl( )
+_canary_greeting: str = _canary_protocol_iface.greet( )

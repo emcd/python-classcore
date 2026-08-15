@@ -381,8 +381,13 @@ sources/
 : Standard metaclasses and base classes:
 
   - `Class` / `Object`: Standard class with full behaviors
+  - `AbstractClass` / `AbstractObject`: Abstract class with ABC machinery
+    (abstract method enforcement, virtual subclass registration); mixes
+    with external `abc.ABCMeta`-based classes
   - `Dataclass` / `DataclassObject`: Auto-dataclass with behaviors
-  - `Protocol` / `ProtocolObject`: Protocol with behaviors
+  - `ProtocolClass` / `Protocol`, `ProtocolMutable`,
+    `DataclassProtocol`, `DataclassProtocolMutable`: Protocol classes
+    with behaviors
   - Mutable variants for each
 
 `decorators.py`
