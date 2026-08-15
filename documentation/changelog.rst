@@ -23,6 +23,44 @@ Release Notes
 
 .. towncrier release notes start
 
+classcore 1.12 (2026-08-15)
+===========================
+
+Enhancements
+------------
+
+- Add abstract base class support: ``AbstractClass`` metaclass and
+  ``AbstractObject`` base class combine standard behaviors with
+  ``abc.ABCMeta`` machinery (abstract method enforcement, virtual subclass
+  registration), and mix with external ABC-based classes without
+  metaclass conflicts. Re-parent ``ProtocolClass`` under ``AbstractClass``,
+  unifying the standard metaclass taxonomy under ``Class``.
+- Improve API documentation for class construction and initialization
+  signatures, including parameter descriptions and the metaclass
+  delegation contract.
+
+
+Repairs
+-------
+
+- Establish proper inheritance hierarchies for standard metaclasses.
+  ``Dataclass`` now inherits from ``Class``, ``DataclassMutable`` from
+  ``Dataclass``, ``ProtocolDataclass`` from ``ProtocolClass``, and
+  ``ProtocolDataclassMutable`` from ``ProtocolDataclass``. This eliminates
+  metaclass conflicts when inheriting from classes backed by different
+  metaclasses in the same family.
+- Fix ``typing.runtime_checkable`` support for classcore protocol classes.
+  ``@runtime_checkable`` can now be applied via the ``decorators=``
+  metaclass argument or directly after class creation.
+  ``isinstance()`` structural subtyping works correctly with
+  ``@runtime_checkable`` classcore protocols.
+- Fix runtime protocol recognition for subclasses of classcore protocol
+  base classes. Previously, ``typing_extensions.Protocol.__init_subclass__``
+  set ``_is_protocol = False`` on these subclasses due to an identity check
+  that did not recognize classcore's own protocol base classes. Subclasses
+  are now properly detected via structural analysis.
+
+
 classcore 1.11 (2026-07-19)
 ===========================
 
