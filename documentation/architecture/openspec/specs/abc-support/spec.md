@@ -1,8 +1,14 @@
 # abc-support Specification
 
 ## Purpose
-TBD - created by archiving change add-abc-support. Update Purpose after archive.
+
+Opt-in abstract base class support: combine standard behaviors with
+`abc.ABCMeta` machinery for abstract classes that mix with external
+ABC-based classes, and unify the protocol metaclass taxonomy under
+`Class`.
+
 ## Requirements
+
 ### Requirement: Abstract Class Metaclass
 
 The `AbstractClass` metaclass MUST combine the standard behaviors of
@@ -79,4 +85,3 @@ of `typing.Protocol`, unifying the metaclass taxonomy under `Class`.
   `AbstractClass`) implements all members of a `@runtime_checkable`
   classcore protocol
 - **THEN** `isinstance()` MUST return `True` for that protocol
-
