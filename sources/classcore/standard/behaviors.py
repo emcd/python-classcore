@@ -224,7 +224,7 @@ def produce_class_construction_preprocessor(
 ) -> _nomina.ClassConstructionPreprocessor[ __.U ]:
     ''' Produces construction processor which handles metaclass arguments. '''
 
-    def preprocess( # noqa: PLR0913
+    def preprocess( # noqa: PLR0913, PLR0917
         clscls: type,
         name: str,
         bases: list[ type ],

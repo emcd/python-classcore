@@ -40,17 +40,27 @@ class Point2d(DataclassObject):
         self.hypotenuse = sqrt(x*x + y*y)
 ```
 
-### `ProtocolObject`
+### `Protocol`
 
-Protocol class with immutability and concealment. Combines `typing.Protocol`
-with standard behaviors. Immutability and concealment are inherited by
-subclassed implementations.
+Protocol base class with immutability and concealment. Combines
+`typing.Protocol` with standard behaviors. Immutability and concealment
+are inherited by subclassed implementations. Dataclass protocol bases
+(`DataclassProtocol`, `DataclassProtocolMutable`) additionally provide
+automatic dataclass conversion.
+
+### `AbstractObject`
+
+Abstract base class with immutability and concealment. Combines standard
+behaviors with `abc.ABCMeta` machinery: abstract method enforcement and
+virtual subclass registration. Mixes with external ABC-based classes
+without metaclass conflicts.
 
 ### Mutable Variants
 
 - `ObjectMutable`: Object with concealment only (no immutability)
 - `DataclassObjectMutable`: DataclassObject with concealment only
-- `ProtocolObjectMutable`: ProtocolObject with concealment only
+- `ProtocolMutable`: Protocol with concealment only
+- `DataclassProtocolMutable`: DataclassProtocol with concealment only
 
 ## Metaclasses
 
@@ -64,27 +74,35 @@ any class that uses this metaclass.
 Metaclass that automatically applies `dataclasses.dataclass` during class
 construction. Configurable for `frozen`, `slots`, etc.
 
-### `Protocol`
+### `AbstractClass`
+
+Metaclass combining `Class` with `abc.ABCMeta`. Supports abstract method
+enforcement and virtual subclass registration for classes that must mix
+with external ABC-based classes.
+
+### `ProtocolClass`
 
 Metaclass for protocol classes. Combines `typing.Protocol` with standard
-behaviors.
+behaviors. Descends from `AbstractClass`, unifying the standard metaclass
+taxonomy under `Class`. Dataclass protocol metaclasses
+(`ProtocolDataclass`, `ProtocolDataclassMutable`) additionally apply
+dataclass conversion.
 
 ### Mutable Variants
 
-- `ClassMutable`: Metaclass with concealment only
-- `DataclassMutable`: Dataclass metaclass with concealment only
-- `ProtocolMutable`: Protocol metaclass with concealment only
+- `DataclassMutable`: Dataclass metaclass whose instances have mutable
+  attributes (concealment only)
 
 ## Decorators
 
-### `class_with_standard_behaviors`
+### `with_standard_behaviors`
 
 Apply standard behaviors to an existing class.
 
 ```python
-from classcore.standard import class_with_standard_behaviors
+from classcore.standard import with_standard_behaviors
 
-@class_with_standard_behaviors()
+@with_standard_behaviors()
 class ExistingClass:
     x: int = 10
 ```
@@ -101,10 +119,6 @@ class Point:
     x: float
     y: float
 ```
-
-### `protocol_with_standard_behaviors`
-
-Create a protocol with standard behaviors applied.
 
 ### `class_factory`
 

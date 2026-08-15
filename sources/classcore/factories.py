@@ -34,7 +34,7 @@ def produce_class_constructor(
 ) -> _nomina.ClassConstructor[ __.T ]:
     ''' Produces constructors for classes. '''
 
-    def construct( # noqa: PLR0913
+    def construct( # noqa: PLR0913, PLR0917
         clscls: type[ __.T ],
         superf: _nomina.ClassConstructorLigation,
         name: str,

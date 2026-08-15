@@ -214,29 +214,52 @@ ClassInitializationCompleters: __.typx.TypeAlias = __.typx.Annotated[
 ClassConstructor: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
         [
-            type,
-            ClassConstructorLigation,
-            str,
-            tuple[ type, ... ],
-            dict[ str, __.typx.Any ],
-            __.NominativeArguments,
-            Decorators[ __.U ],
+            type,                        # metaclass
+            ClassConstructorLigation,    # next constructor in metaclass MRO
+            str,                         # class name
+            tuple[ type, ... ],          # bases
+            dict[ str, __.typx.Any ],    # namespace
+            __.NominativeArguments,      # metaclass arguments
+            Decorators[ __.U ],          # decorators to apply after
         ],
         type
     ],
-    __.ddoc.Doc( ''' Constructor to use with metaclass. ''' ),
+    __.ddoc.Doc(
+        ''' Constructs class, then applies hooks.
+
+            Receives the metaclass ('clscls'), the next constructor in
+            the metaclass MRO ('superf'), the class name, bases,
+            namespace, metaclass arguments, and decorators to apply
+            after construction. Calls 'superf' to create the class,
+            then applies postprocessors and decorators.
+
+            Invoked only at the most-derived metaclass of a class.
+            Class factory wrappers on parent metaclasses delegate
+            directly, so construction hooks execute exactly once per
+            class.
+        ''' ),
 ]
 ClassInitializer: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[
         [
-            type,
-            InitializerLigation,
-            __.PositionalArguments,
-            __.NominativeArguments,
+            type,                        # class
+            InitializerLigation,         # next initializer in metaclass MRO
+            __.PositionalArguments,      # positional arguments
+            __.NominativeArguments,      # nominative arguments
         ],
         None
     ],
-    __.ddoc.Doc( ''' Initializer to use with metaclass. ''' ),
+    __.ddoc.Doc(
+        ''' Initializes class, then applies hooks.
+
+            Receives the class ('cls'), the next initializer in the
+            metaclass MRO ('superf'), positional arguments, and
+            nominative arguments. Calls 'superf' first, then applies
+            completers, which finalize class behaviors (e.g., enable
+            immutability once all other initialization has occurred).
+
+            Invoked only at the most-derived metaclass of a class.
+        ''' ),
 ]
 
 

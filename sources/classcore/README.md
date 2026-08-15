@@ -83,19 +83,20 @@ Pre-configured implementations for common use cases:
 **Base Classes:**
 - `Object`: Standard class with immutability and concealment
 - `DataclassObject`: Automatic dataclass conversion with standard behaviors
-- `ProtocolObject`: Protocol class with immutability and concealment
+- `Protocol`: Protocol base class with immutability and concealment
+- `AbstractObject`: Abstract class with ABC machinery and behaviors
 - Variants for selective mutability (`ObjectMutable`, etc.)
 
 **Metaclasses:**
 - `Class`: Metaclass for standard classes
 - `Dataclass`: Metaclass that auto-applies dataclass decorator
-- `Protocol`: Metaclass for protocol classes
+- `AbstractClass`: Metaclass combining `Class` with `abc.ABCMeta`
+- `ProtocolClass`: Metaclass for protocol classes
 - Mutable variants of each
 
 **Decorators:**
-- `class_with_standard_behaviors`: Add behaviors to existing classes
+- `with_standard_behaviors`: Add behaviors to existing classes
 - `dataclass_with_standard_behaviors`: Dataclass creation with behaviors
-- `protocol_with_standard_behaviors`: Protocol creation with behaviors
 
 **Module Utilities:**
 - `reclassify_module`: Apply immutability and concealment to module objects
@@ -381,16 +382,20 @@ sources/
 : Standard metaclasses and base classes:
 
   - `Class` / `Object`: Standard class with full behaviors
+  - `AbstractClass` / `AbstractObject`: Abstract class with ABC machinery
+    (abstract method enforcement, virtual subclass registration); mixes
+    with external `abc.ABCMeta`-based classes
   - `Dataclass` / `DataclassObject`: Auto-dataclass with behaviors
-  - `Protocol` / `ProtocolObject`: Protocol with behaviors
+  - `ProtocolClass` / `Protocol`, `ProtocolMutable`,
+    `DataclassProtocol`, `DataclassProtocolMutable`: Protocol classes
+    with behaviors
   - Mutable variants for each
 
 `decorators.py`
 : Standard class decorators:
 
-  - `class_with_standard_behaviors`: Apply behaviors to existing class
+  - `with_standard_behaviors`: Apply behaviors to existing class
   - `dataclass_with_standard_behaviors`: Create dataclass with behaviors
-  - `protocol_with_standard_behaviors`: Create protocol with behaviors
   - `class_factory`: Generic factory for creating custom metaclasses
 
 `dynadoc.py`
