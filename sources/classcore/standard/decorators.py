@@ -47,8 +47,10 @@ def prepare_dataclass_for_instances(
     ''' Annotates dataclass in support of instantiation machinery. '''
     annotations = __.inspect.get_annotations( cls )
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    # TODO: Only use mangling if not slotted.
-    # behaviors_name_ = _utilities.mangle_name( cls, behaviors_name )
+    # NOTE: The behaviors field is a dataclass field, so its name must
+    #       stay unmangled; mangling would desynchronize the field from
+    #       the slot or class attribute installed by the dataclass
+    #       machinery, which addresses it by its plain name.
     behaviors_name_ = behaviors_name
     annotations[ behaviors_name_ ] = set[ str ]
     setattr( cls, '__annotations__', annotations ) # in case of absence
