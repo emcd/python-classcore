@@ -37,7 +37,7 @@ Produces metaclass components with customizable hooks:
 - `produce_class_constructor`: Creates `__new__` implementations with
   preprocessor and postprocessor hooks
 - `produce_class_initializer`: Creates `__init__` implementations with
-  completer hooks
+  preparer and completer hooks
 
 These factories enable the construction of metaclasses that can intercept and
 augment class creation at multiple lifecycle points.

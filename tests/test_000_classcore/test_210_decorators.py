@@ -47,3 +47,73 @@ def test_111_produce_class_initialization_decorator_original( ):
             self._hello = 'Hi'
     class Object( metaclass = Class ): pass
     assert Object._hello == 'Hi'
+
+
+def test_112_produce_class_initializer_preparers( ):
+    ''' Preparers mutate arguments before initialization ligation. '''
+    module = cache_import_module( MODULE_QNAME )
+    base_module = cache_import_module( f"{PACKAGE_NAME}.__" )
+    factories_module = cache_import_module( f"{PACKAGE_NAME}.factories" )
+    received: list[ tuple[ tuple, dict ] ] = [ ]
+
+    def preparer( cls, posargs, nomargs ):
+        posargs.append( 'extra' )
+        nomargs[ 'converted' ] = nomargs.pop( 'convert', None )
+        received.append( ( tuple( posargs ), dict( nomargs ) ) )
+
+    initializer = factories_module.produce_class_initializer(
+        attributes_namer = base_module.calculate_attrname,
+        preparers = ( preparer, ) )
+    idecorator = module.produce_class_initialization_decorator(
+        attributes_namer = base_module.calculate_attrname,
+        initializer = initializer )
+
+    @idecorator
+    class Class( type ):
+        def __init__( self, *posargs, **nomargs ):
+            self._received = ( posargs, nomargs )
+
+    class Base:
+        def __init_subclass__( cls, **nomargs ): pass
+
+    class Object( Base, metaclass = Class, convert = 'value' ): pass
+    posargs, nomargs = Object._received
+    assert 'Object' == posargs[ 0 ]
+    assert ( Base, ) == posargs[ 1 ]
+    assert 'extra' == posargs[ -1 ]
+    assert dict( converted = 'value' ) == nomargs
+    assert 1 == len( received )
+
+
+def test_113_produce_class_initializer_completers_positional( ):
+    ''' Completers remain the second positional parameter. '''
+    module = cache_import_module( MODULE_QNAME )
+    base_module = cache_import_module( f"{PACKAGE_NAME}.__" )
+    factories_module = cache_import_module( f"{PACKAGE_NAME}.factories" )
+    completed: list[ type ] = [ ]
+
+    def completer( cls ): completed.append( cls )
+
+    def preparer( cls, posargs, nomargs ): nomargs[ 'prepared' ] = True
+
+    initializer = factories_module.produce_class_initializer(
+        base_module.calculate_attrname, ( completer, ),
+        preparers = ( preparer, ) )
+    idecorator = module.produce_class_initialization_decorator(
+        attributes_namer = base_module.calculate_attrname,
+        initializer = initializer )
+
+    ligated: list[ dict ] = [ ]
+
+    @idecorator
+    class Class( type ):
+        def __init__( self, *posargs, **nomargs ):
+            ligated.append( nomargs )
+
+    class Base:
+        def __init_subclass__( cls, **nomargs ): pass
+
+    class Object( Base, metaclass = Class ): pass
+    assert [ Object ] == completed
+    assert 1 == len( ligated )
+    assert True is ligated[ 0 ].get( 'prepared' )

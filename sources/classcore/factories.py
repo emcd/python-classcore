@@ -77,6 +77,8 @@ def produce_class_constructor(
 def produce_class_initializer(
     attributes_namer: _nomina.AttributesNamer,
     completers: _nomina.ClassInitializationCompleters = ( ),
+    *,
+    preparers: _nomina.ClassInitializationPreparers = ( ),
 ) -> _nomina.ClassInitializer:
     ''' Produces initializers for classes. '''
 
@@ -87,7 +89,10 @@ def produce_class_initializer(
         nomargs: __.NominativeArguments,
     ) -> None:
         ''' Initializes class, applying hooks. '''
-        superf( *posargs, **nomargs )
+        posargs_ = list( posargs )
+        nomargs_ = dict( nomargs )
+        for preparer in preparers: preparer( cls, posargs_, nomargs_ )
+        superf( *posargs_, **nomargs_ )
         progress_name = attributes_namer( 'class', 'in_progress' )
         progress_names = _utilities.survey_mangled_names( cls, progress_name )
         in_progress = any(

@@ -194,7 +194,26 @@ ClassConstructionPostprocessors: __.typx.TypeAlias = __.typx.Annotated[
     __.ddoc.Doc(
         ''' Processors to apply before decoration of class. ''' ),
 ]
-# TODO: ClassInitializationPreparer (arguments mutation)
+ClassInitializationPreparer: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Callable[
+        [
+            type,                        # class
+            list[ __.typx.Any ],         # positional arguments (mutable)
+            dict[ str, __.typx.Any ],    # nominative arguments (mutable)
+        ],
+        None
+    ],
+    __.ddoc.Doc(
+        ''' Processes initialization arguments before ligation.
+
+            For use cases, such as argument conversion or removal.
+        ''' ),
+]
+ClassInitializationPreparers: __.typx.TypeAlias = __.typx.Annotated[
+    __.cabc.Sequence[ ClassInitializationPreparer ],
+    __.ddoc.Doc(
+        ''' Processors to apply before ligation of initialization. ''' ),
+]
 ClassInitializationCompleter: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ type ], None ],
     __.ddoc.Doc(
