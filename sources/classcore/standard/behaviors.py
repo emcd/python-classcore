@@ -48,6 +48,111 @@ def access_core_function( # noqa: PLR0913
         or  getattr( cls, attribute_name, default ) )
 
 
+def survey_active_behaviors(
+    objct: object, /, *,
+    attributes_namer: _nomina.AttributesNamer,
+    level: str,
+) -> __.cabc.Set[ str ]:
+    ''' Returns active behaviors set for object at level.
+
+        This is the shared entry point of the behavior decision cascade:
+        every core first determines whether the governing behavior is
+        active before consulting exclusion configuration.
+    '''
+    leveli = 'instance' if level == 'instances' else level
+    behaviors_name = attributes_namer( leveli, 'behaviors' )
+    behaviors: __.cabc.Set[ str ] = (
+        _utilities.getattr0( objct, behaviors_name, frozenset( ) ) )
+    return behaviors
+
+
+def survey_first_permitting_rule(
+    objct: object, /, *,
+    attributes_namer: _nomina.AttributesNamer,
+    level: str,
+    basename: str,
+    name: str,
+) -> __.typx.Optional[ tuple[ str, str ] ]:
+    ''' Returns first exclusion rule permitting operation, else None.
+
+        Rules apply by precedence: wildcard or names membership, then
+        the first matching predicate, then the first matching regex.
+        Each rule is a pair of kind ('wildcard', 'names', 'predicate',
+        'regex') and detail text.
+    '''
+    names_name = attributes_namer( level, f"{basename}_names" )
+    names: _nomina.BehaviorExclusionNamesOmni = (
+        getattr( objct, names_name, frozenset( ) ) )
+    if names == '*': return ( 'wildcard', '*' )
+    if name in names: return ( 'names', name )
+    predicates_name = attributes_namer( level, f"{basename}_predicates" )
+    predicates: _nomina.BehaviorExclusionPredicates = (
+        getattr( objct, predicates_name, ( ) ) )
+    for predicate in predicates:
+        if predicate( name ):
+            return ( 'predicate', render_verifier_text( predicate ) )
+    regexes_name = attributes_namer( level, f"{basename}_regexes" )
+    regexes: _nomina.BehaviorExclusionRegexes = (
+        getattr( objct, regexes_name, ( ) ) )
+    for regex in regexes:
+        if regex.fullmatch( name ):
+            return ( 'regex', regex.pattern )
+    return None
+
+
+def survey_matched_rules(
+    objct: object, /, *,
+    attributes_namer: _nomina.AttributesNamer,
+    level: str,
+    basename: str,
+    name: str,
+) -> tuple[ tuple[ str, str ], ... ]:
+    ''' Returns exclusion rules matching name, in evaluation order.
+
+        A names match short-circuits, matching the survey core's
+        historical control flow: predicates and regexes are not evaluated
+        for a name found in the exclusion names. Otherwise a name may
+        match any number of predicates and any number of regexes. The
+        wildcard is not considered here; callers handle its
+        short-circuit separately.
+    '''
+    names_name = attributes_namer( level, f"{basename}_names" )
+    names: _nomina.BehaviorExclusionNamesOmni = (
+        getattr( objct, names_name, frozenset( ) ) )
+    if name in names: return ( ( 'names', name ), )
+    predicates_name = attributes_namer( level, f"{basename}_predicates" )
+    predicates: _nomina.BehaviorExclusionPredicates = (
+        getattr( objct, predicates_name, ( ) ) )
+    matched: list[ tuple[ str, str ] ] = [
+        ( 'predicate', render_verifier_text( predicate ) )
+        for predicate in predicates if predicate( name ) ]
+    regexes_name = attributes_namer( level, f"{basename}_regexes" )
+    regexes: _nomina.BehaviorExclusionRegexes = (
+        getattr( objct, regexes_name, ( ) ) )
+    matched.extend(
+        ( 'regex', regex.pattern )
+        for regex in regexes if regex.fullmatch( name ) )
+    return tuple( matched )
+
+
+def render_verifier_text( verifier: __.typx.Any, / ) -> str:
+    ''' Returns stable detail text for an exclusion verifier.
+
+        Regexes render as pattern text; predicates render as
+        fully-qualified name, with an anonymous fallback when no
+        qualified name is available. Strings do not reach this
+        function; they are classified as names before rendering.
+    '''
+    pattern = getattr( verifier, 'pattern', None )
+    if pattern is not None: return __.typx.cast( str, pattern )
+    qualname = getattr( verifier, '__qualname__', None )
+    if qualname is None: return '<anonymous>'
+    module = getattr( verifier, '__module__', None )
+    if module is None or '<locals>' in qualname:
+        return qualname
+    return f"{module}.{qualname}"
+
+
 def assign_attribute_if_mutable( # noqa: PLR0913
     obj: object, /, *,
     ligation: _nomina.AssignerLigation,
@@ -58,34 +163,17 @@ def assign_attribute_if_mutable( # noqa: PLR0913
     value: __.typx.Any,
 ) -> None:
     ''' Assigns attribute if it is mutable, else raises error. '''
-    leveli = 'instance' if level == 'instances' else level
-    behaviors_name = attributes_namer( leveli, 'behaviors' )
-    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
+    behaviors = survey_active_behaviors(
+        obj, attributes_namer = attributes_namer, level = level )
     if _nomina.immutability_label not in behaviors:
         ligation( name, value )
         return
-    names_name = attributes_namer( level, 'mutables_names' )
-    names: _nomina.BehaviorExclusionNamesOmni = (
-        getattr( obj, names_name, frozenset( ) ) )
-    if names == '*' or name in names:
+    rule = survey_first_permitting_rule(
+        obj, attributes_namer = attributes_namer,
+        level = level, basename = 'mutables', name = name )
+    if rule is not None:
         ligation( name, value )
         return
-    predicates_name = attributes_namer( level, 'mutables_predicates' )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( obj, predicates_name, ( ) ) )
-    for predicate in predicates:
-        if predicate( name ):
-            # TODO? Cache predicate hit.
-            ligation( name, value )
-            return
-    regexes_name = attributes_namer( level, 'mutables_regexes' )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    for regex in regexes:
-        if regex.fullmatch( name ):
-            # TODO? Cache regex hit.
-            ligation( name, value )
-            return
     target = _utilities.describe_object( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
@@ -99,34 +187,17 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     name: str,
 ) -> None:
     ''' Deletes attribute if it is mutable, else raises error. '''
-    leveli = 'instance' if level == 'instances' else level
-    behaviors_name = attributes_namer( leveli, 'behaviors' )
-    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
+    behaviors = survey_active_behaviors(
+        obj, attributes_namer = attributes_namer, level = level )
     if _nomina.immutability_label not in behaviors:
         ligation( name )
         return
-    names_name = attributes_namer( level, 'mutables_names' )
-    names: _nomina.BehaviorExclusionNamesOmni = (
-        getattr( obj, names_name, frozenset( ) ) )
-    if names == '*' or name in names:
+    rule = survey_first_permitting_rule(
+        obj, attributes_namer = attributes_namer,
+        level = level, basename = 'mutables', name = name )
+    if rule is not None:
         ligation( name )
         return
-    predicates_name = attributes_namer( level, 'mutables_predicates' )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( obj, predicates_name, ( ) ) )
-    for predicate in predicates:
-        if predicate( name ):
-            # TODO? Cache predicate hit.
-            ligation( name )
-            return
-    regexes_name = attributes_namer( level, 'mutables_regexes' )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    for regex in regexes:
-        if regex.fullmatch( name ):
-            # TODO? Cache regex hit.
-            ligation( name )
-            return
     target = _utilities.describe_object( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
 
@@ -139,35 +210,22 @@ def survey_visible_attributes(
 ) -> __.cabc.Iterable[ str ]:
     ''' Returns sequence of visible attributes. '''
     names_base = ligation( )
-    leveli = 'instance' if level == 'instances' else level
-    behaviors_name = attributes_namer( leveli, 'behaviors' )
-    behaviors = _utilities.getattr0( obj, behaviors_name, frozenset( ) )
+    behaviors = survey_active_behaviors(
+        obj, attributes_namer = attributes_namer, level = level )
     if _nomina.concealment_label not in behaviors: return names_base
     names_name = attributes_namer( level, 'visibles_names' )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( obj, names_name, frozenset( ) ) )
     if names == '*': return names_base # pragma: no branch
-    regexes_name = attributes_namer( level, 'visibles_regexes' )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( obj, regexes_name, ( ) ) )
-    predicates_name = attributes_namer( level, 'visibles_predicates' )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( obj, predicates_name, ( ) ) )
     names_: list[ str ] = [ ]
     for name in names_base:
-        if name in names:
-            names_.append( name )
-            continue
-        for predicate in predicates:
-            if predicate( name ):
-                # TODO? Cache predicate hit.
-                names_.append( name )
-                continue
-        for regex in regexes:
-            if regex.fullmatch( name ):
-                # TODO? Cache regex hit.
-                names_.append( name )
-                continue
+        matched = survey_matched_rules(
+            obj, attributes_namer = attributes_namer,
+            level = level, basename = 'visibles', name = name )
+        # Current behavior: one append per matched rule, so a name
+        # matching several rules is yielded several times. Preserved
+        # deliberately; normalization is a separate repair.
+        names_.extend( name for rule in matched )
     return names_
 
 

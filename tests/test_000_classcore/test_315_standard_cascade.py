@@ -244,3 +244,134 @@ def test_315_survey_wildcard_short_circuits( ):
         level = 'instances' ) )
     assert [ 'alpha' ] == visible
     assert [ ] == calls
+
+
+def test_316_survey_names_match_skips_rules( ):
+    ''' A names match short-circuits predicate and regex evaluation.
+
+        Characterizes the original control flow, where a names match
+        continued the outer per-name loop: with a name rule overlapping
+        predicate and regex rules, the name is yielded once and no
+        predicate or regex runs for it.
+    '''
+    module = cache_import_module( MODULE_QNAME )
+    base = cache_import_module( f"{PACKAGE_NAME}.__" )
+    utilities = cache_import_module( f"{PACKAGE_NAME}.utilities" )
+
+    calls: list[ str ] = [ ]
+
+    def recording_predicate( name: str ) -> bool:
+        calls.append( name )
+        return True
+
+    class Example: pass
+    example = Example( )
+    utilities.setattr0(
+        example, base.calculate_attrname( 'instance', 'behaviors' ),
+        frozenset( ( 'concealment', ) ) )
+    setattr( example,
+        base.calculate_attrname( 'instances', 'visibles_names' ),
+        frozenset( ( 'alpha', ) ) )
+    setattr( example,
+        base.calculate_attrname( 'instances', 'visibles_predicates' ),
+        ( recording_predicate, ) )
+    setattr( example,
+        base.calculate_attrname( 'instances', 'visibles_regexes' ),
+        ( re.compile( 'al.*' ), ) )
+
+    visible = list( module.survey_visible_attributes(
+        example, ligation = lambda: [ 'alpha' ],
+        attributes_namer = base.calculate_attrname,
+        level = 'instances' ) )
+    assert [ 'alpha' ] == visible
+    assert [ ] == calls
+
+
+def test_320_render_verifier_text( ):
+    ''' Verifier rendering: pattern text, qualified names, fallbacks. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    assert 'al.*' == module.render_verifier_text( re.compile( 'al.*' ) )
+    assert (
+        f"{__name__}._predicate_matches_alpha"
+        == module.render_verifier_text( _predicate_matches_alpha ) )
+    assert '<anonymous>' == module.render_verifier_text( object( ) )
+
+    def local_predicate( name: str ) -> bool: return True
+
+    assert (
+        'test_320_render_verifier_text.<locals>.local_predicate'
+        == module.render_verifier_text( local_predicate ) )
+
+
+def test_321_first_permitting_rule_precedence( ):
+    ''' First permitting rule follows wildcard/names/predicate/regex
+        precedence and reports kind with detail text. '''
+    module = cache_import_module( MODULE_QNAME )
+    base = cache_import_module( f"{PACKAGE_NAME}.__" )
+    namer = base.calculate_attrname
+
+    class Stub: pass
+    stub = Stub( )
+
+    setattr( stub, namer( 'instances', 'mutables_names' ), '*' )
+    assert ( 'wildcard', '*' ) == module.survey_first_permitting_rule(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'mutables', name = 'anything' )
+
+    setattr( stub, namer( 'instances', 'mutables_names' ),
+        frozenset( ( 'alpha', ) ) )
+    assert ( 'names', 'alpha' ) == module.survey_first_permitting_rule(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'mutables', name = 'alpha' )
+
+    setattr( stub, namer( 'instances', 'mutables_names' ), frozenset( ) )
+    setattr( stub, namer( 'instances', 'mutables_predicates' ),
+        ( _predicate_matches_alpha, ) )
+    setattr( stub, namer( 'instances', 'mutables_regexes' ),
+        ( re.compile( 'al.*' ), ) )
+    assert ( 'predicate', f"{__name__}._predicate_matches_alpha"
+        ) == module.survey_first_permitting_rule(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'mutables', name = 'alpha' )
+
+    setattr( stub, namer( 'instances', 'mutables_predicates' ), ( ) )
+    assert ( 'regex', 'al.*' ) == module.survey_first_permitting_rule(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'mutables', name = 'alpha' )
+
+    setattr( stub, namer( 'instances', 'mutables_regexes' ), ( ) )
+    assert None is module.survey_first_permitting_rule(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'mutables', name = 'alpha' )
+
+
+def test_322_matched_rules_union( ):
+    ''' Matched rules report predicate/regex matches in evaluation order;
+        a names match short-circuits to the single names rule. '''
+    module = cache_import_module( MODULE_QNAME )
+    base = cache_import_module( f"{PACKAGE_NAME}.__" )
+    namer = base.calculate_attrname
+
+    class Stub: pass
+    stub = Stub( )
+    setattr( stub, namer( 'instances', 'visibles_names' ),
+        frozenset( ( 'alpha', ) ) )
+    assert ( ( 'names', 'alpha' ), ) == module.survey_matched_rules(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'visibles', name = 'alpha' )
+
+    setattr( stub, namer( 'instances', 'visibles_names' ), frozenset( ) )
+    setattr( stub, namer( 'instances', 'visibles_predicates' ),
+        ( _predicate_matches_alpha, ) )
+    setattr( stub, namer( 'instances', 'visibles_regexes' ),
+        ( re.compile( 'al.*' ), ) )
+
+    assert (
+        ( 'predicate', f"{__name__}._predicate_matches_alpha" ),
+        ( 'regex', 'al.*' ) ) == module.survey_matched_rules(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'visibles', name = 'alpha' )
+    assert ( ) == module.survey_matched_rules(
+        stub, attributes_namer = namer, level = 'instances',
+        basename = 'visibles', name = 'beta' )
