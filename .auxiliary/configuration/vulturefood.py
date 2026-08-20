@@ -26,3 +26,18 @@ reclassify_modules
 __class__
 class_
 delattr0
+
+# Attribute explanations (fields consumed via attribute access)
+explain_attribute
+AssignVerdict
+DeleteVerdict
+SurveyVerdict
+DecisionRule
+AttributeExplanation
+permitted
+decider
+matched
+internal
+kind
+detail
+level

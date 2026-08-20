@@ -8,10 +8,10 @@ level, and for each operation the applicable verdict. Assign and delete
 verdicts MUST carry the single deciding rule under precedence — wildcard
 or names membership, then the first matching predicate, then the first
 matching regex — or no rule when the governing behavior is inactive.
-Survey verdicts MUST carry the ordered sequence of all matched rules
-under union semantics: names membership, then predicates in order, then
-regexes in order; a rule may be absent from every verdict.
-
+Survey verdicts carry the ordered sequence of matched rules under union
+semantics — where a names match short-circuits to the single names
+rule and otherwise a rule may match any number of predicates and
+regexes in evaluation order.
 For class targets, the classes-level configuration MUST be evaluated.
 For instance targets, the instances-level configuration MUST be
 evaluated against the instance's class hierarchy. Survey verdicts MUST
@@ -58,9 +58,17 @@ immutability.
   sequence MUST be empty
 
 #### Scenario: Survey multi-match
-- **WHEN** the attribute name matches both a predicate and a regex
+- **WHEN** the attribute name matches both a predicate and a regex and
+  is not in the exclusion names
 - **THEN** the survey matched sequence MUST contain both rules, in
   evaluation order
+
+#### Scenario: Survey names short-circuit
+- **WHEN** the attribute name is in the exclusion names for the survey
+  level and also matches a predicate or regex
+- **THEN** the survey matched sequence MUST contain only the single
+  names rule, and predicates and regexes MUST NOT be evaluated for that
+  name
 
 #### Scenario: Survey wildcard
 - **WHEN** concealment is active and the visibles names equal `'*'`

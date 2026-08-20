@@ -297,6 +297,7 @@ sources/
         ├── classes.py           # Standard metaclasses and base classes
         ├── decorators.py        # Standard class decorators
         ├── dynadoc.py           # Documentation configuration
+        ├── explanations.py      # Attribute behavior explanations
         ├── modules.py           # Module reclassification utilities
         └── nomina.py            # Standard-specific naming types
 ```
@@ -377,6 +378,14 @@ sources/
   - `delete_attribute_if_mutable`: Conditional attribute deletion
   - `survey_visible_attributes`: Filter attributes for `dir()`
   - Verifier processing for names, regexes, and predicates
+
+`explanations.py`
+: Explanations of attribute behavior decisions:
+
+  - `explain_attribute`: Decision trace for one attribute of one target
+  - `AttributeExplanation`, `AssignVerdict`, `DeleteVerdict`,
+    `SurveyVerdict`, `DecisionRule`: Immutable explanation records
+  - Marking of framework-owned and stdlib-machinery attributes
 
 `classes.py`
 : Standard metaclasses and base classes:
