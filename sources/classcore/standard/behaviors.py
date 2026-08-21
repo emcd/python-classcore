@@ -142,6 +142,11 @@ def render_verifier_text( verifier: __.typx.Any, / ) -> str:
         fully-qualified name, with an anonymous fallback when no
         qualified name is available. Strings do not reach this
         function; they are classified as names before rendering.
+
+        Note: the inspect utilities were considered and rejected here;
+        they resolve modules to objects and provide no qualified-name
+        rendering with an anonymous fallback, while this getattr chain
+        stays defensive for exotic callables (e.g., partials).
     '''
     pattern = getattr( verifier, 'pattern', None )
     if pattern is not None: return __.typx.cast( str, pattern )

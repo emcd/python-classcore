@@ -124,3 +124,20 @@ collection.
     Traceback (most recent call last):
         ...
     classcore.exceptions.AttributeImmutability: Could not assign or delete attribute 'name' on instance of class 'classcore.standard.explanations.AttributeExplanation'.
+
+
+Summaries
+===============================================================================
+
+The explanation record renders a human-readable summary of the whole
+decision trace, so digging through attributes and mappings is only
+necessary for programmatic use.
+
+.. doctest:: Standard.Explanations
+
+    >>> print( ccstd.explain_attribute( Ledger( ), 'public_total' ) )
+    'public_total' on instance of class '...Ledger'
+    behaviors: concealment, immutability (instance)
+    assign: forbidden (no permitting rule)
+    delete: forbidden (no permitting rule)
+    survey: visible via regex 'pub.*'

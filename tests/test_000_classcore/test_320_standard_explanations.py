@@ -296,3 +296,37 @@ def test_414_explanation_observational( ):
     module.explain_attribute( instance, 'alpha' )
     with pytest.raises( exceptions.AttributeImmutability ):
         instance.alpha = 1
+
+
+def test_415_explanation_repr_summary( ):
+    ''' Repr summarizes target, behaviors, and verdict outcomes. '''
+    module = cache_import_module( MODULE_QNAME )
+    decorate = _produce_example(
+        mutables = ( 'alpha', ), visibles = ( re.compile( 'pub.*' ), ) )
+
+    @decorate
+    class Example:
+        alpha = 1
+        public_total = 2
+
+    permitted = repr( module.explain_attribute( Example( ), 'alpha' ) )
+    assert "'alpha' on instance of class" in permitted
+    assert 'behaviors: concealment, immutability (instance)' in permitted
+    assert "assign: permitted via names 'alpha'" in permitted
+    assert 'delete: permitted via names' in permitted
+    assert 'survey: concealed (no matching rule)' in permitted
+
+    visible = repr( module.explain_attribute( Example( ), 'public_total' ) )
+    assert "survey: visible via regex 'pub.*'" in visible
+    assert 'assign: forbidden (no permitting rule)' in visible
+
+    class Plain: pass
+
+    plain = repr( module.explain_attribute( Plain( ), 'x' ) )
+    assert 'assign: permitted (behavior inactive)' in plain
+    assert 'survey: visible' in plain
+    assert '[internal]' not in plain
+
+    internal = repr(
+        module.explain_attribute( Plain( ), '_abc_cache' ) )
+    assert '[internal]' in internal

@@ -24,15 +24,15 @@
 from .. import utilities as _utilities
 from . import __
 from . import behaviors as _behaviors
+from . import classes as _classes
+from . import decorators as _decorators
 from . import nomina as _nomina
-from .classes import _abc_class_mutables
-from .decorators import dataclass_with_standard_behaviors
 
 
 _framework_names_prefix = '_classcore_'
 
 
-@dataclass_with_standard_behaviors( )
+@_decorators.dataclass_with_standard_behaviors( )
 class DecisionRule:
     ''' Rule which decided an attribute behavior outcome. '''
     kind: str
@@ -40,7 +40,7 @@ class DecisionRule:
     level: str
 
 
-@dataclass_with_standard_behaviors( )
+@_decorators.dataclass_with_standard_behaviors( )
 class AssignVerdict:
     ''' Verdict for attribute assignment under precedence semantics. '''
     operation: str
@@ -48,7 +48,7 @@ class AssignVerdict:
     decider: __.typx.Optional[ DecisionRule ]
 
 
-@dataclass_with_standard_behaviors( )
+@_decorators.dataclass_with_standard_behaviors( )
 class DeleteVerdict:
     ''' Verdict for attribute deletion under precedence semantics. '''
     operation: str
@@ -56,7 +56,7 @@ class DeleteVerdict:
     decider: __.typx.Optional[ DecisionRule ]
 
 
-@dataclass_with_standard_behaviors( )
+@_decorators.dataclass_with_standard_behaviors( )
 class SurveyVerdict:
     ''' Verdict for attribute visibility under union semantics. '''
     operation: str
@@ -64,7 +64,7 @@ class SurveyVerdict:
     matched: tuple[ DecisionRule, ... ]
 
 
-@dataclass_with_standard_behaviors( )
+@_decorators.dataclass_with_standard_behaviors( )
 class AttributeExplanation:
     ''' Decision trace for one attribute of one target. '''
     target: str
@@ -72,6 +72,41 @@ class AttributeExplanation:
     behaviors: __.cabc.Mapping[ str, __.cabc.Set[ str ] ]
     operations: __.cabc.Mapping[ str, object ]
     internal: bool
+
+    def __repr__( self ) -> str:
+        ''' Returns summary of the decision trace. '''
+        lines = [
+            f"{self.name!r} on {self.target}"
+            + ( ' [internal]' if self.internal else '' ) ]
+        for level, labels in self.behaviors.items( ):
+            lines.append(
+                f"behaviors: {', '.join( sorted( labels ) )}"
+                + f" ({level})" )
+        for operation in ( 'assign', 'delete', 'survey' ):
+            verdict = self.operations.get( operation )
+            if verdict is None: continue # pragma: no cover
+            lines.append( self._render_verdict( verdict ) )
+        return '\n'.join( lines )
+
+    def _render_verdict( self, verdict: object, / ) -> str:
+        operation = getattr( verdict, 'operation', None )
+        permitted = getattr( verdict, 'permitted', False )
+        if operation == 'survey':
+            matched = getattr( verdict, 'matched', ( ) )
+            rules = ', '.join(
+                f"{rule.kind} {rule.detail!r}" for rule in matched )
+            outcome = (
+                f"visible via {rules}" if permitted and rules
+                else 'visible' if permitted
+                else 'concealed (no matching rule)' )
+        else:
+            decider = getattr( verdict, 'decider', None )
+            outcome = (
+                f"permitted via {decider.kind} {decider.detail!r}"
+                if decider is not None
+                else 'permitted (behavior inactive)'
+                if permitted else 'forbidden (no permitting rule)' )
+        return f"{operation}: {outcome}"
 
 
 def explain_attribute(
@@ -151,4 +186,4 @@ def survey_internal_name( name: str, / ) -> bool:
     ''' Returns whether name is framework-owned or stdlib machinery. '''
     return (
         name.startswith( _framework_names_prefix )
-        or name in _abc_class_mutables )
+        or name in _classes.abc_class_mutables )
