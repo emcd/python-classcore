@@ -91,6 +91,12 @@ Module ``classcore.standard.behaviors``
 .. automodule:: classcore.standard.behaviors
 
 
+Module ``classcore.standard.explanations``
+-------------------------------------------------------------------------------
+
+.. automodule:: classcore.standard.explanations
+
+
 Module ``classcore.standard.nomina``
 -------------------------------------------------------------------------------
 

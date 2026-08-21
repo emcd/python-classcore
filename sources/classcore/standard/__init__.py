@@ -49,4 +49,5 @@ from . import nomina
 
 from .classes import *
 from .decorators import *
+from .explanations import *
 from .modules import *

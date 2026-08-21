@@ -28,5 +28,6 @@ Examples
    std-dataclasses
    std-protocols
    std-behaviors
+   std-explanations
    std-modules
    std-dynadoc
