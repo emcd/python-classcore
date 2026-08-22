@@ -24,7 +24,6 @@
 from .. import utilities as _utilities
 from . import __
 from . import behaviors as _behaviors
-from . import classes as _classes
 from . import decorators as _decorators
 from . import nomina as _nomina
 
@@ -218,4 +217,4 @@ def survey_internal_name( name: str, / ) -> bool:
     ''' Returns whether name is framework-owned or stdlib machinery. '''
     return (
         name.startswith( _framework_names_prefix )
-        or name in _classes.abc_class_mutables )
+        or name in __.abc_class_mutables )

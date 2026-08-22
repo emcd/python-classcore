@@ -48,6 +48,78 @@ def access_core_function( # noqa: PLR0913
         or  getattr( cls, attribute_name, default ) )
 
 
+def assign_attribute_if_mutable( # noqa: PLR0913
+    obj: object, /, *,
+    ligation: _nomina.AssignerLigation,
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
+    level: str,
+    name: str,
+    value: __.typx.Any,
+) -> None:
+    ''' Assigns attribute if it is mutable, else raises error. '''
+    behaviors = survey_active_behaviors(
+        obj, attributes_namer = attributes_namer, level = level )
+    if _nomina.immutability_label not in behaviors:
+        ligation( name, value )
+        return
+    rule = survey_first_permitting_rule(
+        obj, attributes_namer = attributes_namer,
+        level = level, basename = 'mutables', name = name )
+    if rule is not None:
+        ligation( name, value )
+        return
+    target = _utilities.describe_object( obj )
+    raise error_class_provider( 'AttributeImmutability' )( name, target )
+
+
+def delete_attribute_if_mutable( # noqa: PLR0913
+    obj: object, /, *,
+    ligation: _nomina.DeleterLigation,
+    attributes_namer: _nomina.AttributesNamer,
+    error_class_provider: _nomina.ErrorClassProvider,
+    level: str,
+    name: str,
+) -> None:
+    ''' Deletes attribute if it is mutable, else raises error. '''
+    behaviors = survey_active_behaviors(
+        obj, attributes_namer = attributes_namer, level = level )
+    if _nomina.immutability_label not in behaviors:
+        ligation( name )
+        return
+    rule = survey_first_permitting_rule(
+        obj, attributes_namer = attributes_namer,
+        level = level, basename = 'mutables', name = name )
+    if rule is not None:
+        ligation( name )
+        return
+    target = _utilities.describe_object( obj )
+    raise error_class_provider( 'AttributeImmutability' )( name, target )
+
+
+def render_verifier_text( verifier: __.typx.Any, / ) -> str:
+    ''' Returns stable detail text for an exclusion verifier.
+
+        Regexes render as pattern text; predicates render as
+        fully-qualified name, with an anonymous fallback when no
+        qualified name is available. Strings do not reach this
+        function; they are classified as names before rendering.
+
+        Note: the inspect utilities were considered and rejected here;
+        they resolve modules to objects and provide no qualified-name
+        rendering with an anonymous fallback, while this getattr chain
+        stays defensive for exotic callables (e.g., partials).
+    '''
+    pattern = getattr( verifier, 'pattern', None )
+    if pattern is not None: return __.typx.cast( str, pattern )
+    qualname = getattr( verifier, '__qualname__', None )
+    if qualname is None: return '<anonymous>'
+    module = getattr( verifier, '__module__', None )
+    if module is None or '<locals>' in qualname:
+        return qualname
+    return f"{module}.{qualname}"
+
+
 def survey_active_behaviors(
     objct: object, /, *,
     attributes_namer: _nomina.AttributesNamer,
@@ -133,78 +205,6 @@ def survey_matched_rules(
         ( 'regex', regex.pattern )
         for regex in regexes if regex.fullmatch( name ) )
     return tuple( matched )
-
-
-def render_verifier_text( verifier: __.typx.Any, / ) -> str:
-    ''' Returns stable detail text for an exclusion verifier.
-
-        Regexes render as pattern text; predicates render as
-        fully-qualified name, with an anonymous fallback when no
-        qualified name is available. Strings do not reach this
-        function; they are classified as names before rendering.
-
-        Note: the inspect utilities were considered and rejected here;
-        they resolve modules to objects and provide no qualified-name
-        rendering with an anonymous fallback, while this getattr chain
-        stays defensive for exotic callables (e.g., partials).
-    '''
-    pattern = getattr( verifier, 'pattern', None )
-    if pattern is not None: return __.typx.cast( str, pattern )
-    qualname = getattr( verifier, '__qualname__', None )
-    if qualname is None: return '<anonymous>'
-    module = getattr( verifier, '__module__', None )
-    if module is None or '<locals>' in qualname:
-        return qualname
-    return f"{module}.{qualname}"
-
-
-def assign_attribute_if_mutable( # noqa: PLR0913
-    obj: object, /, *,
-    ligation: _nomina.AssignerLigation,
-    attributes_namer: _nomina.AttributesNamer,
-    error_class_provider: _nomina.ErrorClassProvider,
-    level: str,
-    name: str,
-    value: __.typx.Any,
-) -> None:
-    ''' Assigns attribute if it is mutable, else raises error. '''
-    behaviors = survey_active_behaviors(
-        obj, attributes_namer = attributes_namer, level = level )
-    if _nomina.immutability_label not in behaviors:
-        ligation( name, value )
-        return
-    rule = survey_first_permitting_rule(
-        obj, attributes_namer = attributes_namer,
-        level = level, basename = 'mutables', name = name )
-    if rule is not None:
-        ligation( name, value )
-        return
-    target = _utilities.describe_object( obj )
-    raise error_class_provider( 'AttributeImmutability' )( name, target )
-
-
-def delete_attribute_if_mutable( # noqa: PLR0913
-    obj: object, /, *,
-    ligation: _nomina.DeleterLigation,
-    attributes_namer: _nomina.AttributesNamer,
-    error_class_provider: _nomina.ErrorClassProvider,
-    level: str,
-    name: str,
-) -> None:
-    ''' Deletes attribute if it is mutable, else raises error. '''
-    behaviors = survey_active_behaviors(
-        obj, attributes_namer = attributes_namer, level = level )
-    if _nomina.immutability_label not in behaviors:
-        ligation( name )
-        return
-    rule = survey_first_permitting_rule(
-        obj, attributes_namer = attributes_namer,
-        level = level, basename = 'mutables', name = name )
-    if rule is not None:
-        ligation( name )
-        return
-    target = _utilities.describe_object( obj )
-    raise error_class_provider( 'AttributeImmutability' )( name, target )
 
 
 def survey_visible_attributes(

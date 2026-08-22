@@ -40,3 +40,17 @@ def provide_error_class( name: str ) -> type[ Exception ]:
 
 mutables_default = ( )
 visibles_default = ( is_public_identifier, )
+
+# Standard library ABC machinery attribute names which the class-level
+# immutability behavior permits. The C _abc implementation writes these
+# cache and protocol bookkeeping attributes through direct dict access,
+# so they must remain assignable on standard classes. Also used by the
+# explanations module to mark such names as internal.
+abc_class_mutables = (
+    '_abc_cache',
+    '_abc_negative_cache',
+    '_abc_negative_cache_version',
+    '_abc_registry',
+    '_is_runtime_protocol',
+    '__non_callable_proto_members__',
+)

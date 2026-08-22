@@ -27,20 +27,6 @@ from . import dynadoc as _dynadoc
 from . import nomina as _nomina
 
 
-# Standard library ABC machinery attribute names which the class-level
-# immutability behavior permits. The C _abc implementation writes these
-# cache and protocol bookkeeping attributes through direct dict access,
-# so they must remain assignable on standard classes. Also used by the
-# explanations module to mark such names as internal.
-abc_class_mutables = (
-    '_abc_cache',
-    '_abc_negative_cache',
-    '_abc_negative_cache_version',
-    '_abc_registry',
-    '_is_runtime_protocol',
-    '__non_callable_proto_members__',
-)
-_abc_class_mutables = abc_class_mutables # Historical private alias.
 _protocol_cls_set = frozenset( { __.typx.Protocol } )
 # Attributes never considered declared protocol members: typing internals,
 # class-creation machinery, and framework attributes declared in classcore
@@ -319,7 +305,7 @@ class ObjectMutable( metaclass = Class, instances_mutables = '*' ):
 
 class AbstractObject(
     metaclass = AbstractClass,
-    class_mutables = _abc_class_mutables,
+    class_mutables = __.abc_class_mutables,
 ):
     ''' Base class for abstract classes with standard behaviors.
 
@@ -354,7 +340,7 @@ class DataclassObjectMutable( metaclass = DataclassMutable ):
 class Protocol(
     __.typx.Protocol,
     metaclass = ProtocolClass,
-    class_mutables = _abc_class_mutables,
+    class_mutables = __.abc_class_mutables,
 ):
     ''' Standard base protocol class. '''
 
@@ -367,7 +353,7 @@ class Protocol(
 class ProtocolMutable(
     __.typx.Protocol,
     metaclass = ProtocolClass,
-    class_mutables = _abc_class_mutables,
+    class_mutables = __.abc_class_mutables,
     instances_mutables = '*',
 ):
     ''' Base protocol class with mutable instance attributes. '''
@@ -381,7 +367,7 @@ class ProtocolMutable(
 class DataclassProtocol(
     __.typx.Protocol,
     metaclass = ProtocolDataclass,
-    class_mutables = _abc_class_mutables,
+    class_mutables = __.abc_class_mutables,
 ):
     ''' Standard base protocol dataclass. '''
 
@@ -394,7 +380,7 @@ class DataclassProtocol(
 class DataclassProtocolMutable(
     __.typx.Protocol,
     metaclass = ProtocolDataclassMutable,
-    class_mutables = _abc_class_mutables,
+    class_mutables = __.abc_class_mutables,
 ):
     ''' Base protocol dataclass with mutable instance attributes. '''
 
