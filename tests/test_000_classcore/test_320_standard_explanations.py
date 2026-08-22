@@ -42,33 +42,23 @@ def _produce_example( **verifiers ):
     return decorators.with_standard_behaviors( **verifiers )
 
 
-def test_400_explain_mutable_attribute( ):
-    ''' Mutable attribute: assign and delete permitted, no decider. '''
+def test_400_explain_inapplicable_behavior( ):
+    ''' Inactive behavior: permitted by inapplicability. '''
     module = cache_import_module( MODULE_QNAME )
 
-    @dataclass_free_decorator( )
-    class MutableBase: pass
+    class Plain: pass
 
-    explanation = module.explain_attribute( MutableBase, 'anything' )
+    explanation = module.explain_attribute( Plain( ), 'anything' )
     assign = explanation.operations[ 'assign' ]
-    delete = explanation.operations[ 'delete' ]
-    assert assign.permitted and assign.decider is None
-    assert delete.permitted and delete.decider is None
+    survey = explanation.operations[ 'survey' ]
+    assert isinstance( assign.decision, module.PermitByInapplicability )
+    assert assign.permissible
+    assert isinstance( survey.decision, module.PermitByInapplicability )
+    assert survey.permissible
 
 
-def dataclass_free_decorator( ):
-    ''' Produces decorator without standard behaviors. '''
-    return _produce_no_behaviors( )
-
-
-def _produce_no_behaviors( ):
-    def decorate( cls ):
-        return cls
-    return decorate
-
-
-def test_401_explain_excluded_by_name( ):
-    ''' Name exclusion: permitted with kind 'names' and detail the name. '''
+def test_401_explain_permit_by_names( ):
+    ''' Names exclusion: permitted by names carrying the matched name. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example( mutables = ( 'alpha', ) )
 
@@ -77,14 +67,13 @@ def test_401_explain_excluded_by_name( ):
 
     explanation = module.explain_attribute( Example( ), 'alpha' )
     assign = explanation.operations[ 'assign' ]
-    assert assign.permitted
-    assert assign.decider is not None
-    assert 'names' == assign.decider.kind
-    assert 'alpha' == assign.decider.detail
+    assert isinstance( assign.decision, module.PermitByNames )
+    assert 'alpha' == assign.decision.name
+    assert assign.permissible
 
 
-def test_402_explain_excluded_by_regex( ):
-    ''' Regex exclusion: permitted with kind 'regex' and pattern detail. '''
+def test_402_explain_permit_by_regex( ):
+    ''' Regex exclusion: permitted by regex carrying pattern text. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example( mutables = ( re.compile( 'al.*' ), ) )
 
@@ -93,13 +82,13 @@ def test_402_explain_excluded_by_regex( ):
 
     explanation = module.explain_attribute( Example( ), 'alpha' )
     assign = explanation.operations[ 'assign' ]
-    assert assign.permitted
-    assert 'regex' == assign.decider.kind
-    assert 'al.*' == assign.decider.detail
+    assert isinstance( assign.decision, module.PermitByRegex )
+    assert 'al.*' == assign.decision.pattern
 
 
-def test_403_explain_excluded_by_predicate( ):
-    ''' Predicate exclusion: permitted, kind 'predicate', qualified name. '''
+def test_403_explain_permit_by_predicate( ):
+    ''' Predicate exclusion: permitted by predicate carrying the
+        qualified name text. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example( mutables = ( _matches_alpha, ) )
 
@@ -108,19 +97,18 @@ def test_403_explain_excluded_by_predicate( ):
 
     explanation = module.explain_attribute( Example( ), 'alpha' )
     assign = explanation.operations[ 'assign' ]
-    assert assign.permitted
-    assert 'predicate' == assign.decider.kind
-    assert f"{__name__}._matches_alpha" == assign.decider.detail
+    assert isinstance( assign.decision, module.PermitByPredicate )
+    assert f"{__name__}._matches_alpha" == assign.decision.predicate
 
 
-def test_404_explain_wildcard_exclusion( ):
-    ''' Wildcard exclusion for assign/delete: permitted, detail '*'.
+def test_404_explain_permit_by_omni( ):
+    ''' Omni exclusion for assign/delete: permitted by omni.
 
-        A wildcard never coexists with active immutability through the
-        recording API (record_behavior skips the behavior label for
-        wildcard verifiers), so this constructs the defensive state the
+        An omni marker never coexists with an active behavior through
+        the recording API (record_behavior skips the behavior label for
+        omni verifiers), so this constructs the defensive state the
         cores are specified to handle: immutability active with the
-        exclusion names configured as the wildcard.
+        exclusion names configured as the omni marker.
     '''
     module = cache_import_module( MODULE_QNAME )
     base = cache_import_module( f"{PACKAGE_NAME}.__" )
@@ -133,13 +121,13 @@ def test_404_explain_wildcard_exclusion( ):
     explanation = module.explain_attribute( Example, 'anything' )
     assign = explanation.operations[ 'assign' ]
     delete = explanation.operations[ 'delete' ]
-    assert assign.permitted and 'wildcard' == assign.decider.kind
-    assert '*' == assign.decider.detail
-    assert delete.permitted and 'wildcard' == delete.decider.kind
+    assert isinstance( assign.decision, module.PermitByOmni )
+    assert assign.permissible
+    assert isinstance( delete.decision, module.PermitByOmni )
 
 
-def test_405_explain_immutable_attribute( ):
-    ''' Immutability without permitting rule: not permitted, no decider. '''
+def test_405_explain_prohibit( ):
+    ''' Active behavior without permitting rule: prohibited. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example( )
 
@@ -148,12 +136,12 @@ def test_405_explain_immutable_attribute( ):
 
     explanation = module.explain_attribute( Example( ), 'alpha' )
     assign = explanation.operations[ 'assign' ]
-    assert not assign.permitted
-    assert assign.decider is None
+    assert isinstance( assign.decision, module.Prohibit )
+    assert not assign.permissible
 
 
 def test_406_explain_concealed_attribute( ):
-    ''' Concealment without visibles rule: survey not permitted, empty. '''
+    ''' Concealment without visibles rule: survey prohibited. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example( visibles = ( ) )
 
@@ -162,12 +150,12 @@ def test_406_explain_concealed_attribute( ):
 
     explanation = module.explain_attribute( Example( ), 'alpha' )
     survey = explanation.operations[ 'survey' ]
-    assert not survey.permitted
-    assert ( ) == survey.matched
+    assert isinstance( survey.decision, module.Prohibit )
+    assert not survey.permissible
 
 
-def test_407_explain_survey_multi_match( ):
-    ''' Survey union semantics: predicate and regex both in matched. '''
+def test_407_explain_survey_precedence( ):
+    ''' Survey follows precedence: the first matching rule decides. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example(
         visibles = ( _matches_alpha, re.compile( 'al.*' ) ) )
@@ -177,44 +165,59 @@ def test_407_explain_survey_multi_match( ):
 
     explanation = module.explain_attribute( Example( ), 'alpha' )
     survey = explanation.operations[ 'survey' ]
-    assert survey.permitted
-    kinds = tuple( rule.kind for rule in survey.matched )
-    assert ( 'predicate', 'regex' ) == kinds
+    assert isinstance( survey.decision, module.PermitByPredicate )
+    assert not isinstance( survey.decision, module.PermitByRegex )
 
 
-def test_408_explain_survey_wildcard( ):
-    ''' Survey wildcard: single wildcard rule, no predicate/regex rules.
-
-        As with the assign wildcard, a visibility wildcard suppresses the
-        concealment label through the recording API, so this constructs
-        the defensive state: concealment active with the visibles names
-        configured as the wildcard.
-    '''
+def test_407a_explain_survey_names_precedence( ):
+    ''' Survey names match short-circuits predicate and regex rules. '''
     module = cache_import_module( MODULE_QNAME )
     base = cache_import_module( f"{PACKAGE_NAME}.__" )
     classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    calls: list[ str ] = [ ]
+
+    def recording_predicate( name: str ) -> bool:
+        calls.append( name )
+        return True
+
+    class Example( classes.Object ): pass
+
+    type.__setattr__(
+        Example, base.calculate_attrname( 'class', 'visibles_names' ),
+        frozenset( ( 'alpha', ) ) )
+    type.__setattr__(
+        Example, base.calculate_attrname( 'class', 'visibles_predicates' ),
+        ( recording_predicate, ) )
+    explanation = module.explain_attribute( Example, 'alpha' )
+    survey = explanation.operations[ 'survey' ]
+    assert isinstance( survey.decision, module.PermitByNames )
+    assert [ ] == calls
+
+
+def test_408_explain_survey_omni( ):
+    ''' Survey omni: permitted by omni, no predicate/regex evaluation. '''
+    module = cache_import_module( MODULE_QNAME )
+    base = cache_import_module( f"{PACKAGE_NAME}.__" )
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    calls: list[ str ] = [ ]
+
+    def recording_predicate( name: str ) -> bool:
+        calls.append( name )
+        return True
 
     class Example( classes.Object ): pass
 
     type.__setattr__(
         Example, base.calculate_attrname( 'class', 'visibles_names' ), '*' )
+    type.__setattr__(
+        Example, base.calculate_attrname( 'class', 'visibles_predicates' ),
+        ( recording_predicate, ) )
     explanation = module.explain_attribute( Example, 'anything' )
     survey = explanation.operations[ 'survey' ]
-    assert survey.permitted
-    assert 1 == len( survey.matched )
-    assert 'wildcard' == survey.matched[ 0 ].kind
-
-
-def test_409_explain_survey_concealment_inactive( ):
-    ''' Concealment inactive: survey permitted with empty matched. '''
-    module = cache_import_module( MODULE_QNAME )
-
-    class Plain: pass
-
-    explanation = module.explain_attribute( Plain( ), 'alpha' )
-    survey = explanation.operations[ 'survey' ]
-    assert survey.permitted
-    assert ( ) == survey.matched
+    assert isinstance( survey.decision, module.PermitByOmni )
+    assert [ ] == calls
 
 
 def test_410_explanation_records_frozen( ):
@@ -230,9 +233,9 @@ def test_410_explanation_records_frozen( ):
     with pytest.raises( exceptions.AttributeImmutability ):
         explanation.name = 'other'
     with pytest.raises( exceptions.AttributeImmutability ):
-        explanation.operations[ 'assign' ].permitted = False
+        explanation.operations[ 'assign' ].decision = module.Prohibit( )
     with pytest.raises( exceptions.AttributeImmutability ):
-        explanation.operations[ 'assign' ].decider.kind = 'names'
+        explanation.operations[ 'assign' ].decision.name = 'other'
 
 
 def test_411_explanation_collections_immutable( ):
@@ -246,8 +249,6 @@ def test_411_explanation_collections_immutable( ):
     explanation = module.explain_attribute( Example( ), 'alpha' )
     with pytest.raises( TypeError ):
         explanation.operations[ 'survey' ] = None
-    survey = explanation.operations[ 'survey' ]
-    assert isinstance( survey.matched, tuple )
     behaviors = explanation.behaviors
     with pytest.raises( TypeError ):
         behaviors[ 'new' ] = frozenset( )
@@ -299,7 +300,7 @@ def test_414_explanation_observational( ):
 
 
 def test_415_explanation_repr_summary( ):
-    ''' Repr summarizes target, behaviors, and verdict outcomes. '''
+    ''' Repr summarizes target, behaviors, and decision outcomes. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example(
         mutables = ( 'alpha', ), visibles = ( re.compile( 'pub.*' ), ) )
@@ -312,21 +313,101 @@ def test_415_explanation_repr_summary( ):
     permitted = repr( module.explain_attribute( Example( ), 'alpha' ) )
     assert "'alpha' on instance of class" in permitted
     assert 'behaviors: concealment, immutability (instance)' in permitted
-    assert "assign: permitted via names 'alpha'" in permitted
-    assert 'delete: permitted via names' in permitted
-    assert 'survey: concealed (no matching rule)' in permitted
+    assert "assign: permitted by names 'alpha'" in permitted
+    assert "delete: permitted by names 'alpha'" in permitted
 
     visible = repr( module.explain_attribute( Example( ), 'public_total' ) )
-    assert "survey: visible via regex 'pub.*'" in visible
-    assert 'assign: forbidden (no permitting rule)' in visible
+    assert "survey: permitted by regex 'pub.*'" in visible
+    assert 'assign: prohibited (no permitting rule)' in visible
 
     class Plain: pass
 
     plain = repr( module.explain_attribute( Plain( ), 'x' ) )
-    assert 'assign: permitted (behavior inactive)' in plain
-    assert 'survey: visible' in plain
+    assert 'permitted (behavior inapplicable)' in plain
     assert '[internal]' not in plain
 
     internal = repr(
         module.explain_attribute( Plain( ), '_abc_cache' ) )
     assert '[internal]' in internal
+
+
+def test_416_names_payload_collision( ):
+    ''' A name literally 'regex' permitted by names stays distinct from
+        a regex decision. '''
+    module = cache_import_module( MODULE_QNAME )
+    decorate = _produce_example( mutables = ( 'regex', ) )
+
+    @decorate
+    class Example: pass
+
+    explanation = module.explain_attribute( Example( ), 'regex' )
+    decision = explanation.operations[ 'assign' ].decision
+    assert isinstance( decision, module.PermitByNames )
+    assert 'regex' == decision.name
+    assert not isinstance( decision, module.PermitByRegex )
+
+
+def test_417_permissible_derivation( ):
+    ''' Permissibility derives from the decision type. '''
+    module = cache_import_module( MODULE_QNAME )
+    decorate = _produce_example( mutables = ( 'alpha', ) )
+
+    @decorate
+    class Example: pass
+
+    permitted = module.explain_attribute( Example( ), 'alpha' )
+    prohibited = module.explain_attribute( Example( ), 'beta' )
+    assert permitted.operations[ 'assign' ].permissible
+    assert not prohibited.operations[ 'assign' ].permissible
+    assert prohibited.operations[ 'assign' ].permissible is (
+        not isinstance(
+            prohibited.operations[ 'assign' ].decision, module.Prohibit ) )
+
+
+def test_418_render_covers_decisions( ):
+    """ Repr renders every decision branch. """
+    module = cache_import_module( MODULE_QNAME )
+    base = cache_import_module( f"{PACKAGE_NAME}.__" )
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Example( classes.Object ): pass
+
+    type.__setattr__(
+        Example, base.calculate_attrname( 'class', 'visibles_names' ), '*' )
+    type.__setattr__(
+        Example, base.calculate_attrname( 'class', 'mutables_predicates' ),
+        ( _matches_alpha, ) )
+    omni = repr( module.explain_attribute( Example, 'anything' ) )
+    assert "survey: permitted by omni '*'" in omni
+    predicated = repr( module.explain_attribute( Example, 'alpha' ) )
+    assert (
+        f"assign: permitted by predicate '{__name__}._matches_alpha'"
+        in predicated )
+
+
+def test_419_produce_decision_rejects_unknown_kinds( ):
+    ''' Unknown rule kinds raise instead of misclassifying. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    with pytest.raises( ValueError, match = 'unknown' ):
+        module.produce_decision( ( 'unknown', 'x' ), True )
+    inapplicable = module.produce_decision( None, False )
+    assert isinstance( inapplicable, module.PermitByInapplicability )
+    prohibited = module.produce_decision( None, True )
+    assert isinstance( prohibited, module.Prohibit )
+    omni = module.produce_decision( ( 'omni', '*' ), True )
+    assert isinstance( omni, module.PermitByOmni )
+
+
+def test_420_render_rejects_unknown_decisions( ):
+    ''' Rendering an unknown decision raises instead of reporting
+        prohibited. '''
+    module = cache_import_module( MODULE_QNAME )
+    decorate = _produce_example( )
+
+    @decorate
+    class Example: pass
+
+    explanation = module.explain_attribute( Example( ), 'alpha' )
+    with pytest.raises( ValueError, match = 'object' ):
+        explanation._render( object( ) )

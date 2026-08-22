@@ -29,15 +29,21 @@ delattr0
 
 # Attribute explanations (fields consumed via attribute access)
 explain_attribute
+Decision
+PermitByInapplicability
+PermitByOmni
+PermitByNames
+PermitByPredicate
+PermitByRegex
+Prohibit
+Verdict
 AssignVerdict
 DeleteVerdict
 SurveyVerdict
-DecisionRule
 AttributeExplanation
-permitted
-decider
-matched
+permissible
+decision
 internal
-kind
-detail
-level
+name
+predicate
+pattern

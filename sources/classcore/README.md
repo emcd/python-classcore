@@ -383,8 +383,11 @@ sources/
 : Explanations of attribute behavior decisions:
 
   - `explain_attribute`: Decision trace for one attribute of one target
-  - `AttributeExplanation`, `AssignVerdict`, `DeleteVerdict`,
-    `SurveyVerdict`, `DecisionRule`: Immutable explanation records
+  - `AttributeExplanation` and the `Verdict` records (`AssignVerdict`,
+    `DeleteVerdict`, `SurveyVerdict`) with derived permissibility
+  - The closed `Decision` hierarchy: `PermitByInapplicability`,
+    `PermitByOmni`, `PermitByNames`, `PermitByPredicate`,
+    `PermitByRegex`, `Prohibit`, with typed payloads
   - Marking of framework-owned and stdlib-machinery attributes
 
 `classes.py`

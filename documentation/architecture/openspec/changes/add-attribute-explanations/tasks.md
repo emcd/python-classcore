@@ -11,10 +11,12 @@
 ## 2. Explanations Module
 
 - [x] 2.1 Define the explanation records directly in
-  standard/explanations.py (AttributeExplanation, AssignVerdict,
-  DeleteVerdict, SurveyVerdict, DecisionRule) with documentation
-  annotations; nomina aliases omitted as the records are classes, not
-  aliases, and are colocated with explain_attribute
+  standard/explanations.py (AttributeExplanation, Verdict subclasses
+  AssignVerdict/DeleteVerdict/SurveyVerdict, and the Decision hierarchy
+  PermitByInapplicability/PermitByOmni/PermitByNames/PermitByPredicate/
+  PermitByRegex/Prohibit) with documentation annotations; nomina
+  aliases omitted as the records are classes, not aliases, and are
+  colocated with explain_attribute
 - [x] 2.2 Implement `standard/explanations.py`: the records as frozen,
   concealed classes with genuinely immutable nested collections, and
   `explain_attribute( target, name )` built on the extracted helpers
@@ -23,11 +25,13 @@
 
 ## 3. Specification Conformance
 
-- [x] 3.1 Tests for every scenario in the attribute-explanations delta:
-  verdict semantics per operation and precedence, union semantics for
-  survey, level evaluation for class versus instance targets,
-  observational (non-bypass) behavior, record and nested immutability,
-  internal marking
+- [x] 3.1 Tests for every scenario in the attribute-explanations delta
+      (re-scoped to the decision-hierarchy verdict shape):
+  verdict semantics per operation under precedence — survey included,
+  first-match semantics, distinct from the core's deferred
+  duplicate-yield defect — level evaluation for class versus instance
+  targets, observational (non-bypass) behavior, record and nested
+  immutability, internal marking
 - [x] 3.2 Validate detail rendering policy: name/`'*'`/pattern text/
   qualified predicate name with `<anonymous>` fallback
 

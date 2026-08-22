@@ -33,35 +33,73 @@ _framework_names_prefix = '_classcore_'
 
 
 @_decorators.dataclass_with_standard_behaviors( )
-class DecisionRule:
-    ''' Rule which decided an attribute behavior outcome. '''
-    kind: str
-    detail: str
-    level: str
+class Decision:
+    ''' Decision which one operation reached for one attribute.
+
+        The decision subclasses form a closed hierarchy; the decision
+        type is the discriminant. Verdict permissibility is derived
+        from the decision type.
+    '''
 
 
 @_decorators.dataclass_with_standard_behaviors( )
-class AssignVerdict:
-    ''' Verdict for attribute assignment under precedence semantics. '''
-    operation: str
-    permitted: bool
-    decider: __.typx.Optional[ DecisionRule ]
+class PermitByInapplicability( Decision ):
+    ''' Permission because the governing behavior is inactive. '''
 
 
 @_decorators.dataclass_with_standard_behaviors( )
-class DeleteVerdict:
-    ''' Verdict for attribute deletion under precedence semantics. '''
-    operation: str
-    permitted: bool
-    decider: __.typx.Optional[ DecisionRule ]
+class PermitByOmni( Decision ):
+    ''' Permission by the omni marker, which permits every name. '''
 
 
 @_decorators.dataclass_with_standard_behaviors( )
-class SurveyVerdict:
-    ''' Verdict for attribute visibility under union semantics. '''
+class PermitByNames( Decision ):
+    ''' Permission by exclusion names membership. '''
+    name: str
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class PermitByPredicate( Decision ):
+    ''' Permission by an exclusion predicate. '''
+    predicate: str
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class PermitByRegex( Decision ):
+    ''' Permission by an exclusion regex. '''
+    pattern: str
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class Prohibit( Decision ):
+    ''' Prohibition: the behavior is active and no rule permits. '''
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class Verdict:
+    ''' Verdict for one operation on one attribute. '''
     operation: str
-    permitted: bool
-    matched: tuple[ DecisionRule, ... ]
+    decision: Decision
+
+    @property
+    def permissible( self ) -> bool:
+        ''' Returns whether the operation is permissible. '''
+        return not isinstance( self.decision, Prohibit )
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class AssignVerdict( Verdict ):
+    ''' Verdict for attribute assignment. '''
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class DeleteVerdict( Verdict ):
+    ''' Verdict for attribute deletion. '''
+
+
+@_decorators.dataclass_with_standard_behaviors( )
+class SurveyVerdict( Verdict ):
+    ''' Verdict for attribute visibility in survey results. '''
 
 
 @_decorators.dataclass_with_standard_behaviors( )
@@ -70,7 +108,7 @@ class AttributeExplanation:
     target: str
     name: str
     behaviors: __.cabc.Mapping[ str, __.cabc.Set[ str ] ]
-    operations: __.cabc.Mapping[ str, object ]
+    operations: __.cabc.Mapping[ str, Verdict ]
     internal: bool
 
     def __repr__( self ) -> str:
@@ -85,28 +123,23 @@ class AttributeExplanation:
         for operation in ( 'assign', 'delete', 'survey' ):
             verdict = self.operations.get( operation )
             if verdict is None: continue # pragma: no cover
-            lines.append( self._render_verdict( verdict ) )
+            lines.append( f"{operation}: {self._render( verdict.decision )}" )
         return '\n'.join( lines )
 
-    def _render_verdict( self, verdict: object, / ) -> str:
-        operation = getattr( verdict, 'operation', None )
-        permitted = getattr( verdict, 'permitted', False )
-        if operation == 'survey':
-            matched = getattr( verdict, 'matched', ( ) )
-            rules = ', '.join(
-                f"{rule.kind} {rule.detail!r}" for rule in matched )
-            outcome = (
-                f"visible via {rules}" if permitted and rules
-                else 'visible' if permitted
-                else 'concealed (no matching rule)' )
-        else:
-            decider = getattr( verdict, 'decider', None )
-            outcome = (
-                f"permitted via {decider.kind} {decider.detail!r}"
-                if decider is not None
-                else 'permitted (behavior inactive)'
-                if permitted else 'forbidden (no permitting rule)' )
-        return f"{operation}: {outcome}"
+    def _render( self, decision: Decision, / ) -> str:
+        if isinstance( decision, PermitByInapplicability ):
+            return 'permitted (behavior inapplicable)'
+        if isinstance( decision, PermitByOmni ):
+            return "permitted by omni '*'"
+        if isinstance( decision, PermitByNames ):
+            return f"permitted by names {decision.name!r}"
+        if isinstance( decision, PermitByPredicate ):
+            return f"permitted by predicate {decision.predicate!r}"
+        if isinstance( decision, PermitByRegex ):
+            return f"permitted by regex {decision.pattern!r}"
+        if isinstance( decision, Prohibit ):
+            return 'prohibited (no permitting rule)'
+        raise ValueError( type( decision ) )
 
 
 def explain_attribute(
@@ -115,15 +148,22 @@ def explain_attribute(
 ) -> AttributeExplanation:
     ''' Returns decision trace for attribute name on target.
 
-        Assign and delete verdicts follow precedence semantics; the survey
-        verdict follows union semantics. For class targets, the
-        classes-level configuration is evaluated; for instance targets,
-        the instances-level configuration is evaluated against the
+        All operations follow precedence semantics: omni, then names
+        membership, then the first matching predicate, then the first
+        matching regex; prohibition when the governing behavior is
+        active and nothing permits; permission by inapplicability when
+        the behavior is inactive. For class targets, the classes-level
+        configuration is evaluated; for instance targets, the
+        instances-level configuration is evaluated against the
         instance's class hierarchy — matching the levels the behavior
         cores evaluate. Records report the normalized level names
         ('class' and 'instance') at which behaviors and exclusion
         configuration were found. Explanations are observational: they
         neither bypass nor alter concealment or immutability.
+
+        Survey explanations describe normalized first-match semantics;
+        the survey core's current once-per-matching-rule duplication is
+        characterized as a defect whose repair is deferred separately.
     '''
     class_target = __.inspect.isclass( target )
     level = 'class' if class_target else 'instances'
@@ -132,47 +172,20 @@ def explain_attribute(
         target, attributes_namer = attributes_namer, level = level )
     immutability = _nomina.immutability_label in behaviors
     concealment = _nomina.concealment_label in behaviors
-    operations: dict[ str, object ] = { }
-    for operation in ( 'assign', 'delete' ):
+    operations: dict[ str, Verdict ] = { }
+    for operation, verdict_class, basename, active in (
+        ( 'assign', AssignVerdict, 'mutables', immutability ),
+        ( 'delete', DeleteVerdict, 'mutables', immutability ),
+        ( 'survey', SurveyVerdict, 'visibles', concealment ),
+    ):
         rule = (
             _behaviors.survey_first_permitting_rule(
                 target, attributes_namer = attributes_namer,
-                level = level, basename = 'mutables', name = name )
-            if immutability else None )
-        verdict_class = (
-            AssignVerdict if operation == 'assign' else DeleteVerdict )
+                level = level, basename = basename, name = name )
+            if active else None )
         operations[ operation ] = verdict_class(
             operation = operation,
-            permitted = not immutability or rule is not None,
-            decider = (
-                DecisionRule(
-                    kind = rule[ 0 ], detail = rule[ 1 ],
-                    level = level_normalized )
-                if rule is not None else None ) )
-    if concealment:
-        names_name = attributes_namer( level, 'visibles_names' )
-        names: _nomina.BehaviorExclusionNamesOmni = (
-            getattr( target, names_name, frozenset( ) ) )
-        if names == '*':
-            rule_wildcard = DecisionRule(
-                kind = 'wildcard', detail = '*',
-                level = level_normalized )
-            matched = ( rule_wildcard, )
-            survey_permitted = True
-        else:
-            matched = tuple(
-                DecisionRule(
-                    kind = kind, detail = detail, level = level_normalized )
-                for kind, detail in _behaviors.survey_matched_rules(
-                    target, attributes_namer = attributes_namer,
-                    level = level, basename = 'visibles', name = name ) )
-            survey_permitted = bool( matched )
-    else:
-        matched = ( )
-        survey_permitted = True
-    operations[ 'survey' ] = SurveyVerdict(
-        operation = 'survey',
-        permitted = survey_permitted, matched = matched )
+            decision = produce_decision( rule, active ) )
     return AttributeExplanation(
         target = _utilities.describe_object( target ),
         name = name,
@@ -180,6 +193,25 @@ def explain_attribute(
             { level_normalized: frozenset( behaviors ) } ),
         operations = __.types.MappingProxyType( operations ),
         internal = survey_internal_name( name ) )
+
+
+def produce_decision(
+    rule: __.typx.Optional[ tuple[ str, str ] ], active: bool, /
+) -> Decision:
+    ''' Returns decision for governing-behavior activity and first rule.
+
+        Rules are the (kind, detail) pairs produced by
+        survey_first_permitting_rule; the kind vocabulary matches the
+        omni/names/predicate/regex precedence stages.
+    '''
+    if not active: return PermitByInapplicability( )
+    if rule is None: return Prohibit( )
+    kind, detail = rule
+    if kind == 'omni': return PermitByOmni( )
+    if kind == 'names': return PermitByNames( name = detail )
+    if kind == 'predicate': return PermitByPredicate( predicate = detail )
+    if kind == 'regex': return PermitByRegex( pattern = detail )
+    raise ValueError( kind )
 
 
 def survey_internal_name( name: str, / ) -> bool:

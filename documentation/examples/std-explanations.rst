@@ -36,7 +36,8 @@ Explaining Immutability
 ===============================================================================
 
 Consider a decorated class with selective mutability. Explaining an excluded
-attribute name reports the permitting rule with its kind and detail text.
+attribute name reports the decision which permitted the operation, with its
+payload carried by a typed record.
 
 .. doctest:: Standard.Explanations
 
@@ -46,31 +47,29 @@ attribute name reports the permitting rule with its kind and detail text.
     ...
     >>> explanation = ccstd.explain_attribute( Counter( ), 'count' )
     >>> assign = explanation.operations[ 'assign' ]
-    >>> assign.permitted
+    >>> assign.permissible
     True
-    >>> assign.decider.kind
-    'names'
-    >>> assign.decider.detail
+    >>> assign.decision.name
     'count'
 
-Explaining a non-excluded attribute reports that immutability forbids the
-operation and no rule decided otherwise.
+Explaining a non-excluded attribute reports that the operation is
+prohibited.
 
 .. doctest:: Standard.Explanations
 
     >>> explanation = ccstd.explain_attribute( Counter( ), 'total' )
     >>> assign = explanation.operations[ 'assign' ]
-    >>> assign.permitted
+    >>> assign.permissible
     False
-    >>> assign.decider is None
-    True
+    >>> type( assign.decision ).__name__
+    'Prohibit'
 
 
 Explaining Concealment
 ===============================================================================
 
-Concealment verdicts follow union semantics: every matching visibility rule
-appears in the survey verdict, in evaluation order.
+Concealment verdicts follow precedence semantics, like every operation: the
+first matching visibility rule decides the survey verdict.
 
 .. doctest:: Standard.Explanations
 
@@ -83,15 +82,13 @@ appears in the survey verdict, in evaluation order.
     ...
     >>> explanation = ccstd.explain_attribute( Ledger( ), 'public_total' )
     >>> survey = explanation.operations[ 'survey' ]
-    >>> survey.permitted
+    >>> survey.permissible
     True
-    >>> [ rule.kind for rule in survey.matched ]
-    ['regex']
-    >>> survey.matched[ 0 ].detail
+    >>> survey.decision.pattern
     'pub.*'
 
     >>> explanation = ccstd.explain_attribute( Ledger( ), '_secret' )
-    >>> explanation.operations[ 'survey' ].permitted
+    >>> explanation.operations[ 'survey' ].permissible
     False
 
 
@@ -136,8 +133,8 @@ necessary for programmatic use.
 .. doctest:: Standard.Explanations
 
     >>> print( ccstd.explain_attribute( Ledger( ), 'public_total' ) )
-    'public_total' on instance of class '...Ledger'
+    'public_total' on instance of class 'builtins.Ledger'
     behaviors: concealment, immutability (instance)
-    assign: forbidden (no permitting rule)
-    delete: forbidden (no permitting rule)
-    survey: visible via regex 'pub.*'
+    assign: prohibited (no permitting rule)
+    delete: prohibited (no permitting rule)
+    survey: permitted by regex 'pub.*'

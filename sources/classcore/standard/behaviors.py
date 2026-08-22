@@ -75,15 +75,15 @@ def survey_first_permitting_rule(
 ) -> __.typx.Optional[ tuple[ str, str ] ]:
     ''' Returns first exclusion rule permitting operation, else None.
 
-        Rules apply by precedence: wildcard or names membership, then
+        Rules apply by precedence: omni or names membership, then
         the first matching predicate, then the first matching regex.
-        Each rule is a pair of kind ('wildcard', 'names', 'predicate',
+        Each rule is a pair of kind ('omni', 'names', 'predicate',
         'regex') and detail text.
     '''
     names_name = attributes_namer( level, f"{basename}_names" )
     names: _nomina.BehaviorExclusionNamesOmni = (
         getattr( objct, names_name, frozenset( ) ) )
-    if names == '*': return ( 'wildcard', '*' )
+    if names == '*': return ( 'omni', '*' )
     if name in names: return ( 'names', name )
     predicates_name = attributes_namer( level, f"{basename}_predicates" )
     predicates: _nomina.BehaviorExclusionPredicates = (

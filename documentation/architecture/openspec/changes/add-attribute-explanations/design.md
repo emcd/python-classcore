@@ -35,25 +35,36 @@ deduplicate custom `__dir__` output, so duplicates reach users.
 
 - Module: `standard/explanations.py` (Latinate, matches the
   `explain_attribute` verb; avoids stdlib `inspect` confusion).
-- Naming: `DecisionRule` (Latinate; not Germanic `DecidingRule`).
-- Verdict shapes follow operation semantics: assign/delete short-circuit
-  by precedence (wildcard/names, first matching predicate, first matching
-  regex) and carry a single `decider` or `None` when the governing
-  behavior is inactive; survey is union logic and carries the ordered
-  sequence of all matched rules. The survey core has two early-return
-  paths that the verdict shapes must distinguish: concealment inactive
-  (permitted, empty matched sequence, no governing rule) and concealment
-  active with visibles wildcard (permitted, the single wildcard rule and
-  no predicate or regex matches, because the wildcard short-circuits
-  predicate and regex evaluation).
+- Naming: decision hierarchy PermitBy* / Prohibit (Latinate verbs);
+  `PermitByOmni` follows the package's `*Omni` wildcard vocabulary
+  (BehaviorExclusionNamesOmni).
+- Verdict shapes follow a single closed decision hierarchy for all
+  three operations: PermitByInapplicability (behavior inactive),
+  PermitByOmni, PermitByNames, PermitByPredicate, PermitByRegex, and
+  Prohibit (behavior active, nothing permitted). All operations apply
+  precedence semantics (omni, names, first predicate, first regex).
+  Permissibility is a derived property of the verdict
+  (not isinstance(decision, Prohibit)) — no stored boolean, no
+  __bool__. Payloads are typed per decision (name, qualified predicate
+  text, pattern text) so a name colliding with a genus label or pattern
+  cannot be confused with one.
+- Survey first-match is an owner decision reversing the earlier
+  union-trace design: the union trace existed to faithfully describe
+  the duplicate-yield behavior, which is itself characterized as a
+  defect with normalization deferred. Specifying the explanation to
+  the normalized (first-match) semantics now makes explanation and
+  repaired behavior coincide; until the repair, the survey core keeps
+  survey_matched_rules internally to reproduce current behavior.
 - Level semantics: class targets evaluate the `classes`-level
   configuration; instance targets evaluate the `instances`-level
   configuration against the instance's class hierarchy. Exclusion
   configuration uses the raw level; the normalized behavior level is
   recorded separately on the explanation.
-- `DecisionRule.detail` rendering policy: names/wildcard — the name or
-  `'*'`; regex — pattern text; predicate — fully-qualified name with an
-  `'<anonymous>'` fallback.
+- Decision payload policy: names decisions carry the matched name;
+  predicate decisions carry qualified-name text with an `'<anonymous>'`
+  fallback; regex decisions carry pattern text; omni and prohibition
+  decisions carry no payload. Payloads are typed per decision class,
+  so a name colliding with a pattern or label cannot be confused.
 - `AttributeExplanation.internal` marks classcore-owned named/mangled
   attributes and stdlib ABC machinery (class mutables exemption sets).
 - Survey duplicate-yield is preserved by the extraction and

@@ -315,7 +315,7 @@ def test_321_first_permitting_rule_precedence( ):
     stub = Stub( )
 
     setattr( stub, namer( 'instances', 'mutables_names' ), '*' )
-    assert ( 'wildcard', '*' ) == module.survey_first_permitting_rule(
+    assert ( 'omni', '*' ) == module.survey_first_permitting_rule(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'anything' )
 
