@@ -54,7 +54,7 @@ deduplicate custom `__dir__` output, so duplicates reach users.
   defect with normalization deferred. Specifying the explanation to
   the normalized (first-match) semantics now makes explanation and
   repaired behavior coincide; until the repair, the survey core keeps
-  survey_matched_rules internally to reproduce current behavior.
+  determine_relevant_permitters internally to reproduce current behavior.
 - Level semantics: class targets evaluate the `classes`-level
   configuration; instance targets evaluate the `instances`-level
   configuration against the instance's class hierarchy. Exclusion

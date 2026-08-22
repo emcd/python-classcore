@@ -178,7 +178,7 @@ def explain_attribute(
         ( 'survey', SurveyVerdict, 'visibles', concealment ),
     ):
         rule = (
-            _behaviors.survey_first_permitting_rule(
+            _behaviors.provide_permitter_if_applicable(
                 target, attributes_namer = attributes_namer,
                 level = level, basename = basename, name = name )
             if active else None )
@@ -191,7 +191,14 @@ def explain_attribute(
         behaviors = __.types.MappingProxyType(
             { level_normalized: frozenset( behaviors ) } ),
         operations = __.types.MappingProxyType( operations ),
-        internal = survey_internal_name( name ) )
+        internal = is_internal_name( name ) )
+
+
+def is_internal_name( name: str, / ) -> bool:
+    ''' Returns whether name is framework-owned or stdlib machinery. '''
+    return (
+        name.startswith( _framework_names_prefix )
+        or name in __.abc_class_mutables )
 
 
 def produce_decision(
@@ -200,7 +207,7 @@ def produce_decision(
     ''' Returns decision for governing-behavior activity and first rule.
 
         Rules are the (kind, detail) pairs produced by
-        survey_first_permitting_rule; the kind vocabulary matches the
+        provide_permitter_if_applicable; the kind vocabulary matches the
         omni/names/predicate/regex precedence stages.
     '''
     if not active: return PermitByInapplicability( )
@@ -211,10 +218,3 @@ def produce_decision(
     if kind == 'predicate': return PermitByPredicate( predicate = detail )
     if kind == 'regex': return PermitByRegex( pattern = detail )
     raise ValueError( kind )
-
-
-def survey_internal_name( name: str, / ) -> bool:
-    ''' Returns whether name is framework-owned or stdlib machinery. '''
-    return (
-        name.startswith( _framework_names_prefix )
-        or name in __.abc_class_mutables )

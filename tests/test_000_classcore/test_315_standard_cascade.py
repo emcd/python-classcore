@@ -315,13 +315,13 @@ def test_321_first_permitting_rule_precedence( ):
     stub = Stub( )
 
     setattr( stub, namer( 'instances', 'mutables_names' ), '*' )
-    assert ( 'omni', '*' ) == module.survey_first_permitting_rule(
+    assert ( 'omni', '*' ) == module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'anything' )
 
     setattr( stub, namer( 'instances', 'mutables_names' ),
         frozenset( ( 'alpha', ) ) )
-    assert ( 'names', 'alpha' ) == module.survey_first_permitting_rule(
+    assert ( 'names', 'alpha' ) == module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'alpha' )
 
@@ -331,17 +331,17 @@ def test_321_first_permitting_rule_precedence( ):
     setattr( stub, namer( 'instances', 'mutables_regexes' ),
         ( re.compile( 'al.*' ), ) )
     assert ( 'predicate', f"{__name__}._predicate_matches_alpha"
-        ) == module.survey_first_permitting_rule(
+        ) == module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'alpha' )
 
     setattr( stub, namer( 'instances', 'mutables_predicates' ), ( ) )
-    assert ( 'regex', 'al.*' ) == module.survey_first_permitting_rule(
+    assert ( 'regex', 'al.*' ) == module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'alpha' )
 
     setattr( stub, namer( 'instances', 'mutables_regexes' ), ( ) )
-    assert None is module.survey_first_permitting_rule(
+    assert None is module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'alpha' )
 
@@ -357,7 +357,7 @@ def test_322_matched_rules_union( ):
     stub = Stub( )
     setattr( stub, namer( 'instances', 'visibles_names' ),
         frozenset( ( 'alpha', ) ) )
-    assert ( ( 'names', 'alpha' ), ) == module.survey_matched_rules(
+    assert ( ( 'names', 'alpha' ), ) == module.determine_relevant_permitters(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'visibles', name = 'alpha' )
 
@@ -369,9 +369,9 @@ def test_322_matched_rules_union( ):
 
     assert (
         ( 'predicate', f"{__name__}._predicate_matches_alpha" ),
-        ( 'regex', 'al.*' ) ) == module.survey_matched_rules(
+        ( 'regex', 'al.*' ) ) == module.determine_relevant_permitters(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'visibles', name = 'alpha' )
-    assert ( ) == module.survey_matched_rules(
+    assert ( ) == module.determine_relevant_permitters(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'visibles', name = 'beta' )

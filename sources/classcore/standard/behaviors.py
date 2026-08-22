@@ -63,7 +63,7 @@ def assign_attribute_if_mutable( # noqa: PLR0913
     if _nomina.immutability_label not in behaviors:
         ligation( name, value )
         return
-    rule = survey_first_permitting_rule(
+    rule = provide_permitter_if_applicable(
         obj, attributes_namer = attributes_namer,
         level = level, basename = 'mutables', name = name )
     if rule is not None:
@@ -87,7 +87,7 @@ def delete_attribute_if_mutable( # noqa: PLR0913
     if _nomina.immutability_label not in behaviors:
         ligation( name )
         return
-    rule = survey_first_permitting_rule(
+    rule = provide_permitter_if_applicable(
         obj, attributes_namer = attributes_namer,
         level = level, basename = 'mutables', name = name )
     if rule is not None:
@@ -95,6 +95,75 @@ def delete_attribute_if_mutable( # noqa: PLR0913
         return
     target = _utilities.describe_object( obj )
     raise error_class_provider( 'AttributeImmutability' )( name, target )
+
+
+def determine_relevant_permitters(
+    objct: object, /, *,
+    attributes_namer: _nomina.AttributesNamer,
+    level: str,
+    basename: str,
+    name: str,
+) -> tuple[ tuple[ str, str ], ... ]:
+    ''' Returns exclusion rules matching name, in evaluation order.
+
+        A names match short-circuits, matching the survey core's
+        historical control flow: predicates and regexes are not evaluated
+        for a name found in the exclusion names. Otherwise a name may
+        match any number of predicates and any number of regexes. The
+        wildcard is not considered here; callers handle its
+        short-circuit separately.
+    '''
+    names_name = attributes_namer( level, f"{basename}_names" )
+    names: _nomina.BehaviorExclusionNamesOmni = (
+        getattr( objct, names_name, frozenset( ) ) )
+    if name in names: return ( ( 'names', name ), )
+    predicates_name = attributes_namer( level, f"{basename}_predicates" )
+    predicates: _nomina.BehaviorExclusionPredicates = (
+        getattr( objct, predicates_name, ( ) ) )
+    matched: list[ tuple[ str, str ] ] = [
+        ( 'predicate', render_verifier_text( predicate ) )
+        for predicate in predicates if predicate( name ) ]
+    regexes_name = attributes_namer( level, f"{basename}_regexes" )
+    regexes: _nomina.BehaviorExclusionRegexes = (
+        getattr( objct, regexes_name, ( ) ) )
+    matched.extend(
+        ( 'regex', regex.pattern )
+        for regex in regexes if regex.fullmatch( name ) )
+    return tuple( matched )
+
+
+def provide_permitter_if_applicable(
+    objct: object, /, *,
+    attributes_namer: _nomina.AttributesNamer,
+    level: str,
+    basename: str,
+    name: str,
+) -> __.typx.Optional[ tuple[ str, str ] ]:
+    ''' Returns first exclusion rule permitting operation, else None.
+
+        Rules apply by precedence: omni or names membership, then
+        the first matching predicate, then the first matching regex.
+        Each rule is a pair of kind ('omni', 'names', 'predicate',
+        'regex') and detail text.
+    '''
+    names_name = attributes_namer( level, f"{basename}_names" )
+    names: _nomina.BehaviorExclusionNamesOmni = (
+        getattr( objct, names_name, frozenset( ) ) )
+    if names == '*': return ( 'omni', '*' )
+    if name in names: return ( 'names', name )
+    predicates_name = attributes_namer( level, f"{basename}_predicates" )
+    predicates: _nomina.BehaviorExclusionPredicates = (
+        getattr( objct, predicates_name, ( ) ) )
+    for predicate in predicates:
+        if predicate( name ):
+            return ( 'predicate', render_verifier_text( predicate ) )
+    regexes_name = attributes_namer( level, f"{basename}_regexes" )
+    regexes: _nomina.BehaviorExclusionRegexes = (
+        getattr( objct, regexes_name, ( ) ) )
+    for regex in regexes:
+        if regex.fullmatch( name ):
+            return ( 'regex', regex.pattern )
+    return None
 
 
 def render_verifier_text( verifier: __.typx.Any, / ) -> str:
@@ -138,75 +207,6 @@ def survey_active_behaviors(
     return behaviors
 
 
-def survey_first_permitting_rule(
-    objct: object, /, *,
-    attributes_namer: _nomina.AttributesNamer,
-    level: str,
-    basename: str,
-    name: str,
-) -> __.typx.Optional[ tuple[ str, str ] ]:
-    ''' Returns first exclusion rule permitting operation, else None.
-
-        Rules apply by precedence: omni or names membership, then
-        the first matching predicate, then the first matching regex.
-        Each rule is a pair of kind ('omni', 'names', 'predicate',
-        'regex') and detail text.
-    '''
-    names_name = attributes_namer( level, f"{basename}_names" )
-    names: _nomina.BehaviorExclusionNamesOmni = (
-        getattr( objct, names_name, frozenset( ) ) )
-    if names == '*': return ( 'omni', '*' )
-    if name in names: return ( 'names', name )
-    predicates_name = attributes_namer( level, f"{basename}_predicates" )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( objct, predicates_name, ( ) ) )
-    for predicate in predicates:
-        if predicate( name ):
-            return ( 'predicate', render_verifier_text( predicate ) )
-    regexes_name = attributes_namer( level, f"{basename}_regexes" )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( objct, regexes_name, ( ) ) )
-    for regex in regexes:
-        if regex.fullmatch( name ):
-            return ( 'regex', regex.pattern )
-    return None
-
-
-def survey_matched_rules(
-    objct: object, /, *,
-    attributes_namer: _nomina.AttributesNamer,
-    level: str,
-    basename: str,
-    name: str,
-) -> tuple[ tuple[ str, str ], ... ]:
-    ''' Returns exclusion rules matching name, in evaluation order.
-
-        A names match short-circuits, matching the survey core's
-        historical control flow: predicates and regexes are not evaluated
-        for a name found in the exclusion names. Otherwise a name may
-        match any number of predicates and any number of regexes. The
-        wildcard is not considered here; callers handle its
-        short-circuit separately.
-    '''
-    names_name = attributes_namer( level, f"{basename}_names" )
-    names: _nomina.BehaviorExclusionNamesOmni = (
-        getattr( objct, names_name, frozenset( ) ) )
-    if name in names: return ( ( 'names', name ), )
-    predicates_name = attributes_namer( level, f"{basename}_predicates" )
-    predicates: _nomina.BehaviorExclusionPredicates = (
-        getattr( objct, predicates_name, ( ) ) )
-    matched: list[ tuple[ str, str ] ] = [
-        ( 'predicate', render_verifier_text( predicate ) )
-        for predicate in predicates if predicate( name ) ]
-    regexes_name = attributes_namer( level, f"{basename}_regexes" )
-    regexes: _nomina.BehaviorExclusionRegexes = (
-        getattr( objct, regexes_name, ( ) ) )
-    matched.extend(
-        ( 'regex', regex.pattern )
-        for regex in regexes if regex.fullmatch( name ) )
-    return tuple( matched )
-
-
 def survey_visible_attributes(
     obj: object, /, *,
     ligation: _nomina.SurveyorLigation,
@@ -224,7 +224,7 @@ def survey_visible_attributes(
     if names == '*': return names_base # pragma: no branch
     names_: list[ str ] = [ ]
     for name in names_base:
-        matched = survey_matched_rules(
+        matched = determine_relevant_permitters(
             obj, attributes_namer = attributes_namer,
             level = level, basename = 'visibles', name = name )
         # Current behavior: one append per matched rule, so a name
