@@ -255,20 +255,33 @@ def test_411_explanation_collections_immutable( ):
 
 
 def test_412_explanation_internal_marking( ):
-    ''' Framework and stdlib machinery names are marked internal. '''
+    ''' Framework names mark via the namer detector; stdlib machinery
+        names mark only where the machinery operates. '''
     module = cache_import_module( MODULE_QNAME )
     decorate = _produce_example( )
 
     @decorate
     class Example: pass
 
+    import hashlib
+    digest = hashlib.sha256( b'x' ).hexdigest( )
     framework = module.explain_attribute(
-        Example( ), '_classcore_class_in_progress_x' )
-    stdlib = module.explain_attribute( Example( ), '_abc_cache' )
+        Example( ), f"_classcore_class_in_progress_{digest}" )
+    machinery_absent = module.explain_attribute( Example( ), '_abc_cache' )
     user = module.explain_attribute( Example( ), 'alpha' )
     assert framework.internal
-    assert stdlib.internal
+    assert not machinery_absent.internal # no ABC machinery here
     assert not user.internal
+
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Abstract( classes.AbstractObject ): pass
+
+    machinery_present = module.explain_attribute(
+        Abstract( ), '_abc_cache' )
+    assert machinery_present.internal
+    assert not module.explain_attribute(
+        Abstract( ), 'alpha' ).internal
 
 
 def test_413_explanation_level_semantics( ):
@@ -326,8 +339,12 @@ def test_415_explanation_repr_summary( ):
     assert 'permitted (behavior inapplicable)' in plain
     assert '[internal]' not in plain
 
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Abstract( classes.AbstractObject ): pass
+
     internal = repr(
-        module.explain_attribute( Plain( ), '_abc_cache' ) )
+        module.explain_attribute( Abstract( ), '_abc_cache' ) )
     assert '[internal]' in internal
 
 
@@ -411,3 +428,248 @@ def test_420_render_rejects_unknown_decisions( ):
     explanation = module.explain_attribute( Example( ), 'alpha' )
     with pytest.raises( ValueError, match = 'object' ):
         explanation._render( object( ) )
+
+
+def test_421_grammar_static_forms_marked( ):
+    ''' All grammar-valid static stems mark; invalid cores do not. '''
+    module = cache_import_module( MODULE_QNAME )
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Example( classes.Object ): pass
+
+    for level in ( 'class', 'classes', 'instance', 'instances' ):
+        for core in ( 'mutables_names', 'visibles_predicates',
+            'assigner_core', 'construction_arguments' ):
+            name = f"_classcore_{level}_{core}_"
+            assert module.explain_attribute(
+                Example, name ).internal, name
+    for name in ( '_classcore_not_a_generated_core_',
+        '_classcore_class_lookalike_', '_classcore_lookalike_behaviors_',
+        '_classcore_zzz_abc' ):
+        assert not module.explain_attribute( Example, name ).internal
+
+
+def test_422_grammar_mangled_forms( ):
+    ''' Both mangled forms mark with valid digests only. '''
+    import hashlib
+    module = cache_import_module( MODULE_QNAME )
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Example( classes.Object ): pass
+
+    digest = hashlib.sha256( b'probe' ).hexdigest( )
+    for stem in ( 'class_behaviors', 'class_in_progress' ):
+        assert module.explain_attribute(
+            Example, f"_classcore_{stem}_{digest}" ).internal
+    for name in (
+        f"_classcore_class_in_progress_{digest[ :-1 ]}",
+        f"_classcore_class_in_progress_{digest.upper( )}",
+        f"_classcore_class_in_progress_{digest}_",
+        '_classcore_class_in_progress_',
+        '_classcore_class_behaviors_',
+    ):
+        assert not module.explain_attribute( Example, name ).internal
+
+
+def test_423_instance_target_metaclass_chain( ):
+    ''' Instance targets consult the metaclass chain via the double
+        type transformation. '''
+    module = cache_import_module( MODULE_QNAME )
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Example( classes.Object ): pass
+
+    instance = Example( )
+    assert module.explain_attribute(
+        instance, '_classcore_class_mutables_names_' ).internal
+    # The class MRO of the instance's type contains no metaclass;
+    # marking proves the metaclass chain was consulted.
+    assert not any(
+        holder is type( Example )
+        for holder in type( instance ).__mro__ )
+
+
+def test_424_inherited_contribution_across_packages( ):
+    ''' A class defined in the test module (a foreign module, from the
+        framework's perspective) inherits the base's contributions
+        through the base's metaclass. '''
+    module = cache_import_module( MODULE_QNAME )
+    classes = cache_import_module( f"{PACKAGE_NAME}.standard.classes" )
+
+    class Derived( classes.Object ): pass
+
+    assert module.explain_attribute(
+        Derived, '_classcore_instances_mutables_names_' ).internal
+
+
+def test_425_namer_vocabulary_consistency( ):
+    ''' Every literal namer call site in the package sources has its
+        level and core covered by the detector grammar, and at least
+        one site is found (guarding against a vacuous scan). '''
+    import ast
+    from pathlib import Path
+    base = cache_import_module( f"{PACKAGE_NAME}.__" )
+    det = base.calculate_attrname.is_internal_name
+    namer_names = ( 'calculate_attrname', 'attributes_namer' )
+    levels = ( 'class', 'classes', 'instance', 'instances' )
+    sites: list[ tuple[ str, str ] ] = [ ]
+    for path in Path( 'sources' ).rglob( '*.py' ):
+        tree = ast.parse( path.read_text( ) )
+        for node in ast.walk( tree ):
+            if not (
+                isinstance( node, ast.Call )
+                and isinstance( node.func, ast.Name )
+                and node.func.id in namer_names
+                and 2 == len( node.args )
+                and all(
+                    isinstance( a, ast.Constant )
+                    and isinstance( a.value, str )
+                    for a in node.args ) ):
+                continue
+            level, core = (
+                node.args[ 0 ].value, node.args[ 1 ].value )
+            sites.append( ( level, core ) )
+            assert level in levels, ( path, level )
+            marked = (
+                det( f"_classcore_{level}_{core}_" )
+                or ( 'class' == level and det(
+                    f"_classcore_class_{core}_" + 'a' * 64 ) ) )
+            assert marked, ( path, level, core )
+    assert 5 <= len( sites )
+
+
+def test_426_bare_namer_contributes_nothing( ):
+    ''' A namer without an is_internal_name attribute contributes
+        nothing, and downstream detectors ride only when provided. '''
+    from classcore.standard.decorators import class_factory
+    module = cache_import_module( MODULE_QNAME )
+
+    def bare_namer( level: str, core: str ) -> str:
+        return f"_custom_{level}_{core}_"
+
+    @class_factory( attributes_namer = bare_namer )
+    class CustomMeta( type ): pass
+
+    class Custom( metaclass = CustomMeta ): pass
+
+    assert not module.explain_attribute(
+        Custom, '_classcore_class_mutables_names_' ).internal
+    assert not module.explain_attribute(
+        Custom, '_custom_class_core_' ).internal
+
+    @class_factory( attributes_namer = bare_namer )
+    class BareMeta( type ): pass
+
+    class Bare( metaclass = BareMeta ): pass
+
+    assert not module.explain_attribute(
+        Bare, '_custom_class_core_' ).internal
+
+    from classcore.__ import AttrnameCalculator
+
+    class DownstreamNamer( AttrnameCalculator ):
+        def __call__( self, level: str, core: str ) -> str:
+            return f"_downstream_{level}_{core}_"
+        def is_internal_name( self, name: str ) -> bool:
+            return name.startswith( '_downstream_' )
+
+    @class_factory( attributes_namer = DownstreamNamer( ) )
+    class DownstreamMeta( type ): pass
+
+    class Downstream( metaclass = DownstreamMeta ): pass
+
+    assert module.explain_attribute(
+        Downstream, '_downstream_class_core_' ).internal
+
+
+def test_427_decorator_path_inheritance( ):
+    ''' Subclassing a decorated class keeps internal marking via the
+        class resolution order. '''
+    module = cache_import_module( MODULE_QNAME )
+    decorate = _produce_example( )
+
+    @decorate
+    class Base: pass
+
+    class Derived( Base ): pass
+
+    assert module.explain_attribute(
+        Base, '_classcore_instances_mutables_names_' ).internal
+    assert module.explain_attribute(
+        Derived, '_classcore_instances_mutables_names_' ).internal
+
+
+def test_428_augment_internal_names_idempotent( ):
+    ''' Private augmentation wiring dedupes repeated bound detectors.
+
+        The bound method retrieved twice from one namer instance is
+        one detector: fresh bindings of the same instance's method must
+        dedupe, which plain identity comparison would miss.
+    '''
+    from classcore.__ import AttrnameCalculator, calculate_contribution_name
+    from classcore.standard.__ import augment_internal_names
+
+    namer = AttrnameCalculator( )
+
+    class Meta( type ): pass
+
+    augment_internal_names(
+        Meta, namer.is_internal_name )
+    augment_internal_names(
+        Meta, namer.is_internal_name ) # Fresh bound method.
+    assert 1 == len( getattr( Meta, calculate_contribution_name( ) ) )
+
+
+def test_429_distinct_instances_keep_separate_contributions( ):
+    ''' Two namer instances sharing method implementation but with
+        instance-configured detector behavior keep both contributions. '''
+    from classcore.__ import AttrnameCalculator, calculate_contribution_name
+    from classcore.standard.decorators import class_factory
+    module = cache_import_module( MODULE_QNAME )
+
+    class ConfiguredNamer( AttrnameCalculator ):
+        def __init__( self, prefix: str ):
+            self.prefix = prefix
+        def __call__( self, level: str, core: str ) -> str:
+            return f"{self.prefix}_{level}_{core}_"
+        def is_internal_name( self, name: str ) -> bool:
+            return name.startswith( self.prefix )
+
+    first = ConfiguredNamer( '_first_' )
+    second = ConfiguredNamer( '_second_' )
+
+    @class_factory( attributes_namer = first )
+    class FirstMeta( type ): pass
+
+    @class_factory( attributes_namer = second )
+    class SecondMeta( FirstMeta ): pass
+
+    class Product( metaclass = SecondMeta ): pass
+
+    assert module.explain_attribute(
+        Product, '_first_class_core_' ).internal
+    assert module.explain_attribute(
+        Product, '_second_class_core_' ).internal
+    contributions = getattr( Product, calculate_contribution_name( ) )
+    assert 2 == len( contributions )
+
+
+def test_430_plain_function_detectors_by_identity( ):
+    ''' Plain function detectors compare by identity, not attribute
+        probing: a non-method callable without __func__ dedupes only
+        against itself. '''
+    from classcore.__ import calculate_contribution_name
+    from classcore.standard.__ import augment_internal_names
+
+    def detector_a( name: str ) -> bool:
+        return name.startswith( '_a_' )
+
+    def detector_b( name: str ) -> bool:
+        return name.startswith( '_b_' )
+
+    class Meta( type ): pass
+
+    augment_internal_names( Meta, detector_a )
+    augment_internal_names( Meta, detector_a )
+    augment_internal_names( Meta, detector_b )
+    assert 2 == len( getattr( Meta, calculate_contribution_name( ) ) )

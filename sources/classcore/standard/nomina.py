@@ -45,6 +45,10 @@ BehaviorExclusionVerifiers: __.typx.TypeAlias = (
     __.cabc.Sequence[ BehaviorExclusionVerifier ] )
 BehaviorExclusionVerifiersOmni: __.typx.TypeAlias = (
     BehaviorExclusionVerifiers | __.typx.Literal[ '*' ] )
+InternalNameDetector: __.typx.TypeAlias = (
+    __.cabc.Callable[ [ str ], bool ] )
+InternalNameDetectors: __.typx.TypeAlias = (
+    __.cabc.Sequence[ InternalNameDetector ] )
 ErrorClassProvider: __.typx.TypeAlias = __.typx.Annotated[
     __.cabc.Callable[ [ str ], type[ Exception ] ],
     __.ddoc.Doc(

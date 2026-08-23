@@ -20,7 +20,7 @@
 
 ''' Common constants, imports, and utilities. '''
 
-# ruff: noqa: F403
+# ruff: noqa: F403, F405
 
 
 from ..__ import *
@@ -54,3 +54,40 @@ abc_class_mutables = (
     '_is_runtime_protocol',
     '__non_callable_proto_members__',
 )
+
+
+def is_same_detector(
+    detector: cabc.Callable[ [ str ], bool ],
+    other: cabc.Callable[ [ str ], bool ], /,
+) -> bool:
+    ''' Returns whether two detector references are the same detector.
+
+        Bound methods are the same detector only when both the
+        underlying function and the bound instance are identical, so
+        distinct namer instances with distinct configured behavior keep
+        separate contributions. Plain callables compare by identity.
+    '''
+    if detector is other: return True
+    function = getattr( detector, '__func__', None )
+    other_function = getattr( other, '__func__', None )
+    if function is None or other_function is None: return False
+    return (
+        function is other_function
+        and getattr( detector, '__self__', None )
+            is getattr( other, '__self__', None ) )
+
+
+def augment_internal_names(
+    cls: type, /, detector: cabc.Callable[ [ str ], bool ]
+) -> None:
+    ''' Adds an internal-name detector to existing contributions.
+
+        Private wiring point for machinery mixins: the abstract-base
+        metaclass adds the stdlib machinery set after factory
+        decoration, without expanding public factory arguments.
+    '''
+    detectors = getattr( cls, calculate_contribution_name( ), ( ) )
+    if any( is_same_detector( detector, d ) for d in detectors ): return
+    setattr(
+        cls, calculate_contribution_name( ),
+        ( *detectors, detector ) )

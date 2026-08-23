@@ -388,7 +388,10 @@ sources/
   - The closed `Decision` hierarchy: `PermitByInapplicability`,
     `PermitByOmni`, `PermitByNames`, `PermitByPredicate`,
     `PermitByRegex`, `Prohibit`, with typed payloads
-  - Marking of framework-owned and stdlib-machinery attributes
+  - Internal marking via metaclass-carried contributions: the namer
+    detector for framework names, the abstract-base wiring for stdlib
+    ABC machinery (only where that machinery operates), and downstream
+    factory namers' detectors for downstream names
 
 `classes.py`
 : Standard metaclasses and base classes:

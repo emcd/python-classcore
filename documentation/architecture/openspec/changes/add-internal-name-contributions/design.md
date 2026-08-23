@@ -37,10 +37,17 @@ owner as a documented user-settable declaration convention.
 ## Decisions
 
 - Metaclass-carried contributions attach at factory/decoration time:
-  the factory closure records its namer's detector; `AbstractClass`
-  wiring contributes the ABC set. Subclasses in any package inherit
+  the factory closure records its namer's detector; the abstract-base
+  metaclass adds the stdlib machinery set after factory decoration
+  through a private wiring function — no public factory or decorator
+  argument is added anywhere. Subclasses in any package inherit
   contributions via the metaclass, which resolves multi-package
   inheritance by construction.
+- Decorator-path exception: plain decorated classes (no custom
+  metaclass exists; `type` builds them) carry their contribution on
+  the class itself, and consultation walks the class resolution order
+  after the metaclass chain. Subclassing a decorated class keeps the
+  marking via the class MRO.
 - The namer detector attribute is canonically `is_internal_name`,
   mirroring the module-level function it specializes. Namer detectors
   over prefix arguments: a detector callable validates

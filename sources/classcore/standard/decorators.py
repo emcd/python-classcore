@@ -85,6 +85,30 @@ def apply_cfc_core_functions(
         setattr( clscls, core_aname, core_function )
 
 
+def apply_internal_names(
+    cls: type, /,
+    attributes_namer: _nomina.AttributesNamer,
+) -> None:
+    ''' Records the namer's internal-name contribution, if any.
+
+        Works for metaclasses (contributions inherit to every class the
+        metaclass builds) and for decorator-path classes (contributions
+        ride the class itself, since plain decorated classes have no
+        custom metaclass). Parent wiring may already contribute the
+        same detector (e.g., a diamond re-running the factory with the
+        same namer); keep one of each by identity.
+    '''
+    detector: __.typx.Optional[ _nomina.InternalNameDetector ] = (
+        getattr( attributes_namer, 'is_internal_name', None ) )
+    if detector is None: return
+    detectors: _nomina.InternalNameDetectors = getattr(
+        cls, __.calculate_contribution_name( ), ( ) )
+    if any( __.is_same_detector( detector, d ) for d in detectors ): return
+    setattr(
+        cls, __.calculate_contribution_name( ),
+        ( *detectors, detector ) )
+
+
 def apply_cfc_dynadoc_configuration(
     clscls: type[ __.T ], /,
     attributes_namer: _nomina.AttributesNamer,
@@ -194,6 +218,8 @@ def class_factory( # noqa: PLR0913, PLR0917
             assigner_core = assigner_core,
             deleter_core = deleter_core,
             surveyor_core = surveyor_core )
+        apply_internal_names(
+            clscls, attributes_namer = attributes_namer )
         apply_cfc_dynadoc_configuration(
             clscls,
             attributes_namer = attributes_namer,
@@ -245,6 +271,8 @@ def produce_instances_inception_decorator( # noqa: PLR0913, PLR0917
         surveyor = _behaviors.survey_visible_attributes )
 
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
+        apply_internal_names(
+            cls, attributes_namer = attributes_namer )
         for core_name in ( 'assigner', 'deleter', 'surveyor' ):
             core_function = _behaviors.access_core_function(
                 cls,

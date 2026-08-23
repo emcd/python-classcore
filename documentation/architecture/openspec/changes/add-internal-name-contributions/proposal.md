@@ -21,7 +21,10 @@ contributions:
   downstream prefixes ride their `class_factory`-produced metaclasses
   via namer-provided detectors.
 - `explain_attribute` and `is_internal_name(target, name)` consult the
-  target's metaclass MRO for contributions.
+  target's metaclass MRO for contributions; decorator-path classes
+  (built by plain `type`) carry their contribution on the class itself
+  and are consulted through the class resolution order. No public
+  factory or decorator argument is added.
 - `_dynadoc_fragments_` is never marked internal: it is a documented,
   user-settable declaration convention, analogous to `__slots__`.
 - No global registry: no shared store, no locking, no injection

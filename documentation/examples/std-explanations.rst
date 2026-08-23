@@ -20,7 +20,7 @@
 Attribute Explanations
 *******************************************************************************
 
-The :py:func:`classcore.standard.explain_attribute` function explains why an
+The :py:func:`classcore.standard.explanations.explain_attribute` function explains why an
 attribute of a class or an instance is mutable or immutable and visible or
 concealed. It returns an explanation record which carries, for each operation
 — assignment, deletion, and survey — a verdict with the rule which decided
@@ -95,12 +95,27 @@ first matching visibility rule decides the survey verdict.
 Internal Attributes
 ===============================================================================
 
-Framework-owned attribute names and standard library machinery names are
-marked as internal.
+Framework attribute names mark as internal wherever the framework's
+machinery built the class. Standard library machinery names, like the
+ABC caches, mark only where that machinery actually operates — a class
+without ABC machinery keeps such a name unmarked.
 
 .. doctest:: Standard.Explanations
 
+    >>> import hashlib
+    >>> digest = hashlib.sha256( b'x' ).hexdigest( )
+    >>> explanation = ccstd.explain_attribute(
+    ...     Ledger( ), f"_classcore_class_in_progress_{digest}" )
+    >>> explanation.internal
+    True
     >>> explanation = ccstd.explain_attribute( Ledger( ), '_abc_cache' )
+    >>> explanation.internal
+    False
+
+    >>> class Registry( ccstd.AbstractObject ):
+    ...     pass
+    ...
+    >>> explanation = ccstd.explain_attribute( Registry( ), '_abc_cache' )
     >>> explanation.internal
     True
     >>> explanation = ccstd.explain_attribute( Ledger( ), 'public_total' )

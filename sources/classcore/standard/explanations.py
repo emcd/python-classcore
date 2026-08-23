@@ -191,14 +191,35 @@ def explain_attribute(
         behaviors = __.types.MappingProxyType(
             { level_normalized: frozenset( behaviors ) } ),
         operations = __.types.MappingProxyType( operations ),
-        internal = is_internal_name( name ) )
+        internal = is_internal_name( target, name ) )
 
 
-def is_internal_name( name: str, / ) -> bool:
-    ''' Returns whether name is framework-owned or stdlib machinery. '''
-    return (
-        name.startswith( _framework_names_prefix )
-        or name in __.abc_class_mutables )
+def is_internal_name( target: object, name: str, / ) -> bool:
+    ''' Returns whether name is internal to the target's machinery.
+
+        Contributions are discovered on the metaclass chain: for a
+        class target, its metaclass method resolution order; for an
+        instance target, the metaclass resolution order of its type
+        (the metaclass chain is reached through the double type
+        transformation — the instance's own type resolution order
+        enumerates the class bases, never the metaclass). Decorator-
+        based classes carry their contributions on the class itself,
+        so the class resolution order is consulted as well. Each
+        contribution is a detector produced by the machinery which
+        built the class, so a name is internal only where the
+        machinery that generates it operates.
+    '''
+    cls = target if __.inspect.isclass( target ) else type( target )
+    chains = (
+        type( cls ).__mro__, cls.__mro__ ) # Metaclass chain, then class.
+    contribution_name = __.calculate_contribution_name( )
+    for chain in chains:
+        for holder in chain:
+            contributions = holder.__dict__.get( contribution_name )
+            if not contributions: continue
+            for detector in contributions:
+                if detector( name ): return True
+    return False
 
 
 def produce_decision(

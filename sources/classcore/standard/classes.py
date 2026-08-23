@@ -122,6 +122,10 @@ class AbstractClass( Class, __.abc.ABCMeta ):
         registration) via a diamond hierarchy. `Class` itself remains
         backed by plain `type`, so ABC machinery applies only where this
         metaclass is used.
+
+        Contributes the stdlib ABC machinery names as internal for the
+        classes it builds, mirroring the class_mutables exemption
+        scoping.
     '''
 
     _dynadoc_fragments_ = (
@@ -426,3 +430,10 @@ class _CanaryProtocolImpl( _CanaryProtocolUse ):
 _canary_abstract: int = _CanaryAbstractObject( ).provide( )
 _canary_protocol_iface: _CanaryProtocolUse = _CanaryProtocolImpl( )
 _canary_greeting: str = _canary_protocol_iface.greet( )
+
+
+def _is_abc_machinery_name( name: str ) -> bool:
+    return name in __.abc_class_mutables
+
+
+__.augment_internal_names( AbstractClass, _is_abc_machinery_name )
