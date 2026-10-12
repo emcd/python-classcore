@@ -43,16 +43,29 @@ visibles_default = ( is_public_identifier, )
 
 # Standard library ABC machinery attribute names which the class-level
 # immutability behavior permits. The C _abc implementation writes these
-# cache and protocol bookkeeping attributes through direct dict access,
-# so they must remain assignable on standard classes. Also used by the
-# explanations module to mark such names as internal.
+# cache attributes through direct dict access, so they must remain
+# assignable on standard classes. Also used to mark such names as
+# internal in attribute explanations.
 abc_class_mutables = (
     '_abc_cache',
     '_abc_negative_cache',
     '_abc_negative_cache_version',
     '_abc_registry',
+)
+# Standard library typing machinery attribute names which the
+# class-level immutability behavior permits on protocol classes.
+# 'typing' sets these protocol bookkeeping attributes during class
+# decoration: '_is_runtime_protocol' and '__non_callable_proto_members__'
+# in the 'runtime_checkable' decorator, and
+# '__typing_is_deprecated_inherited_runtime_protocol__' (CPython 3.15+)
+# during class decoration and in 'runtime_checkable'. Without this
+# exemption, decorating a runtime protocol which inherits runtime
+# checkability fails. Also used to mark such names as internal in
+# attribute explanations.
+typing_class_mutables = (
     '_is_runtime_protocol',
     '__non_callable_proto_members__',
+    '__typing_is_deprecated_inherited_runtime_protocol__', # Python 3.15+
 )
 
 

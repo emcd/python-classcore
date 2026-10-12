@@ -237,6 +237,21 @@ def test_442_declared_dunder_preserved( ):
     assert '__eq__' not in attrs
 
 
+def test_446_typing_dunder_excluded_from_protocol_attrs( ):
+    ''' '__typing_is_deprecated_inherited_runtime_protocol__', set by
+        CPython 3.15+ typing machinery during class creation, is not a
+        declared protocol member. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    class TypingProto( module.Protocol ):
+        __typing_is_deprecated_inherited_runtime_protocol__ = True
+        def greet( self ) -> str: ...
+
+    attrs = TypingProto.__dict__[ '__protocol_attrs__' ]
+    assert '__typing_is_deprecated_inherited_runtime_protocol__' not in attrs
+    assert 'greet' in attrs
+
+
 def test_443_dataclass_protocol_attrs_declared_only( ):
     ''' Dataclass protocol attrs contain declared fields and methods,
         excluding dataclass-generated dunders. '''

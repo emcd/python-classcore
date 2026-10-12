@@ -39,7 +39,12 @@ _protocol_attr_excluded = frozenset( {
     # Injected during class creation by ABC, Generic, and typing machinery.
     # '__init__' is '_no_init' on protocol bases; as a structural member it
     # is vacuous since every candidate object has an '__init__'.
+    # '__typing_is_deprecated_inherited_runtime_protocol__' is set by
+    # CPython 3.15+ typing on protocol classes which inherit runtime
+    # checkability; as a structural member it is vacuous since it records
+    # machinery provenance rather than a callable member.
     '__abstractmethods__', '__parameters__', '__init__', '__orig_bases__',
+    '__typing_is_deprecated_inherited_runtime_protocol__', # Python 3.15+
 } )
 _protocol_attr_prefixes = ( '_classcore_', '_abc_' )
 # Standard Python attributes present in every pre-decoration namespace.
@@ -123,8 +128,8 @@ class AbstractClass( Class, __.abc.ABCMeta ):
         backed by plain `type`, so ABC machinery applies only where this
         metaclass is used.
 
-        Contributes the stdlib ABC machinery names as internal for the
-        classes it builds, mirroring the class_mutables exemption
+        Contributes the stdlib ABC and typing machinery names as internal
+        for the classes it builds, mirroring the class_mutables exemption
         scoping.
     '''
 
@@ -344,7 +349,8 @@ class DataclassObjectMutable( metaclass = DataclassMutable ):
 class Protocol(
     __.typx.Protocol,
     metaclass = ProtocolClass,
-    class_mutables = __.abc_class_mutables,
+    class_mutables = (
+        *__.abc_class_mutables, *__.typing_class_mutables ),
 ):
     ''' Standard base protocol class. '''
 
@@ -357,7 +363,8 @@ class Protocol(
 class ProtocolMutable(
     __.typx.Protocol,
     metaclass = ProtocolClass,
-    class_mutables = __.abc_class_mutables,
+    class_mutables = (
+        *__.abc_class_mutables, *__.typing_class_mutables ),
     instances_mutables = '*',
 ):
     ''' Base protocol class with mutable instance attributes. '''
@@ -371,7 +378,8 @@ class ProtocolMutable(
 class DataclassProtocol(
     __.typx.Protocol,
     metaclass = ProtocolDataclass,
-    class_mutables = __.abc_class_mutables,
+    class_mutables = (
+        *__.abc_class_mutables, *__.typing_class_mutables ),
 ):
     ''' Standard base protocol dataclass. '''
 
@@ -384,7 +392,8 @@ class DataclassProtocol(
 class DataclassProtocolMutable(
     __.typx.Protocol,
     metaclass = ProtocolDataclassMutable,
-    class_mutables = __.abc_class_mutables,
+    class_mutables = (
+        *__.abc_class_mutables, *__.typing_class_mutables ),
 ):
     ''' Base protocol dataclass with mutable instance attributes. '''
 
@@ -432,8 +441,10 @@ _canary_protocol_iface: _CanaryProtocolUse = _CanaryProtocolImpl( )
 _canary_greeting: str = _canary_protocol_iface.greet( )
 
 
-def _is_abc_machinery_name( name: str ) -> bool:
-    return name in __.abc_class_mutables
+def _is_stdlib_machinery_name( name: str ) -> bool:
+    return (
+        name in __.abc_class_mutables
+        or name in __.typing_class_mutables )
 
 
-__.augment_internal_names( AbstractClass, _is_abc_machinery_name )
+__.augment_internal_names( AbstractClass, _is_stdlib_machinery_name )
