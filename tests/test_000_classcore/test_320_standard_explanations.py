@@ -36,6 +36,24 @@ def _matches_alpha( name: str ) -> bool:
     return 'alpha' == name
 
 
+class _OpaquePredicate:
+    ''' Callable predicate whose introspectable metadata raises.
+
+        Simulates exotic callables (raising descriptors, custom
+        '__getattribute__'): boolean invocation works, but any
+        diagnostic rendering metadata access fails. Enforcement and
+        survey must follow the boolean outcome regardless.
+    '''
+
+    def __call__( self, name: str ) -> bool:
+        return True
+
+    def __getattribute__( self, name: str ):
+        if name in ( 'pattern', '__qualname__', '__module__' ):
+            raise RuntimeError( 'opaque' )
+        return object.__getattribute__( self, name )
+
+
 def _produce_example( **verifiers ):
     decorators = cache_import_module( DECORATORS_QNAME )
 
@@ -673,3 +691,31 @@ def test_430_plain_function_detectors_by_identity( ):
     augment_internal_names( Meta, detector_a )
     augment_internal_names( Meta, detector_b )
     assert 2 == len( getattr( Meta, calculate_contribution_name( ) ) )
+
+
+def test_431_opaque_predicate_governs_by_bool( ):
+    ''' Opaque predicate: enforcement and survey follow the boolean
+        outcome despite hostile introspection metadata; the
+        explanation record renders the documented fallback. '''
+    module = cache_import_module( MODULE_QNAME )
+    decorate = _produce_example(
+        mutables = ( _OpaquePredicate( ), ),
+        visibles = ( _OpaquePredicate( ), ) )
+
+    @decorate
+    class Example: pass
+
+    instance = Example( )
+    instance.alpha = 1
+    assert 1 == instance.alpha
+    assert 'alpha' in dir( instance )
+    explanation = module.explain_attribute( instance, 'alpha' )
+    assign = explanation.operations[ 'assign' ]
+    assert isinstance( assign.decision, module.PermitByPredicate )
+    assert '<unrenderable>' == assign.decision.predicate
+    assert assign.permissible
+    survey = explanation.operations[ 'survey' ]
+    assert isinstance( survey.decision, module.PermitByPredicate )
+    assert '<unrenderable>' == survey.decision.predicate
+    assert survey.permissible
+    del instance.alpha

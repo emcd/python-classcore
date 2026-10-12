@@ -158,7 +158,10 @@ def explain_attribute(
         cores evaluate. Records report the normalized level names
         ('class' and 'instance') at which behaviors and exclusion
         configuration were found. Explanations are observational: they
-        neither bypass nor alter concealment or immutability.
+        neither bypass nor alter concealment or immutability. They are
+        not side-effect-free for arbitrary callbacks, however:
+        producing a record invokes user predicates and internal-name
+        detectors to determine the same outcome the cores would.
 
         Survey explanations describe normalized first-match semantics;
         the survey core's current once-per-matching-rule duplication is
@@ -207,7 +210,10 @@ def is_internal_name( target: object, name: str, / ) -> bool:
         so the class resolution order is consulted as well. Each
         contribution is a detector produced by the machinery which
         built the class, so a name is internal only where the
-        machinery that generates it operates.
+        machinery that generates it operates. Classification scope is
+        the machinery chain and is independent of per-class mutability
+        exemptions: a name may be internal on a class where it is not
+        mutable, and mutable where it is not internal.
     '''
     cls = target if __.inspect.isclass( target ) else type( target )
     chains = (
@@ -223,19 +229,25 @@ def is_internal_name( target: object, name: str, / ) -> bool:
 
 
 def produce_decision(
-    rule: __.typx.Optional[ tuple[ str, str ] ], active: bool, /
+    rule: __.typx.Optional[ tuple[ str, __.typx.Any ] ], active: bool, /
 ) -> Decision:
     ''' Returns decision for governing-behavior activity and first rule.
 
-        Rules are the (kind, detail) pairs produced by
+        Rules are the (kind, raw verifier) pairs produced by
         provide_permitter_if_applicable; the kind vocabulary matches the
-        omni/names/predicate/regex precedence stages.
+        omni/names/predicate/regex precedence stages. Verifier detail
+        text is rendered here, at the record layer, so enforcement
+        paths which consult the same rules never depend on rendering.
     '''
     if not active: return PermitByInapplicability( )
     if rule is None: return Prohibit( )
-    kind, detail = rule
+    kind, verifier = rule
     if kind == 'omni': return PermitByOmni( )
-    if kind == 'names': return PermitByNames( name = detail )
-    if kind == 'predicate': return PermitByPredicate( predicate = detail )
-    if kind == 'regex': return PermitByRegex( pattern = detail )
+    if kind == 'names': return PermitByNames( name = verifier )
+    if kind == 'predicate':
+        return PermitByPredicate(
+            predicate = _behaviors.render_verifier_text( verifier ) )
+    if kind == 'regex':
+        return PermitByRegex(
+            pattern = _behaviors.render_verifier_text( verifier ) )
     raise ValueError( kind )

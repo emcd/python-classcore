@@ -44,6 +44,23 @@ def _predicate_matches_alpha( name: str ) -> bool:
     return 'alpha' == name
 
 
+class _OpaquePredicate:
+    ''' Callable predicate whose introspectable metadata raises.
+
+        Simulates exotic callables (raising descriptors, custom
+        '__getattribute__'): boolean invocation works, but any
+        diagnostic rendering metadata access fails.
+    '''
+
+    def __call__( self, name: str ) -> bool:
+        return 'alpha' == name
+
+    def __getattribute__( self, name: str ):
+        if name in ( 'pattern', '__qualname__', '__module__' ):
+            raise RuntimeError( 'opaque' )
+        return object.__getattribute__( self, name )
+
+
 def test_300_immutable_without_exclusions( ):
     ''' Immutability active and no rule permits: assignment raises. '''
     decorators = cache_import_module( DECORATORS_QNAME )
@@ -297,6 +314,13 @@ def test_320_render_verifier_text( ):
         == module.render_verifier_text( _predicate_matches_alpha ) )
     assert '<anonymous>' == module.render_verifier_text( object( ) )
 
+    class _Patterned:
+        pattern = 42
+
+    assert (
+        'test_320_render_verifier_text.<locals>._Patterned'
+        == module.render_verifier_text( _Patterned ) )
+
     def local_predicate( name: str ) -> bool: return True
 
     assert (
@@ -306,7 +330,7 @@ def test_320_render_verifier_text( ):
 
 def test_321_first_permitting_rule_precedence( ):
     ''' First permitting rule follows wildcard/names/predicate/regex
-        precedence and reports kind with detail text. '''
+        precedence and reports kind with raw verifier. '''
     module = cache_import_module( MODULE_QNAME )
     base = cache_import_module( f"{PACKAGE_NAME}.__" )
     namer = base.calculate_attrname
@@ -330,13 +354,14 @@ def test_321_first_permitting_rule_precedence( ):
         ( _predicate_matches_alpha, ) )
     setattr( stub, namer( 'instances', 'mutables_regexes' ),
         ( re.compile( 'al.*' ), ) )
-    assert ( 'predicate', f"{__name__}._predicate_matches_alpha"
+    assert ( 'predicate', _predicate_matches_alpha
         ) == module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'alpha' )
 
     setattr( stub, namer( 'instances', 'mutables_predicates' ), ( ) )
-    assert ( 'regex', 'al.*' ) == module.provide_permitter_if_applicable(
+    assert ( 'regex', re.compile( 'al.*' )
+        ) == module.provide_permitter_if_applicable(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'mutables', name = 'alpha' )
 
@@ -348,7 +373,8 @@ def test_321_first_permitting_rule_precedence( ):
 
 def test_322_matched_rules_union( ):
     ''' Matched rules report predicate/regex matches in evaluation order;
-        a names match short-circuits to the single names rule. '''
+        a names match short-circuits to the single names rule. Rules
+        carry raw verifiers; rendering happens at the record layer. '''
     module = cache_import_module( MODULE_QNAME )
     base = cache_import_module( f"{PACKAGE_NAME}.__" )
     namer = base.calculate_attrname
@@ -368,8 +394,9 @@ def test_322_matched_rules_union( ):
         ( re.compile( 'al.*' ), ) )
 
     assert (
-        ( 'predicate', f"{__name__}._predicate_matches_alpha" ),
-        ( 'regex', 'al.*' ) ) == module.determine_relevant_permitters(
+        ( 'predicate', _predicate_matches_alpha ),
+        ( 'regex', re.compile( 'al.*' ) )
+        ) == module.determine_relevant_permitters(
         stub, attributes_namer = namer, level = 'instances',
         basename = 'visibles', name = 'alpha' )
     assert ( ) == module.determine_relevant_permitters(

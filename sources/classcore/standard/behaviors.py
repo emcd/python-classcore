@@ -103,7 +103,7 @@ def determine_relevant_permitters(
     level: str,
     basename: str,
     name: str,
-) -> tuple[ tuple[ str, str ], ... ]:
+) -> tuple[ tuple[ str, __.typx.Any ], ... ]:
     ''' Returns exclusion rules matching name, in evaluation order.
 
         A names match short-circuits, matching the survey core's
@@ -112,6 +112,13 @@ def determine_relevant_permitters(
         match any number of predicates and any number of regexes. The
         wildcard is not considered here; callers handle its
         short-circuit separately.
+
+        Rules pair a kind ('names', 'predicate', 'regex') with the raw
+        matched verifier (name, predicate, or regex). Matching never
+        renders diagnostic text: enforcement and survey consult kind
+        and presence only, so exotic callables cannot disrupt them.
+        Render verifiers with 'render_verifier_text' at the record
+        layer when producing explanation records.
     '''
     names_name = attributes_namer( level, f"{basename}_names" )
     names: _nomina.BehaviorExclusionNamesOmni = (
@@ -120,14 +127,14 @@ def determine_relevant_permitters(
     predicates_name = attributes_namer( level, f"{basename}_predicates" )
     predicates: _nomina.BehaviorExclusionPredicates = (
         getattr( objct, predicates_name, ( ) ) )
-    matched: list[ tuple[ str, str ] ] = [
-        ( 'predicate', render_verifier_text( predicate ) )
+    matched: list[ tuple[ str, __.typx.Any ] ] = [
+        ( 'predicate', predicate )
         for predicate in predicates if predicate( name ) ]
     regexes_name = attributes_namer( level, f"{basename}_regexes" )
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( objct, regexes_name, ( ) ) )
     matched.extend(
-        ( 'regex', regex.pattern )
+        ( 'regex', regex )
         for regex in regexes if regex.fullmatch( name ) )
     return tuple( matched )
 
@@ -138,13 +145,17 @@ def provide_permitter_if_applicable(
     level: str,
     basename: str,
     name: str,
-) -> __.typx.Optional[ tuple[ str, str ] ]:
+) -> __.typx.Optional[ tuple[ str, __.typx.Any ] ]:
     ''' Returns first exclusion rule permitting operation, else None.
 
         Rules apply by precedence: omni or names membership, then
         the first matching predicate, then the first matching regex.
-        Each rule is a pair of kind ('omni', 'names', 'predicate',
-        'regex') and detail text.
+        Each rule pairs a kind ('omni', 'names', 'predicate', 'regex')
+        with the raw matched verifier. Matching never renders
+        diagnostic text: enforcement consults kind and presence only,
+        so exotic callables cannot disrupt it. Render the verifier
+        with 'render_verifier_text' at the record layer when producing
+        explanation records.
     '''
     names_name = attributes_namer( level, f"{basename}_names" )
     names: _nomina.BehaviorExclusionNamesOmni = (
@@ -156,13 +167,13 @@ def provide_permitter_if_applicable(
         getattr( objct, predicates_name, ( ) ) )
     for predicate in predicates:
         if predicate( name ):
-            return ( 'predicate', render_verifier_text( predicate ) )
+            return ( 'predicate', predicate )
     regexes_name = attributes_namer( level, f"{basename}_regexes" )
     regexes: _nomina.BehaviorExclusionRegexes = (
         getattr( objct, regexes_name, ( ) ) )
     for regex in regexes:
         if regex.fullmatch( name ):
-            return ( 'regex', regex.pattern )
+            return ( 'regex', regex )
     return None
 
 
@@ -172,21 +183,23 @@ def render_verifier_text( verifier: __.typx.Any, / ) -> str:
         Regexes render as pattern text; predicates render as
         fully-qualified name, with an anonymous fallback when no
         qualified name is available. Strings do not reach this
-        function; they are classified as names before rendering.
+        function; they are classified as names before rendering. A
+        non-string 'pattern' attribute is not trusted as text; such
+        verifiers fall through to qualified-name rendering. Hostile
+        metadata (raising descriptors, custom '__getattribute__')
+        yields '<unrenderable>' rather than raising, so diagnostic
+        rendering never disrupts its callers.
 
         Note: the inspect utilities were considered and rejected here;
         they resolve modules to objects and provide no qualified-name
         rendering with an anonymous fallback, while this getattr chain
         stays defensive for exotic callables (e.g., partials).
     '''
-    pattern = getattr( verifier, 'pattern', None )
-    if pattern is not None: return __.typx.cast( str, pattern )
-    qualname = getattr( verifier, '__qualname__', None )
-    if qualname is None: return '<anonymous>'
-    module = getattr( verifier, '__module__', None )
-    if module is None or '<locals>' in qualname:
-        return qualname
-    return f"{module}.{qualname}"
+    try:
+        text = _render_verifier_text( verifier )
+    except Exception:
+        text = '<unrenderable>'
+    return text
 
 
 def survey_active_behaviors(
@@ -475,3 +488,21 @@ def _deduplicate_merge_sequences(
         if addend in augends_: continue
         result.append( addend )
     return tuple( result )
+
+
+def _render_verifier_text( verifier: __.typx.Any, / ) -> str:
+    ''' Returns detail text for an exclusion verifier, possibly raising.
+
+        Total rendering lives in 'render_verifier_text', which maps
+        hostile-metadata failures to the documented fallback. This
+        partial function holds the getattr chain so the wrapper has
+        no returns inside its guarded block.
+    '''
+    pattern = getattr( verifier, 'pattern', None )
+    if isinstance( pattern, str ): return pattern
+    qualname = getattr( verifier, '__qualname__', None )
+    if qualname is None: return '<anonymous>'
+    module = getattr( verifier, '__module__', None )
+    if module is None or '<locals>' in qualname:
+        return qualname
+    return f"{module}.{qualname}"
