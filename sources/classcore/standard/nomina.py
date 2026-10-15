@@ -29,6 +29,10 @@ concealment_label = 'concealment'
 immutability_label = 'immutability'
 
 
+abc_class_mutables = __.abc_class_mutables
+typing_class_mutables = __.typing_class_mutables
+
+
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]
 BehaviorExclusionNamesOmni: __.typx.TypeAlias = (
     BehaviorExclusionNames | __.typx.Literal[ '*' ] )
