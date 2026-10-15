@@ -23,6 +23,50 @@ Release Notes
 
 .. towncrier release notes start
 
+classcore 1.13 (2026-10-15)
+===========================
+
+Enhancements
+------------
+
+- Add attribute explanations: ``explain_attribute`` in
+  ``classcore.standard.explanations`` returns the decision trace for one
+  attribute of one target — active behaviors per evaluated level and, for
+  each operation, a verdict carrying its decision under precedence
+  semantics: permission by inapplicability, omni, names, predicate, or
+  regex, or prohibition. Decision payloads are typed per decision class,
+  explanation records are immutable with immutable nested collections,
+  and framework-owned and stdlib-machinery attributes are marked
+  internal.
+- Attribute internal marking now follows metaclass-carried
+  contributions: the attribute namer's ``is_internal_name`` detector
+  marks framework names (grammar-constrained static stems and both
+  digest-mangled forms), the abstract-base wiring marks stdlib ABC
+  machinery names only where that machinery operates, and downstream
+  ``class_factory`` namers contribute their own detectors, so
+  ``explain_attribute`` reports downstream framework attributes
+  truthfully. ``is_internal_name`` takes the target and consults the
+  metaclass chain; lookalike names that fail the detector grammar stay
+  unmarked, and the public ``_dynadoc_fragments_`` declaration
+  convention is never marked.
+
+
+Repairs
+-------
+
+- Fix construction of function-local dataclass classes. Classes derived
+  from the dataclass base classes (``DataclassObject``,
+  ``DataclassObjectMutable``, ``DataclassProtocol``, and
+  ``DataclassProtocolMutable``) failed with ``TypeError`` when defined
+  inside a function body, because the construction marker could not be
+  recognized during dataclass slot reproduction.
+- Permit CPython 3.15+ typing machinery dunder on immutable classes.
+  ``typing`` sets ``__typing_is_deprecated_inherited_runtime_protocol__``
+  during class decoration and in the ``runtime_checkable`` decorator; the
+  class-level immutability behavior now exempts it, and the protocol
+  member snapshot excludes it from ``__protocol_attrs__``.
+
+
 classcore 1.12 (2026-08-15)
 ===========================
 
