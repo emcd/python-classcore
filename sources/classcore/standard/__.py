@@ -20,7 +20,7 @@
 
 ''' Common constants, imports, and utilities. '''
 
-# ruff: noqa: F403
+# ruff: noqa: F403, F405
 
 
 from ..__ import *
@@ -40,3 +40,67 @@ def provide_error_class( name: str ) -> type[ Exception ]:
 
 mutables_default = ( )
 visibles_default = ( is_public_identifier, )
+
+# Standard library ABC machinery attribute names which the class-level
+# immutability behavior permits. The C _abc implementation writes these
+# cache attributes through direct dict access, so they must remain
+# assignable on standard classes. Also used to mark such names as
+# internal in attribute explanations.
+abc_class_mutables = (
+    '_abc_cache',
+    '_abc_negative_cache',
+    '_abc_negative_cache_version',
+    '_abc_registry',
+)
+# Standard library typing machinery attribute names which the
+# class-level immutability behavior permits on protocol classes.
+# 'typing' sets these protocol bookkeeping attributes during class
+# decoration: '_is_runtime_protocol' and '__non_callable_proto_members__'
+# in the 'runtime_checkable' decorator, and
+# '__typing_is_deprecated_inherited_runtime_protocol__' (CPython 3.15+)
+# during class decoration and in 'runtime_checkable'. Without this
+# exemption, decorating a runtime protocol which inherits runtime
+# checkability fails. Also used to mark such names as internal in
+# attribute explanations.
+typing_class_mutables = (
+    '_is_runtime_protocol',
+    '__non_callable_proto_members__',
+    '__typing_is_deprecated_inherited_runtime_protocol__', # Python 3.15+
+)
+
+
+def is_same_detector(
+    detector: cabc.Callable[ [ str ], bool ],
+    other: cabc.Callable[ [ str ], bool ], /,
+) -> bool:
+    ''' Returns whether two detector references are the same detector.
+
+        Bound methods are the same detector only when both the
+        underlying function and the bound instance are identical, so
+        distinct namer instances with distinct configured behavior keep
+        separate contributions. Plain callables compare by identity.
+    '''
+    if detector is other: return True
+    function = getattr( detector, '__func__', None )
+    other_function = getattr( other, '__func__', None )
+    if function is None or other_function is None: return False
+    return (
+        function is other_function
+        and getattr( detector, '__self__', None )
+            is getattr( other, '__self__', None ) )
+
+
+def augment_internal_names(
+    cls: type, /, detector: cabc.Callable[ [ str ], bool ]
+) -> None:
+    ''' Adds an internal-name detector to existing contributions.
+
+        Private wiring point for machinery mixins: the abstract-base
+        metaclass adds the stdlib machinery set after factory
+        decoration, without expanding public factory arguments.
+    '''
+    detectors = getattr( cls, calculate_contribution_name( ), ( ) )
+    if any( is_same_detector( detector, d ) for d in detectors ): return
+    setattr(
+        cls, calculate_contribution_name( ),
+        ( *detectors, detector ) )

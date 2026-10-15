@@ -95,15 +95,40 @@ def mangle_name( objct: object, /, name: str ) -> str:
         Effectively provides name of private member attribute,
         which is unique across class inheritance.
     '''
-    # TODO: Replace expensive SHA-256 hash with simple 'id'.
-    #       Need to debug weird issue with using 'id' early on dataclasses.
+    # NOTE: Mangling is based on the fully-qualified class name, not on id,
+    #       because class reproductions (e.g., from dataclass slots) must
+    #       retain identity of private attributes. A reproduction is a new
+    #       object, so id-based mangling would break such identity.
     if not __.inspect.isclass( objct ):
         return mangle_name( type( objct ), name )
-    # return "{name}{uid}".format( name = name, uid = id( objct ) )
     namehash = __.hashlib.sha256( )
     namehash.update( qualify_class_name( objct ).encode( ) )
     namehash_hex = namehash.hexdigest( )
     return f"{name}{namehash_hex}"
+
+
+def survey_mangled_names( cls: type, /, name: str ) -> tuple[ str, ... ]:
+    ''' Returns mangled variants of name present in class's own namespace.
+
+        A class reproduction (e.g., from ``dataclass( slots = ... )``) is
+        created with a bare ``__qualname__``, which is restored only after
+        the reproduction is constructed. During that window, mangled names
+        computed from the reproduction differ from those computed from the
+        original. Detection by prefix survives such qualname drift.
+    '''
+    suffix_start = len( name )
+    return tuple(
+        key for key in cls.__dict__
+        if key.startswith( name ) and _is_digest( key[ suffix_start: ] ) )
+
+
+_digest_length = 64 # Length of a hexadecimal SHA-256 digest.
+
+
+def _is_digest( text: str ) -> bool:
+    ''' Returns whether text is a hexadecimal SHA-256 digest. '''
+    return _digest_length == len( text ) and all(
+        character in '0123456789abcdef' for character in text )
 
 
 def qualify_class_name( cls: type ) -> str:

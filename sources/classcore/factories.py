@@ -54,12 +54,20 @@ def produce_class_constructor(
         # Some decorators create new classes, which invokes this method again.
         # Short-circuit to prevent recursive decoration and other tangles.
         progress_name = attributes_namer( 'class', 'in_progress' )
-        progress_name_m = _utilities.mangle_name( cls, progress_name )
-        in_progress = getattr( cls, progress_name_m, False )
+        progress_names = _utilities.survey_mangled_names( cls, progress_name )
+        in_progress = any(
+            getattr( cls, key, False ) for key in progress_names )
         if in_progress: return cls
+        progress_name_m = _utilities.mangle_name( cls, progress_name )
         setattr( cls, progress_name_m, True )
         for postprocessor in postprocessors: postprocessor( cls, decorators_ )
         cls = _decorators.apply_decorators( cls, decorators_ )
+        # Decoration may have replaced the class. Clear every marker
+        # variant, including ones inherited from the original namespace,
+        # so initialization completes regardless of qualname restoration.
+        progress_names = _utilities.survey_mangled_names( cls, progress_name )
+        for progress_name_ in progress_names:
+            setattr( cls, progress_name_, False )
         setattr( cls, progress_name_m, False )
         return cls
 
@@ -81,10 +89,11 @@ def produce_class_initializer(
         ''' Initializes class, applying hooks. '''
         superf( *posargs, **nomargs )
         progress_name = attributes_namer( 'class', 'in_progress' )
-        progress_name_m = _utilities.mangle_name( cls, progress_name )
-        in_progress = getattr( cls, progress_name_m, False )
+        progress_names = _utilities.survey_mangled_names( cls, progress_name )
+        in_progress = any(
+            getattr( cls, key, False ) for key in progress_names )
         if in_progress: return # If non-empty, then not top-level.
-        delattr( cls, progress_name_m )
+        for progress_name_m in progress_names: delattr( cls, progress_name_m )
         for completer in completers: completer( cls )
 
     return initialize

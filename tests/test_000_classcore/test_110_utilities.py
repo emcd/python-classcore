@@ -111,3 +111,25 @@ def test_302_class_repair_nothing( ):
     module.repair_class_reproduction( Wut, DataclassWut )
     wut = DataclassWut( )
     assert 'wut' == wut.name
+
+
+def test_310_survey_mangled_names( ):
+    ''' Mangled-name survey detects digest-drifted variants. '''
+    module = cache_import_module( MODULE_QNAME )
+    class C: pass
+    base = '_classcore_class_in_progress_'
+    name_m = module.mangle_name( C, base )
+    setattr( C, name_m, True )
+    drifted = f"{base}{'a' * 64}"
+    setattr( C, drifted, False )
+    setattr( C, f"{base}zz", False ) # suffix not hexadecimal
+    setattr( C, f"{base}{'a' * 63}", False ) # suffix short of digest
+    setattr( C, f"{base}{'a' * 65}", False ) # suffix beyond digest
+    names = module.survey_mangled_names( C, base )
+    assert name_m in names
+    assert drifted in names
+    assert f"{base}zz" not in names
+    assert f"{base}{'a' * 63}" not in names
+    assert f"{base}{'a' * 65}" not in names
+    class D( C ): pass
+    assert ( ) == module.survey_mangled_names( D, base )

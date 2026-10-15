@@ -188,3 +188,22 @@ def test_522_concrete_classes_satisfy_protocols( ):
             return 'concrete'
 
     assert isinstance( GreeterClass( ), GreeterProto )
+
+
+def test_523_typing_dunder_assignable_on_immutable_class( ):
+    ''' CPython 3.15+ typing machinery dunder is assignable on immutable
+        classes. Typing sets
+        '__typing_is_deprecated_inherited_runtime_protocol__' during
+        class decoration and in the 'runtime_checkable' decorator, so
+        the class-level immutability behavior exempts it. '''
+    module = cache_import_module( MODULE_QNAME )
+
+    class GreeterProto( module.Protocol ):
+        def greet( self ) -> str: ...
+
+    GreeterProto.__typing_is_deprecated_inherited_runtime_protocol__ = (
+        False )
+    assert (
+        GreeterProto.__dict__[
+            '__typing_is_deprecated_inherited_runtime_protocol__' ]
+        is False )

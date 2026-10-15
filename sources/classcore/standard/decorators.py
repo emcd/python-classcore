@@ -47,8 +47,10 @@ def prepare_dataclass_for_instances(
     ''' Annotates dataclass in support of instantiation machinery. '''
     annotations = __.inspect.get_annotations( cls )
     behaviors_name = attributes_namer( 'instance', 'behaviors' )
-    # TODO: Only use mangling if not slotted.
-    # behaviors_name_ = _utilities.mangle_name( cls, behaviors_name )
+    # NOTE: The behaviors field is a dataclass field, so its name must
+    #       stay unmangled; mangling would desynchronize the field from
+    #       the slot or class attribute installed by the dataclass
+    #       machinery, which addresses it by its plain name.
     behaviors_name_ = behaviors_name
     annotations[ behaviors_name_ ] = set[ str ]
     setattr( cls, '__annotations__', annotations ) # in case of absence
@@ -81,6 +83,30 @@ def apply_cfc_core_functions(
             default = cores_default[ core_name ] )
         core_aname = attributes_namer( 'classes', f"{core_name}_core" )
         setattr( clscls, core_aname, core_function )
+
+
+def apply_internal_names(
+    cls: type, /,
+    attributes_namer: _nomina.AttributesNamer,
+) -> None:
+    ''' Records the namer's internal-name contribution, if any.
+
+        Works for metaclasses (contributions inherit to every class the
+        metaclass builds) and for decorator-path classes (contributions
+        ride the class itself, since plain decorated classes have no
+        custom metaclass). Parent wiring may already contribute the
+        same detector (e.g., a diamond re-running the factory with the
+        same namer); keep one of each by identity.
+    '''
+    detector: __.typx.Optional[ _nomina.InternalNameDetector ] = (
+        getattr( attributes_namer, 'is_internal_name', None ) )
+    if detector is None: return
+    detectors: _nomina.InternalNameDetectors = getattr(
+        cls, __.calculate_contribution_name( ), ( ) )
+    if any( __.is_same_detector( detector, d ) for d in detectors ): return
+    setattr(
+        cls, __.calculate_contribution_name( ),
+        ( *detectors, detector ) )
 
 
 def apply_cfc_dynadoc_configuration(
@@ -192,6 +218,8 @@ def class_factory( # noqa: PLR0913, PLR0917
             assigner_core = assigner_core,
             deleter_core = deleter_core,
             surveyor_core = surveyor_core )
+        apply_internal_names(
+            clscls, attributes_namer = attributes_namer )
         apply_cfc_dynadoc_configuration(
             clscls,
             attributes_namer = attributes_namer,
@@ -243,6 +271,8 @@ def produce_instances_inception_decorator( # noqa: PLR0913, PLR0917
         surveyor = _behaviors.survey_visible_attributes )
 
     def decorate( cls: type[ __.U ] ) -> type[ __.U ]:
+        apply_internal_names(
+            cls, attributes_namer = attributes_namer )
         for core_name in ( 'assigner', 'deleter', 'surveyor' ):
             core_function = _behaviors.access_core_function(
                 cls,
