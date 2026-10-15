@@ -33,3 +33,17 @@ def test_200_provide_error_class( ):
     assert exceptions.AttributeImmutability is error_class
     with pytest.raises( exceptions.ErrorProvideFailure ):
         module.provide_error_class( 'DoesNotExist' )
+
+
+def test_201_mutables_sets_public_from_nomina( ):
+    ''' Class-level mutability exemption sets are publicly re-exported
+        from 'standard.nomina' (canonical home remains 'standard.__'),
+        so downstream packages need not import across the private
+        module boundary. '''
+    hub = cache_import_module( MODULE_QNAME )
+    nomina = cache_import_module( f"{PACKAGE_NAME}.standard.nomina" )
+    assert nomina.abc_class_mutables is hub.abc_class_mutables
+    assert nomina.typing_class_mutables is hub.typing_class_mutables
+    assert (
+        '__typing_is_deprecated_inherited_runtime_protocol__'
+        in nomina.typing_class_mutables )
