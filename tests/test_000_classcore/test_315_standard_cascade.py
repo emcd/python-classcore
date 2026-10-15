@@ -321,6 +321,23 @@ def test_320_render_verifier_text( ):
         'test_320_render_verifier_text.<locals>._Patterned'
         == module.render_verifier_text( _Patterned ) )
 
+    class _NonStrQualname:
+        def __getattribute__( self, name: str ):
+            if '__qualname__' == name: return 42
+            return object.__getattribute__( self, name )
+
+    assert '<anonymous>' == module.render_verifier_text(
+        _NonStrQualname( ) )
+
+    class _NonStrModule:
+        def __getattribute__( self, name: str ):
+            if '__qualname__' == name: return 'weird.Qual'
+            if '__module__' == name: return 42
+            return object.__getattribute__( self, name )
+
+    assert 'weird.Qual' == module.render_verifier_text(
+        _NonStrModule( ) )
+
     def local_predicate( name: str ) -> bool: return True
 
     assert (

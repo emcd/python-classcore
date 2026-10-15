@@ -185,10 +185,13 @@ def render_verifier_text( verifier: __.typx.Any, / ) -> str:
         qualified name is available. Strings do not reach this
         function; they are classified as names before rendering. A
         non-string 'pattern' attribute is not trusted as text; such
-        verifiers fall through to qualified-name rendering. Hostile
-        metadata (raising descriptors, custom '__getattribute__')
-        yields '<unrenderable>' rather than raising, so diagnostic
-        rendering never disrupts its callers.
+        verifiers fall through to qualified-name rendering, and
+        non-string qualified or module names fall back to
+        '<anonymous>'. Hostile metadata (raising descriptors, custom
+        '__getattribute__') yields '<unrenderable>' rather than raising,
+        so diagnostic rendering never disrupts its callers. The broad
+        'except Exception' is deliberate: rendering is diagnostics, and
+        diagnostics must never break enforcement or survey paths.
 
         Note: the inspect utilities were considered and rejected here;
         they resolve modules to objects and provide no qualified-name
@@ -501,8 +504,8 @@ def _render_verifier_text( verifier: __.typx.Any, / ) -> str:
     pattern = getattr( verifier, 'pattern', None )
     if isinstance( pattern, str ): return pattern
     qualname = getattr( verifier, '__qualname__', None )
-    if qualname is None: return '<anonymous>'
+    if not isinstance( qualname, str ): return '<anonymous>'
     module = getattr( verifier, '__module__', None )
-    if module is None or '<locals>' in qualname:
+    if not isinstance( module, str ) or '<locals>' in qualname:
         return qualname
     return f"{module}.{qualname}"

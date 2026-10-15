@@ -17,16 +17,19 @@
 #                                                                            #
 #============================================================================#
 
-
 ''' Tests for abstract base class support. '''
 
 
 import abc
 import typing
 
+import pytest
+
 from .__ import PACKAGE_NAME, cache_import_module
 
+
 MODULE_QNAME = f"{PACKAGE_NAME}.standard.classes"
+EXCEPTIONS_QNAME = f"{PACKAGE_NAME}.exceptions"
 
 
 # =========================================================================== #
@@ -207,3 +210,15 @@ def test_523_typing_dunder_assignable_on_immutable_class( ):
         GreeterProto.__dict__[
             '__typing_is_deprecated_inherited_runtime_protocol__' ]
         is False )
+
+
+def test_524_typing_names_refused_on_non_protocol_abstract( ):
+    ''' Typing-only mutability exemptions do not extend to non-protocol
+        abstract classes: only the ABC machinery set is mutable there. '''
+    module = cache_import_module( MODULE_QNAME )
+    exceptions = cache_import_module( EXCEPTIONS_QNAME )
+
+    class Concrete( module.AbstractObject ): pass
+
+    with pytest.raises( exceptions.AttributeImmutability ):
+        Concrete._is_runtime_protocol = True
