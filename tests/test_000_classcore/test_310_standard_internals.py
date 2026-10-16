@@ -47,3 +47,13 @@ def test_201_mutables_sets_public_from_nomina( ):
     assert (
         '__typing_is_deprecated_inherited_runtime_protocol__'
         in nomina.typing_class_mutables )
+
+
+def test_202_calculator_public_from_nomina( ):
+    ''' Reference calculator is publicly re-exported from
+        'standard.nomina' (canonical home remains 'classcore.__'),
+        defaulting to the classcore package prefix. '''
+    hub_nomina = cache_import_module( f"{PACKAGE_NAME}.__.nomina" )
+    std_nomina = cache_import_module( f"{PACKAGE_NAME}.standard.nomina" )
+    assert std_nomina.AttrnameCalculator is hub_nomina.AttrnameCalculator
+    assert 'classcore' == hub_nomina.AttrnameCalculator( ).package_name

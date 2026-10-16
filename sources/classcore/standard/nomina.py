@@ -31,6 +31,7 @@ immutability_label = 'immutability'
 
 abc_class_mutables = __.abc_class_mutables
 typing_class_mutables = __.typing_class_mutables
+AttrnameCalculator = __.AttrnameCalculator
 
 
 BehaviorExclusionNames: __.typx.TypeAlias = __.cabc.Set[ str ]

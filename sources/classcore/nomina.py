@@ -29,8 +29,11 @@ AttributesNamer: __.typx.TypeAlias = __.typx.Annotated[
     __.ddoc.Doc(
         ''' Names attribute from level and core arguments.
 
-            Level will be one of 'class', 'instances', or 'instance'.
-            Core will be the core of the name as supplied this package.
+            Level will be one of 'class', 'classes', 'instance', or
+            'instances'. Core will be one of the framework cores
+            named in the attribute-namer grammar (mutables and
+            visibles rules, assigner, deleter, and surveyor cores,
+            and construction bookkeeping).
 
             Can be used by downstream packages to determine names of
             bookkeeping attributes assigned by this package.
