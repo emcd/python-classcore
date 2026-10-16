@@ -583,21 +583,21 @@ def test_426_bare_namer_contributes_nothing( ):
     assert not module.explain_attribute(
         Bare, '_custom_class_core_' ).internal
 
-    from classcore.__ import AttrnameCalculator
+    from classcore.standard.nomina import AttrnameCalculator
 
-    class DownstreamNamer( AttrnameCalculator ):
-        def __call__( self, level: str, core: str ) -> str:
-            return f"_downstream_{level}_{core}_"
-        def is_internal_name( self, name: str ) -> bool:
-            return name.startswith( '_downstream_' )
+    namer = AttrnameCalculator( package_name = 'downstream' )
 
-    @class_factory( attributes_namer = DownstreamNamer( ) )
+    @class_factory( attributes_namer = namer )
     class DownstreamMeta( type ): pass
 
     class Downstream( metaclass = DownstreamMeta ): pass
 
     assert module.explain_attribute(
-        Downstream, '_downstream_class_core_' ).internal
+        Downstream, '_downstream_instances_mutables_names_' ).internal
+    assert not module.explain_attribute(
+        Downstream, '_downstream_custom_' ).internal
+    assert not module.explain_attribute(
+        Downstream, '_classcore_instances_mutables_names_' ).internal
 
 
 def test_427_decorator_path_inheritance( ):
@@ -719,3 +719,37 @@ def test_431_opaque_predicate_governs_by_bool( ):
     assert '<unrenderable>' == survey.decision.predicate
     assert survey.permissible
     del instance.alpha
+
+
+def test_432_calculator_prefix_mismatch( ):
+    ''' Configured prefix governs both generation and detection:
+        cross-prefix names do not match, mangled digest forms are
+        accepted, and bare mangling stems are not. '''
+    from classcore.standard.nomina import AttrnameCalculator
+
+    frigid = AttrnameCalculator( package_name = 'frigid' )
+    assert '_frigid_class_behaviors_' == frigid( 'class', 'behaviors' )
+    assert frigid.is_internal_name(
+        '_frigid_instances_mutables_names_' )
+    assert frigid.is_internal_name(
+        '_frigid_class_behaviors_' + 'b' * 64 )
+    assert not frigid.is_internal_name( '_frigid_class_behaviors_' )
+    assert not frigid.is_internal_name(
+        '_classcore_instances_mutables_names_' )
+    assert not frigid.is_internal_name( '_frigid_custom_' )
+
+
+def test_433_calculator_prefix_read_only( ):
+    ''' Configured prefix is read-only: post-construction assignment
+        raises, and generation and detection retain the original. '''
+    from classcore.standard.nomina import AttrnameCalculator
+
+    namer = AttrnameCalculator( package_name = 'frigid' )
+    assert 'frigid' == namer.package_name
+    with pytest.raises( AttributeError ):
+        # Assignment, rather than direct attribute syntax, so the
+        # read-only property violation is exercised, not type-checked.
+        setattr( namer, 'package_name', 'classcore' )
+    assert '_frigid_class_behaviors_' == namer( 'class', 'behaviors' )
+    assert namer.is_internal_name(
+        '_frigid_instances_mutables_names_' )

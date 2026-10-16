@@ -51,13 +51,32 @@ class AttrnameCalculator:
 
         Reference implementation of the attribute namer convention:
         call instances to produce names, and consult ``is_internal_name``
-        to detect names this framework generated. Downstream packages
-        may subclass (or otherwise provide callables exposing the same
-        optional detector) to contribute their own internal names.
+        to detect names this framework generated. The package prefix is
+        construction-time configuration (default: this package):
+        downstream packages construct with their own prefix rather
+        than overriding either method, and it is read-only
+        thereafter: assignment raises, so a registered prefix cannot
+        drift. Detection consults the reserved
+        framework grammar (shape conformance, not proof of
+        generation); generation emits the class-level mangling stems
+        whose bare forms the detector does not accept. Downstream
+        callers writing conformance or drift tests can detect a
+        generated name without the private mangled-core vocabulary:
+        try the bare form first, then the form with 64 'a'
+        characters appended, which covers the two class-level
+        mangling stems the bare form never matches.
     '''
 
+    def __init__( self, package_name: str = package_name ) -> None:
+        self._package_name = package_name
+
+    @property
+    def package_name( self ) -> str:
+        ''' Package prefix this calculator generates and detects. '''
+        return self._package_name
+
     def is_internal_name( self, name: str ) -> bool:
-        prefix = f"_{package_name}_"
+        prefix = f"_{self.package_name}_"
         if not name.startswith( prefix ):
             return False
         body = name[ len( prefix ): ]
@@ -84,7 +103,7 @@ class AttrnameCalculator:
         return False
 
     def __call__( self, level: str, core: str ) -> str:
-        return f"_{package_name}_{level}_{core}_"
+        return f"_{self.package_name}_{level}_{core}_"
 
 
 calculate_attrname = AttrnameCalculator( )
